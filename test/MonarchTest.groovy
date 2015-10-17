@@ -2,8 +2,8 @@ import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
 class MonarchTest {
-  Monarch m = new Monarch()
-  Yaml yaml = new Yaml()
+  def m = new Monarch()
+  def yaml = new Yaml()
 
   Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data) {
     return m.generate(
