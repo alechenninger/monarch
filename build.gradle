@@ -1,0 +1,25 @@
+apply plugin: 'groovy'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile 'org.codehaus.groovy:groovy-all:2.4.5'
+  testCompile 'junit:junit:4.12'
+  testCompile 'org.yaml:snakeyaml:1.16'
+}
+
+sourceSets {
+  main {
+    groovy {
+      srcDirs = ['lib/']
+    }
+  }
+
+  test {
+    groovy {
+      srcDirs = ['test/']
+    }
+  }
+}
