@@ -1,5 +1,5 @@
 # monarch
-Rule over hierarchical data structures!
+Rule over hierarchical data!
 
 The idea is something that can take a desired end state, a hierarchy of data sources, a specific
 data source to change among them, and the current state of all data sources in the hierarchy, and
