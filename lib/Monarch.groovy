@@ -1,13 +1,31 @@
 class Monarch {
-  Map generate(Map hierarchy, Iterable<Change> changes, String sourceToChange,
-               Map<String, Map> data) {
-    def maybeDescendants = getDescendants(sourceToChange, hierarchy)
-    def result = data
+  /**
+   * Generates new data for all known sources in the hierarchy based on the hierarchy, the data
+   * changes you want applied, the existing state of the data, and a "pivot" source which you want
+   * to change alongside all of its children.
+   *
+   * @param hierarchy A tree-structure describing which sources inherit from which parent sources.
+   * @param changes The "end-state" changes to be applied assuming you could update the entire tree.
+   *                Even if you are not pivoting on the root of the tree (which would generate an
+   *                entirely new tree), the {@code pivotSource} and its children will be updated
+   *                such that each source's inherited values are what you want your end state to be,
+   *                as described by the changes.
+   * @param pivotSource A source in the hierarchy that represents a level that we can start to
+   *                    change values. Sources above this source will be untouched. This source and
+   *                    any below it will be updated to achieve the desired {@code changes}.
+   * @param data A map of sources to key:value pairs representing the existing state of the data.
+   * @return A map of sources to key:value pairs representing the new state of the data with changes
+   *         applied to the given {@code pivotSource} and its children.
+   */
+  Map<String, Map> generateHierarchy(Map hierarchy, Iterable<Change> changes, String pivotSource,
+                                     Map<String, Map> data) {
+    def maybeDescendants = getDescendants(pivotSource, hierarchy)
+    def result = deepCopy(data)
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
-    // so far.
+    // as we go along.
     for (def descendant in maybeDescendants.get()) {
-      result = generateIgnoringDescendants(hierarchy, changes, descendant, result)
+      result[descendant] = generateSingleSource(hierarchy, changes, descendant, result)
     }
 
     return result
@@ -217,7 +235,8 @@ class Monarch {
     throw new IllegalArgumentException("Expected hierarchy to be a List, Map, or String, but " +
         "got ${hierarchy}")
   }
-/**
+
+  /**
    * Flattens a hierarchy of key:values into a single map. It's a "view" of the data from a child's
    * point of view: all keys in the hierarchy, with the values from the nearest ancestor.
    *
@@ -244,40 +263,45 @@ class Monarch {
     return flattened;
   }
 
-  private static Map generateIgnoringDescendants(Map hierarchy, Iterable<Change> changes,
-                                                 String sourceToChange, Map<String, Map> data) {
-    def ancestry = getAncestors(sourceToChange, hierarchy);
-    def result = deepCopy(data);
-    def flattenedSourceData = flattenHierarchy(ancestry, data)
+  /**
+   * Generates new data for the given source only, taking into account the desired changes, the
+   * existing hierarchy, and the existing data in the hierarchy.
+   */
+  private Map<String, ?> generateSingleSource(Map hierarchy, Iterable<Change> changes,
+                                                     String sourceToChange, Map<String, Map> data) {
+    def ancestors = getAncestors(sourceToChange, hierarchy)
+    def flattenedSourceData = flattenHierarchy(ancestors, data)
+    def result = new HashMap<>(data[sourceToChange])
 
-    for (source in ancestry.reverse()) {
+    for (source in ancestors.reverse()) {
       def maybeChange = getChangeForSource(source, changes);
 
-      if (!maybeChange.present) continue;
+      if (!maybeChange.present) continue
 
-      def change = maybeChange.get();
+      def change = maybeChange.get()
 
       for (entry in change.set) {
+        // Have we already inherited this value (or have it set ourselves)?
         if (flattenedSourceData.containsKey(entry.key) &&
             flattenedSourceData[entry.key] == entry.value) {
-          // Is this source an ancestor?
+          // Is the change not for the source we're updating?
           if (source != sourceToChange) {
-            // Ensure not present lower in the hierarchy since it would be redundant
-            result[sourceToChange].remove(entry.key)
+            // Ensure not present in result source since it would be redundant
+            result.remove(entry.key)
           }
           continue
         }
 
-        result[sourceToChange][entry.key] = entry.value
+        result[entry.key] = entry.value
       }
 
       // TODO: Support removing nested keys (keys in a hash)
       for (key in change.remove) {
-        result[sourceToChange].remove(key);
+        result.remove(key)
       }
     }
 
-    return result;
+    return result
   }
 
   private static Map deepCopy(Map<String, Map> data) {

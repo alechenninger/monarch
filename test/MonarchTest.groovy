@@ -12,7 +12,7 @@ global.yaml:
 ''';
 
   Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data) {
-    return m.generate(
+    return m.generateHierarchy(
         yaml.load(hierarchy) as Map,
         yaml.loadAll(changes).collect { Change.fromMap(it as Map)},
         sourceToChange,
