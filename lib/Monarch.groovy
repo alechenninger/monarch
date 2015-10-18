@@ -18,7 +18,7 @@ class Monarch {
    *         applied to the given {@code pivotSource} and its children.
    */
   Map<String, Map> generateHierarchy(Map hierarchy, Iterable<Change> changes, String pivotSource,
-                                     Map<String, Map> data) {
+      Map<String, Map> data) {
     def maybeDescendants = getDescendants(pivotSource, hierarchy)
     def result = deepCopy(data)
 
@@ -271,7 +271,7 @@ class Monarch {
    * existing hierarchy, and the existing data in the hierarchy.
    */
   private Map<String, ?> generateSingleSource(Map hierarchy, Iterable<Change> changes,
-                                                     String sourceToChange, Map<String, Map> data) {
+      String sourceToChange, Map<String, Map> data) {
     def ancestors = getAncestors(sourceToChange, hierarchy)
     def flattenedSourceData = flattenHierarchy(ancestors, data)
     def original = data[sourceToChange]
