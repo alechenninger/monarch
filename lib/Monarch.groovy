@@ -255,8 +255,11 @@ class Monarch {
     Map flattened = [:]
 
     for (def source in ancestry) {
-      for (def entry in sourceToData[source]) {
-        flattened[entry.key] = entry.value
+      def data = sourceToData[source]
+      if (data != null) {
+        for (def entry in sourceToData[source]) {
+          flattened[entry.key] = entry.value
+        }
       }
     }
 
@@ -271,7 +274,8 @@ class Monarch {
                                                      String sourceToChange, Map<String, Map> data) {
     def ancestors = getAncestors(sourceToChange, hierarchy)
     def flattenedSourceData = flattenHierarchy(ancestors, data)
-    def result = new HashMap<>(data[sourceToChange])
+    def original = data[sourceToChange]
+    def result = original == null ? new HashMap<>() : new HashMap<>(original)
 
     for (source in ancestors.reverse()) {
       def maybeChange = getChangeForSource(source, changes);
