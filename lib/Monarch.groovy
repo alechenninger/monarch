@@ -43,31 +43,8 @@ class Monarch {
     return Optional.of(found.first())
   }
 
-  List<String> getAncestors(String source, Map<String, ?> hierarchy, String parent = null) {
-    for (entry in hierarchy) {
-      def key = entry.key
-      def value = entry.value
-
-      if (key == source) {
-        return parent == null ? [source] : [source, parent]
-      }
-
-      if (value == source) {
-        return parent == null ? [source, key] : [source, key, parent]
-      }
-
-      if (value instanceof List && value.contains(source)) {
-        return parent == null ? [source, key] : [source, key, parent]
-      }
-
-      if (value instanceof Map) {
-        def a = getAncestors(source, value, key)
-        return parent == null ? a : a.with { add(parent); return it }
-      }
-    }
-
-    // TODO: Should this error instead? Means there is no hierarchy
-    return [];
+  List<String> getAncestors(String source, Map<String, ?> hierarchy) {
+    return Hierarchy.fromStringListOrMap(hierarchy).ancestorsOf(source).orElseThrow({ new IllegalArgumentException()})
   }
 
   /**
@@ -78,162 +55,13 @@ class Monarch {
    * algorithm.
    */
   Optional<List<String>> getDescendants(String source, Map<String, ?> hierarchy) {
-    def parents = hierarchy.entrySet().findAll { it.key == source }
-
-    if (parents.size() > 1) {
-      throw new IllegalArgumentException()
-    }
-
-    if (parents.empty) {
-      for (def node in hierarchy.values()) {
-        if (node == source) {
-          // Source is a leaf
-          return Optional.of([source])
-        }
-
-        if (node instanceof List && node.contains(source)) {
-          // Source is a leaf
-          return Optional.of([source])
-        }
-
-        if (node instanceof Map) {
-          def maybeDescendants = getDescendants(source, node)
-          if (maybeDescendants.present) {
-            return maybeDescendants
-          }
-        }
-      }
-
-      return Optional.empty()
-    }
-
-    if (parents.size() == 1) {
-      def parent = parents.first()
-      return Optional.of([parent.key].with {
-        addAll(getAllDescendants(parent.value))
-        return it
-      })
-    }
-
-    return Optional.empty()
+    return Hierarchy.fromStringListOrMap(hierarchy).findDescendant(source).map({
+      it.descendantsNearestToFurthest()
+    })
   }
 
-  /**
-   * This is kinda gnarly. The goal is to take a nested tree structure of any combination of maps,
-   * lists, and strings, and return a list of <em>only</em> strings, in order of <em>nearest to
-   * furthest</em>. The leaf nodes will be after the "branch" nodes, and later the deeper in the
-   * tree they are.
-   *
-   * Maps and lists and strings combine to form a tree structure with named string nodes (whether
-   * branches or leaves). See the following diagram:
-   *
-   * <pre><code>
-   *            foo (foo is a map because it contains only branches)
-   *           /   \
-   *         bar   baz (bar is list because it contains a leaf)
-   *                   (baz is a map because it contains only branches)
-   *        /  \     \
-   *       1    2     3  (3 is a list because it contains a leaf. leaves cant be expressed in maps)
-   *                 /  \
-   *               fizz buzz (buzz is a map with one key, "buzz" and value, "blue")
-   *                       \
-   *                      blue
-   * </code></pre>
-   *
-   * The order we want from a result should reflect how nested (or not) each node is. The order of
-   * this tree is foo, bar, baz, 1, 2, 3, fizz, buzz, blue. Foo is at the top of the tree so it is
-   * first. Blue is at the bottom so it is last. Let's walk through how we calculate this.
-   *
-   * <p>First off, the result needs to be a list. If you have just have a single string, just return
-   * a one element list of that.
-   *
-   * <p>If you have a map, the keys are nearest in the hierarchy; add all those first. Then add the
-   * values, whatever they may be. Now you have a list, but it might still have other lists or maps
-   * within it. Recurse through the function again with this list. See below for what happens when
-   * you pass a list.
-   *
-   * <p>If you have a list, first make a copy. This will be our list of descendants. If it only
-   * contains strings, we're done; just return it. If not, iterate through all of the values, and
-   * find the values that are maps or lists. Remove them so you are left with a list of only
-   * strings. Then, in order that the maps or lists appeared, create <em>flattened versions</em> of
-   * them (described below), and append those to the end of our result list. Since this result list
-   * might still have maps or lists as members ("flattened versions" aren't fully flat because we
-   * don't want to traverse too deep in any one branch or we'll end up adding elements to our list
-   * that are further away too soon), we pass this result again to this function and
-   * recurse, starting over with that list.
-   *
-   * <p>The idea of "flattened versions" of those elements is to unravel them a little bit to get
-   * the nearest node values and <em>only</em> the nearest node values. We only want "one level" to
-   * keep our ordering correct.
-   *
-   * <p>A flattened version of a map is a list of all of the keys followed by all of the values.
-   *
-   * <p>A flattened version of a list is a little more complicated. Start off with itself,
-   * obviously, since it is already a list. However, if there are any maps in the list, we want the
-   * keys of that map to become elements in the list, and the values to be a list within that list.
-   *
-   * <p>Now we have a list with any of the lists or maps within it "flattened" as per above
-   * description. If there were no maps or lists in
-   */
   List<String> getAllDescendants(Object hierarchy) {
-    if (hierarchy instanceof String) {
-      return [hierarchy] as List<String>
-    }
-
-    if (hierarchy instanceof Map) {
-      return getAllDescendants([].with {
-        it.addAll(hierarchy.keySet())
-        it.addAll(hierarchy.values())
-        return it
-      })
-    }
-
-    if (hierarchy instanceof List) {
-      def descendants = new ArrayList(hierarchy)
-      Map<Integer, List> indexesToFlattened = [:]
-
-      for (int i; i < descendants.size(); i++) {
-        def descendant = descendants[i]
-
-        if (descendant instanceof Map) {
-          indexesToFlattened[i] = [].with {
-            it.addAll(descendant.keySet())
-            it.addAll(descendant.values())
-            return it
-          }
-        }
-
-        if (descendant instanceof List) {
-          def descendantsWithoutMaps = []
-          for (def maybeMap in descendant) {
-            if (maybeMap instanceof Map) {
-              descendantsWithoutMaps.addAll(maybeMap.keySet())
-              descendantsWithoutMaps.add(new ArrayList(maybeMap.values()))
-            } else {
-              descendantsWithoutMaps.add(maybeMap)
-            }
-          }
-          indexesToFlattened[i] = descendantsWithoutMaps
-        }
-      }
-
-      def removed = 0;
-      for (def entry in indexesToFlattened) {
-        descendants.removeAt(entry.key - removed)
-        descendants.addAll(entry.value)
-        removed++
-
-      }
-
-      if (indexesToFlattened.isEmpty()) {
-        return descendants
-      }
-
-      return getAllDescendants(descendants)
-    }
-
-    throw new IllegalArgumentException("Expected hierarchy to be a List, Map, or String, but " +
-        "got ${hierarchy}")
+    return Hierarchy.fromStringListOrMap(hierarchy).descendantsNearestToFurthest()
   }
 
   /**
@@ -330,5 +158,184 @@ class Change {
 
   static Change fromMap(Map map) {
     return new Change(map['source'], map['set'] ?: [:], map['remove'] ?: [])
+  }
+}
+
+class Hierarchy {
+  private final Node hierarchy;
+
+  Hierarchy(List<Node> nodes) {
+    if (nodes.size() == 1) {
+      this.hierarchy = nodes.first()
+    } else {
+      hierarchy = new Node(null, null)
+      for (def node in nodes) {
+        hierarchy.append(node)
+      }
+    }
+  }
+
+  Hierarchy(Node node) {
+    this.hierarchy = Objects.requireNonNull(node, "node")
+  }
+
+  static Hierarchy fromStringListOrMap(Object object) {
+    return new Hierarchy(nodesFromStringListOrMap(object))
+  }
+
+  /**
+   * Returns all of the leaf node names in order of <em>nearest to furthest</em>. The leaf nodes
+   * will be after the "branch" nodes, and later the deeper in the tree they are.
+   *
+   * <p>For example, given the following tree structure:
+   *
+   * <pre><code>
+   *            foo
+   *           /   \
+   *         bar   baz
+   *        /  \     \
+   *       1    2     3
+   *                 /  \
+   *               fizz buzz
+   *                       \
+   *                      blue
+   * </code></pre>
+   *
+   * The depth-order is foo, bar, baz, 1, 2, 3, fizz, buzz, blue. Foo is at the top of the tree so
+   * it is first. Blue is at the bottom so it is last.
+   */
+  List<String> descendantsNearestToFurthest() {
+    def children = hierarchy.children()
+    if (children.empty) {
+      return [hierarchy.name()] as List<String>
+    }
+
+    return new DescendantsIterator(hierarchy).toList().collect {
+      it.name() as String
+    }
+  }
+
+  Optional<Hierarchy> findDescendant(String name) {
+    def found = new DescendantsIterator(hierarchy).findAll { it.name() == name }
+
+    if (found.empty) return Optional.empty()
+    if (found.size() == 1) return Optional.of(new Hierarchy(found.first()))
+
+    throw new IllegalStateException()
+  }
+
+  Optional<List<String>> ancestorsOf(String name) {
+    def found = new DescendantsIterator(hierarchy).findAll { it.name() == name }
+
+    if (found.empty) return Optional.empty()
+    if (found.size() > 1) {
+      throw new IllegalStateException()
+    }
+
+    def ancestors = new AncestorsIterator(found.first()).toList()
+    return Optional.of(ancestors.collect {it.name()})
+  }
+
+  private class DescendantsIterator implements Iterator<Node> {
+    private Queue<Node> currentLevel = new LinkedList<>()
+    private Queue<Node> nextLevel = new LinkedList<>()
+
+    DescendantsIterator(Node node) {
+      currentLevel.add(node)
+    }
+
+    @Override
+    boolean hasNext() {
+      return !(currentLevel.empty && nextLevel.empty)
+    }
+
+    @Override
+    Node next() {
+      if (currentLevel.empty) {
+        currentLevel = nextLevel
+        if (currentLevel == null) {
+          throw new IndexOutOfBoundsException()
+        }
+        return next()
+      }
+
+      def next = currentLevel.poll()
+
+      def nextChildren = next.children()
+      if (!nextChildren.empty) {
+        nextLevel.addAll(nextChildren)
+      }
+
+      return next
+    }
+  }
+
+  class AncestorsIterator implements Iterator<Node> {
+    private Node next
+
+    AncestorsIterator(Node node) {
+      this.next = node
+    }
+
+    @Override
+    boolean hasNext() {
+      return next != null
+    }
+
+    @Override
+    Node next() {
+      if (next == null) throw new IndexOutOfBoundsException()
+      def current = next
+      next = current.parent()
+      return current;
+    }
+  }
+
+  private static List<Node> nodesFromStringListOrMap(Object object) {
+    if (object instanceof String) {
+      return [new Node(null, object, new HashMap(), null)]
+    }
+
+    if (object instanceof List) {
+      return nodesFromList(object)
+    }
+
+    if (object instanceof Map) {
+      return nodesFromMap(object)
+    }
+
+    throw new IllegalArgumentException("Can only parse Strings, Lists, or Maps, but got ${object}")
+  }
+
+  private static List<Node> nodesFromMap(Map<String, ?> map) {
+    def nodes = []
+    for (def entry in map) {
+      def keyNode = new Node(null, entry.key)
+      def valueNodes = nodesFromStringListOrMap(entry.value)
+      if (valueNodes.size() == 1) {
+        keyNode.append(valueNodes.first())
+      } else {
+        for (def node in valueNodes) {
+          keyNode.append(node)
+        }
+      }
+      nodes.add(keyNode)
+    }
+    return nodes
+  }
+
+  private static List<Node> nodesFromList(List<?> list) {
+    def nodes = []
+    for (def element in list) {
+      def elementNodes = nodesFromStringListOrMap(element)
+
+      if (elementNodes.size() == 1) {
+        nodes.add(elementNodes.first())
+      } else {
+        nodes.addAll(elementNodes)
+      }
+    }
+
+    return nodes
   }
 }

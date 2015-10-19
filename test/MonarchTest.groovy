@@ -172,19 +172,19 @@ foo:
   -
     a:
       - bob
-      - jannet: true
+      - jannet: 'true'
   - b
   -
-    1:
+    '1':
       - bar
       -
         baz: blue
         biz: red
-    2:
+    '2':
       - y
       - z
 '''))
 
-    assert ['foo', 'a', 'b', 1, 2, 'bob', 'jannet', 'bar', 'baz', 'biz', 'y', 'z', true, 'blue', 'red'] == descendants
+    assert ['foo', 'a', 'b', '1', '2', 'bob', 'jannet', 'bar', 'baz', 'biz', 'y', 'z', 'true', 'blue', 'red'] == descendants
   }
 }
