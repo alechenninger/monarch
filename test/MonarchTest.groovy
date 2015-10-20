@@ -12,8 +12,8 @@ global.yaml:
 ''';
 
   Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data) {
-    return m.generateHierarchy(
-        yaml.load(hierarchy) as Map,
+    return m.generateSources(
+        Hierarchy.fromStringListOrMap(yaml.load(hierarchy)),
         yaml.loadAll(changes).collect { Change.fromMap(it as Map)},
         sourceToChange,
         data.with {
@@ -163,28 +163,5 @@ otherapp::version: 5
     ]
 
     assert result == expected
-  }
-
-  @Test
-  public void shouldCalculateDescendantsInOrderFromNearestToFurthest() {
-    def descendants = m.getAllDescendants(yaml.load('''
-foo:
-  -
-    a:
-      - bob
-      - jannet: 'true'
-  - b
-  -
-    '1':
-      - bar
-      -
-        baz: blue
-        biz: red
-    '2':
-      - y
-      - z
-'''))
-
-    assert ['foo', 'a', 'b', '1', '2', 'bob', 'jannet', 'bar', 'baz', 'biz', 'y', 'z', 'true', 'blue', 'red'] == descendants
   }
 }

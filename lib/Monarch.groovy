@@ -17,21 +17,24 @@ class Monarch {
    * @return A map of sources to key:value pairs representing the new state of the data with changes
    *         applied to the given {@code pivotSource} and its children.
    */
-  Map<String, Map> generateHierarchy(Map hierarchy, Iterable<Change> changes, String pivotSource,
-      Map<String, Map> data) {
-    def maybeDescendants = getDescendants(pivotSource, hierarchy)
+  Map<String, Map> generateSources(Hierarchy hierarchy, Iterable<Change> changes,
+      String pivotSource, Map<String, Map> data) {
+    def descendants = hierarchy.descendantsOf(pivotSource)
+        .orElseThrow({new IllegalArgumentException("Could not find pivot source in hierarchy.\n" +
+            "  Pivot source: ${pivotSource}\n" +
+            "  Hierarchy: ${hierarchy}")})
     def result = deepCopy(data)
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
-    for (def descendant in maybeDescendants.get()) {
+    for (def descendant in descendants) {
       result[descendant] = generateSingleSource(hierarchy, changes, descendant, result)
     }
 
     return result
   }
 
-  Optional<Change> getChangeForSource(String source, Iterable<Change> changes) {
+  Optional<Change> findChangeForSource(String source, Iterable<Change> changes) {
     def found = changes.findAll {it.source == source}
     if (found.empty) {
       return Optional.empty()
@@ -43,35 +46,14 @@ class Monarch {
     return Optional.of(found.first())
   }
 
-  List<String> getAncestors(String source, Map<String, ?> hierarchy) {
-    return Hierarchy.fromStringListOrMap(hierarchy).ancestorsOf(source).orElseThrow({ new IllegalArgumentException()})
-  }
-
-  /**
-   * Gets all descendants of a source in the given hierarchy, flattened, where the closest
-   * descendants are first. If descendants are the same distance from the source then there is no
-   * significance in their ordering; the only guarantee is that further descendants will be later in
-   * the list. See {@link #getAllDescendants(java.lang.Object)} for a deeper explanation of the
-   * algorithm.
-   */
-  Optional<List<String>> getDescendants(String source, Map<String, ?> hierarchy) {
-    return Hierarchy.fromStringListOrMap(hierarchy).findDescendant(source).map({
-      it.descendantsNearestToFurthest()
-    })
-  }
-
-  List<String> getAllDescendants(Object hierarchy) {
-    return Hierarchy.fromStringListOrMap(hierarchy).descendantsNearestToFurthest()
-  }
-
   /**
    * Flattens a hierarchy of key:values into a single map. It's a "view" of the data from a child's
-   * point of view: all keys in the hierarchy, with the values from the nearest ancestor.
+   * point of view: all keys in the hierarchy, with the values from the nearest ancestor (or self).
    *
    * @param ancestry Ordered list of sources, child first to furthest ancestor last.
    * @param sourceToData Map of sources to their current key:values.
    */
-  Map flattenHierarchy(List<String> ancestry, Map<String, Map> sourceToData) {
+  Map flattenSource(List<String> ancestry, Map<String, Map> sourceToData) {
     if (!sourceToData.keySet().containsAll(ancestry)) {
       def missing = ancestry - ancestry.intersect(sourceToData.keySet())
       throw new IllegalArgumentException("Not all sources in ancestry found in source data.\n" +
@@ -98,15 +80,20 @@ class Monarch {
    * Generates new data for the given source only, taking into account the desired changes, the
    * existing hierarchy, and the existing data in the hierarchy.
    */
-  private Map<String, ?> generateSingleSource(Map hierarchy, Iterable<Change> changes,
-      String sourceToChange, Map<String, Map> data) {
-    def ancestors = getAncestors(sourceToChange, hierarchy)
-    def flattenedSourceData = flattenHierarchy(ancestors, data)
-    def original = data[sourceToChange]
+  private Map<String, ?> generateSingleSource(Hierarchy hierarchy, Iterable<Change> changes,
+      String pivotSource, Map<String, Map> data) {
+    def ancestors = hierarchy.ancestorsOf(pivotSource)
+        .orElseThrow({new IllegalArgumentException("Could not find pivot source in hierarchy.\n" +
+        "  Pivot source: ${pivotSource}\n" +
+        "  Hierarchy: ${hierarchy}")})
+
+    def flattenedSourceData = flattenSource(ancestors, data)
+
+    def original = data[pivotSource]
     def result = original == null ? new HashMap<>() : new HashMap<>(original)
 
     for (source in ancestors.reverse()) {
-      def maybeChange = getChangeForSource(source, changes);
+      def maybeChange = findChangeForSource(source, changes);
 
       if (!maybeChange.present) continue
 
@@ -117,7 +104,7 @@ class Monarch {
         if (flattenedSourceData.containsKey(entry.key) &&
             flattenedSourceData[entry.key] == entry.value) {
           // Is the change not for the source we're updating?
-          if (source != sourceToChange) {
+          if (source != pivotSource) {
             // Ensure not present in result source since it would be redundant
             result.remove(entry.key)
           }
@@ -204,7 +191,7 @@ class Hierarchy {
    * The depth-order is foo, bar, baz, 1, 2, 3, fizz, buzz, blue. Foo is at the top of the tree so
    * it is first. Blue is at the bottom so it is last.
    */
-  List<String> descendantsNearestToFurthest() {
+  List<String> descendants() {
     def children = hierarchy.children()
     if (children.empty) {
       return [hierarchy.name()] as List<String>
@@ -215,17 +202,12 @@ class Hierarchy {
     }
   }
 
-  Optional<Hierarchy> findDescendant(String name) {
-    def found = new DescendantsIterator(hierarchy).findAll { it.name() == name }
-
-    if (found.empty) return Optional.empty()
-    if (found.size() == 1) return Optional.of(new Hierarchy(found.first()))
-
-    throw new IllegalStateException()
+  Optional<List<String>> descendantsOf(String source) {
+    return hierarchyOf(source).map {it.descendants()}
   }
 
-  Optional<List<String>> ancestorsOf(String name) {
-    def found = new DescendantsIterator(hierarchy).findAll { it.name() == name }
+  Optional<List<String>> ancestorsOf(String source) {
+    def found = new DescendantsIterator(hierarchy).findAll { it.name() == source }
 
     if (found.empty) return Optional.empty()
     if (found.size() > 1) {
@@ -236,9 +218,42 @@ class Hierarchy {
     return Optional.of(ancestors.collect {it.name()})
   }
 
+  /**
+   * Finds a descendant source node and returns it as the root of a new {@link Hierarchy}.
+   */
+  Optional<Hierarchy> hierarchyOf(String source) {
+    def found = new DescendantsIterator(hierarchy).findAll { it.name() == source }
+
+    if (found.empty) return Optional.empty()
+    if (found.size() == 1) return Optional.of(new Hierarchy(found.first()))
+
+    throw new IllegalStateException()
+  }
+
+  String toString() {
+    return nodeToString(hierarchy)
+  }
+
+  private static String nodeToString(Node node, StringBuilder sb = new StringBuilder()) {
+    return sb.with {
+      append(node)
+      def children = node.children()
+      if (!children.empty) {
+        for (def child in children) {
+          append('\n')
+          append(nodeToString(child).eachLine {"|- " + it})
+        }
+      }
+      append('\n')
+      return it
+    }
+  }
+
   private class DescendantsIterator implements Iterator<Node> {
     private Queue<Node> currentLevel = new LinkedList<>()
     private Queue<Node> nextLevel = new LinkedList<>()
+
+    private int depth = 1;
 
     DescendantsIterator(Node node) {
       currentLevel.add(node)
@@ -256,6 +271,7 @@ class Hierarchy {
         if (currentLevel == null) {
           throw new IndexOutOfBoundsException()
         }
+        depth++
         return next()
       }
 
