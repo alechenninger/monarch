@@ -81,22 +81,25 @@ class Hierarchy {
   }
 
   String toString() {
-    return nodeToString(hierarchy)
+    return "[${nodeToString(hierarchy)}]"
   }
 
   private static String nodeToString(Node node, StringBuilder sb = new StringBuilder()) {
     return sb.with {
-      append(node)
+      append(node.name())
       def children = node.children()
       if (!children.empty) {
         for (def child in children) {
           append('\n')
-          append(nodeToString(child).eachLine { "|- " + it })
+          append(nodeToString(child)
+              .readLines()
+              .collect {"  " + it}
+              .inject {string, line -> string + "\n" + line})
         }
       }
       append('\n')
       return it
-    }
+    }.toString()
   }
 
   private class DescendantsIterator implements Iterator<Node> {
