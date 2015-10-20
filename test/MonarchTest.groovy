@@ -164,4 +164,32 @@ otherapp::version: 5
 
     assert result == expected
   }
+
+  @Test
+  public void shouldNotRemoveInheritedValuesFromDescendantsIfDescendantsHaveValueExplicitlySet() {
+    def changes = '''
+---
+  source: global.yaml
+  set:
+    myapp::version: 2
+---
+  source: myteam/stage.yaml
+  set:
+    myapp::version: 2
+''';
+
+    def result = generateFromYaml(hierarchy, changes, 'global.yaml', [
+        'global.yaml': '',
+        'myteam.yaml': 'myapp::version: 2',
+        'myteam/stage.yaml': 'myapp::version: 2'
+    ])
+
+    def expected = [
+        'global.yaml': ['myapp::version': 2],
+        'myteam.yaml': [:],
+        'myteam/stage.yaml': ['myapp::version': 2]
+    ]
+
+    assert result == expected
+  }
 }

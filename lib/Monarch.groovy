@@ -100,14 +100,12 @@ class Monarch {
       def change = maybeChange.get()
 
       for (entry in change.set) {
-        // Have we already inherited this value (or have it set ourselves)?
-        if (flattenedSourceData.containsKey(entry.key) &&
+        // Is this change not for the pivot source, and have we already inherited this value?
+        if (change.source != pivotSource &&
+            flattenedSourceData.containsKey(entry.key) &&
             flattenedSourceData[entry.key] == entry.value) {
-          // Is the change not for the source we're updating?
-          if (source != pivotSource) {
-            // Ensure not present in result source since it would be redundant
-            result.remove(entry.key)
-          }
+          // Ensure not present in result source since it would be redundant and not explicitly set
+          result.remove(entry.key)
           continue
         }
 
