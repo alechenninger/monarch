@@ -270,7 +270,7 @@ class Hierarchy {
     }
   }
 
-  class AncestorsIterator implements Iterator<Node> {
+  private class AncestorsIterator implements Iterator<Node> {
     private Node next
 
     AncestorsIterator(Node node) {
@@ -312,12 +312,8 @@ class Hierarchy {
     for (def entry in map) {
       def keyNode = new Node(null, entry.key)
       def valueNodes = nodesFromStringListOrMap(entry.value)
-      if (valueNodes.size() == 1) {
-        keyNode.append(valueNodes.first())
-      } else {
-        for (def node in valueNodes) {
-          keyNode.append(node)
-        }
+      for (def node in valueNodes) {
+        keyNode.append(node)
       }
       nodes.add(keyNode)
     }
@@ -328,12 +324,7 @@ class Hierarchy {
     def nodes = []
     for (def element in list) {
       def elementNodes = nodesFromStringListOrMap(element)
-
-      if (elementNodes.size() == 1) {
-        nodes.add(elementNodes.first())
-      } else {
-        nodes.addAll(elementNodes)
-      }
+      nodes.addAll(elementNodes)
     }
 
     return nodes
