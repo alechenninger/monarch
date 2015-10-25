@@ -1,19 +1,19 @@
 class Hierarchy {
-  private final Node hierarchy;
+  private final Node rootNode;
 
   Hierarchy(List<Node> nodes) {
     if (nodes.size() == 1) {
-      this.hierarchy = nodes.first()
+      this.rootNode = Objects.requireNonNull(nodes.first(), "rootNode")
     } else {
-      hierarchy = new Node(null, null)
+      rootNode = new Node(null, null)
       for (def node in nodes) {
-        hierarchy.append(node)
+        rootNode.append(node)
       }
     }
   }
 
-  Hierarchy(Node node) {
-    this.hierarchy = Objects.requireNonNull(node, "node")
+  Hierarchy(Node rootNode) {
+    this.rootNode = Objects.requireNonNull(rootNode, "rootNode")
   }
 
   static Hierarchy fromStringListOrMap(Object object) {
@@ -42,12 +42,12 @@ class Hierarchy {
    * it is first. Blue is at the bottom so it is last.
    */
   List<String> descendants() {
-    def children = hierarchy.children()
+    def children = rootNode.children()
     if (children.empty) {
-      return [hierarchy.name()] as List<String>
+      return [rootNode.name()] as List<String>
     }
 
-    return new DescendantsIterator(hierarchy).toList().collect {
+    return new DescendantsIterator(rootNode).toList().collect {
       it.name() as String
     }
   }
@@ -57,7 +57,7 @@ class Hierarchy {
   }
 
   Optional<List<String>> ancestorsOf(String source) {
-    def found = new DescendantsIterator(hierarchy).findAll { it.name() == source }
+    def found = new DescendantsIterator(rootNode).findAll { it.name() == source }
 
     if (found.empty) return Optional.empty()
     if (found.size() > 1) {
@@ -72,7 +72,7 @@ class Hierarchy {
    * Finds a descendant source node and returns it as the root of a new {@link Hierarchy}.
    */
   Optional<Hierarchy> hierarchyOf(String source) {
-    def found = new DescendantsIterator(hierarchy).findAll { it.name() == source }
+    def found = new DescendantsIterator(rootNode).findAll { it.name() == source }
 
     if (found.empty) return Optional.empty()
     if (found.size() == 1) return Optional.of(new Hierarchy(found.first()))
@@ -80,8 +80,26 @@ class Hierarchy {
     throw new IllegalStateException()
   }
 
+  @Override
+  boolean equals(o) {
+    if (this.is(o)) return true
+    if (getClass() != o.class) return false
+
+    Hierarchy hierarchy = (Hierarchy) o
+
+    if (rootNode != hierarchy.rootNode) return false
+
+    return true
+  }
+
+  @Override
+  int hashCode() {
+    return rootNode.hashCode()
+  }
+
+  @Override
   String toString() {
-    return "[${nodeToString(hierarchy)}]"
+    return "[${nodeToString(rootNode)}]"
   }
 
   private static String nodeToString(Node node, StringBuilder sb = new StringBuilder()) {
@@ -102,11 +120,8 @@ class Hierarchy {
     }.toString()
   }
 
-  private class DescendantsIterator implements Iterator<Node> {
+  private static class DescendantsIterator implements Iterator<Node> {
     private Queue<Node> currentLevel = new LinkedList<>()
-    private Queue<Node> nextLevel = new LinkedList<>()
-
-    private int depth = 1;
 
     DescendantsIterator(Node node) {
       currentLevel.add(node)
@@ -114,32 +129,23 @@ class Hierarchy {
 
     @Override
     boolean hasNext() {
-      return !(currentLevel.empty && nextLevel.empty)
+      return !currentLevel.empty
     }
 
     @Override
     Node next() {
-      if (currentLevel.empty) {
-        currentLevel = nextLevel
-        if (currentLevel == null) {
-          throw new IndexOutOfBoundsException()
-        }
-        depth++
-        return next()
-      }
-
-      def next = currentLevel.poll()
+      def next = currentLevel.remove()
 
       def nextChildren = next.children()
       if (!nextChildren.empty) {
-        nextLevel.addAll(nextChildren)
+        currentLevel.addAll(nextChildren)
       }
 
       return next
     }
   }
 
-  private class AncestorsIterator implements Iterator<Node> {
+  private static class AncestorsIterator implements Iterator<Node> {
     private Node next
 
     AncestorsIterator(Node node) {

@@ -24,6 +24,7 @@ foo:
       - z
 ''')).descendants()
 
-    assert ['foo', 'a', 'b', '1', '2', 'bob', 'jannet', 'bar', 'baz', 'biz', 'y', 'z', 'true', 'blue', 'red'] == descendants
+    assert ['foo', 'a', 'b', '1', '2', 'bob', 'jannet', 'bar',
+            'baz', 'biz', 'y', 'z', 'true', 'blue', 'red'] == descendants
   }
 }
