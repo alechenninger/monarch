@@ -1,3 +1,6 @@
+import io.github.alechenninger.monarch.Hierarchy
+import io.github.alechenninger.monarch.Monarch
+import io.github.alechenninger.monarch.Change
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
