@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class Monarch {
@@ -28,13 +27,12 @@ public class Monarch {
    * @return A map of sources to key:value pairs representing the new state of the data with changes
    *         applied to the given {@code pivotSource} and its children.
    */
-  public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy, Iterable<Change> changes,
-      String pivotSource, Map<String, Map<String, Object>> data) {
+  public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
+      Iterable<Change> changes, String pivotSource, Map<String, Map<String, Object>> data) {
     List<String> descendants = hierarchy.descendantsOf(pivotSource)
-        .orElseThrow(() -> new IllegalArgumentException("Could not find pivot source in hierarchy.\n" +
-            "  Pivot source: ${pivotSource}\n" +
-            "  Hierarchy: ${hierarchy}"));
-    Map<String, Map<String, Object>> result = deepCopy(data);
+        .orElseThrow(() -> new IllegalArgumentException("Could not find pivot source in " +
+            "hierarchy. Pivot source: " + pivotSource + ". Hierarchy: \n" + hierarchy));
+    Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
@@ -49,7 +47,8 @@ public class Monarch {
     return StreamSupport.stream(changes.spliterator(), false)
         .filter(c -> Objects.equals(c.source(), source))
         .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
-            "Expected only one change with matching source in list of changes, but got: " + changes)));
+            "Expected only one change with matching source in list of changes, but got: " +
+                changes)));
   }
 
   /**
@@ -75,9 +74,9 @@ public class Monarch {
     Map<String, Object> flattened = new HashMap<>();
 
     for (String source : ancestry) {
-      Map data = sourceToData.get(source);
+      Map<String, Object> data = sourceToData.get(source);
       if (data != null) {
-        for (Map.Entry<String, Object> entry : sourceToData.get(source).entrySet()) {
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
           flattened.put(entry.getKey(), entry.getValue());
         }
       }
@@ -94,9 +93,8 @@ public class Monarch {
       String pivotSource, Map<String, Map<String, Object>> data) {
     List<String> ancestors = hierarchy.ancestorsOf(pivotSource)
         .orElseThrow(() -> new IllegalArgumentException(
-            "Could not find pivot source in hierarchy.\n" +
-            "  Pivot source: " + pivotSource + "\n" +
-            "  Hierarchy: " + hierarchy));
+            "Could not find pivot source in hierarchy. Pivot source: " + pivotSource + ". " +
+            "Hierarchy: \n" + hierarchy));
 
     Map<String, Object> flattenedSourceData = flattenSource(ancestors, data);
 
@@ -132,7 +130,8 @@ public class Monarch {
     return result;
   }
 
-  private static Map<String, Map<String, Object>> deepCopy(Map<String, Map<String, Object>> data) {
+  private static Map<String, Map<String, Object>> copyMapAndValues(
+      Map<String, Map<String, Object>> data) {
     Map<String, Map<String, Object>> copy = new HashMap<>();
 
     for (Map.Entry<String, Map<String, Object>> entry : data.entrySet()) {
