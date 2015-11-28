@@ -1,0 +1,5 @@
+include 'bin'
+findProject(':bin')?.name = 'monarch-bin'
+include 'lib'
+findProject(':lib')?.name = 'monarch-lib'
+
