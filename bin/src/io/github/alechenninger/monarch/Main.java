@@ -1,5 +1,6 @@
 package io.github.alechenninger.monarch;
 
+import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.ParseException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -33,29 +34,34 @@ public class Main {
   }
 
   public void run(String[] args) throws ParseException, IOException {
-    CliInputs cliInputs = CliInputs.parse(args);
+    try {
+      CliInputs cliInputs = CliInputs.parse(args);
 
-    if (cliInputs.helpRequested()) {
-      System.out.print(cliInputs.helpMessage());
-      return;
-    }
+      if (cliInputs.helpRequested()) {
+        System.out.print(cliInputs.helpMessage());
+        return;
+      }
 
-    Path configPath = cliInputs.getConfigPath().map(Paths::get).orElse(defaultConfigPath);
+      Path configPath = cliInputs.getConfigPath().map(Paths::get).orElse(defaultConfigPath);
 
-    Inputs inputs = Files.exists(configPath)
-        ? cliInputs.fallingBackTo(Inputs.fromYaml(configPath))
-        : cliInputs;
+      Inputs inputs = Files.exists(configPath)
+          ? cliInputs.fallingBackTo(Inputs.fromYaml(configPath))
+          : cliInputs;
 
-    MonarchOptions options = MonarchOptions.fromInputs(inputs, fileSystem);
-    Path outputDir = options.outputDir();
+      MonarchOptions options = MonarchOptions.fromInputs(inputs, fileSystem);
+      Path outputDir = options.outputDir();
 
-    Map<String, Map<String, Object>> result = monarch.generateSources(options.hierarchy(),
-        options.changes(), options.pivotSource(), options.data());
+      Map<String, Map<String, Object>> result = monarch.generateSources(options.hierarchy(),
+          options.changes(), options.pivotSource(), options.data());
 
-    for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
-      Path source = outputDir.resolve(sourceToData.getKey());
-      ensureParentDirectories(source);
-      yaml.dump(sourceToData.getValue(), Files.newBufferedWriter(source, UTF_8));
+      for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
+        Path source = outputDir.resolve(sourceToData.getKey());
+        ensureParentDirectories(source);
+        yaml.dump(sourceToData.getValue(), Files.newBufferedWriter(source, UTF_8));
+      }
+    } catch (MonarchException | ParseException e) {
+      e.printStackTrace();
+      run("--help");
     }
   }
 
