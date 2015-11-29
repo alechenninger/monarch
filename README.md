@@ -1,6 +1,20 @@
 # monarch
 Rule over hierarchical data!
 
+## install
+1. Download tar or zip @ https://github.com/alechenninger/monarch/releases
+2. Extract somewhere you like to put things
+3. Have JRE8 installed
+4. Have JAVA_HOME defined
+5. Add a symlink 'monarch' to your path which points to ${where_you_extracted_zip}/bin/monarch-bin
+
+## usage
+See [bin](https://github.com/alechenninger/monarch/blob/master/bin/) for command line usage.
+
+See [the tests](https://github.com/alechenninger/monarch/blob/master/lib/test/MonarchTest.groovy) for
+example library usage and edge cases.
+
+## motivation
 The idea is something that can take a desired end state, a hierarchy of data sources, a "pivot"
 data source to change among them, the current state of all data sources in the hierarchy, and
 split out a new state of all data sources in the hierarchy with the given changes applied to the
@@ -17,8 +31,3 @@ promotions (say from QA and stage environments to a base configuration file whic
 inherit defaults from). This tool allows you to start with your end state: all environments get 
 the new configuration, and allow to tool to generate the "horizontal" promotions from QA to stage,
 as well as the "vertical" promotion from QA and stage to their parent data source.
-
-See [the tests](https://github.com/alechenninger/monarch/blob/master/lib/test/MonarchTest.groovy) for
-example usage.
-
-See [bin](https://github.com/alechenninger/monarch/blob/master/bin/) for command line usage.
