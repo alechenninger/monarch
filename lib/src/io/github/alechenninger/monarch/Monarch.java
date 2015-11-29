@@ -65,6 +65,7 @@ public class Monarch {
           .filter(s -> !sourceToData.containsKey(s))
           .collect(Collectors.toList());
 
+      // TODO: Is this exceptional or just treat as empty data?
       throw new IllegalArgumentException("Not all sources in ancestry found in source data.\n" +
           "  Missing sources: " + missing + "\n" +
           "  Sources in ancestry: " + ancestry + "\n" +

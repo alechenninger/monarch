@@ -52,9 +52,11 @@ public class YamlMonarchParser implements MonarchParser {
     try {
       for (String source : sources) {
         Path sourcePath = dataDir.resolve(source);
-        Map<String, Object> dataForSource = (Map<String, Object>) yaml.load(
-            Files.newInputStream(sourcePath));
-        data.put(source, dataForSource);
+        if (Files.exists(sourcePath)) {
+          Map<String, Object> dataForSource = (Map<String, Object>) yaml.load(
+              Files.newInputStream(sourcePath));
+          data.put(source, dataForSource);
+        }
       }
     } catch (IOException e) {
       throw new MonarchException("Error reading data source.", e);
