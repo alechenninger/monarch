@@ -2,11 +2,11 @@ package io.github.alechenninger.monarch;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,15 +80,20 @@ public class CliMonarchOptions implements MonarchOptions {
       .addOption(dataDirectoryOption)
       ;
 
-  private final Yaml yaml;
+  private final Map<String, MonarchParser> parserByExtension = new HashMap<>();
   private final CommandLine cli;
   private final HelpFormatter helpFormatter = new HelpFormatter();
 
-  public CliMonarchOptions(String[] args, CommandLineParser parser, Yaml yaml)
-      throws ParseException {
-    this.yaml = yaml;
+  public CliMonarchOptions(String[] args) throws ParseException {
+    this(args, new DefaultParser(), new MonarchParsers.Default());
+  }
 
-    cli = parser.parse(options, args);
+  public CliMonarchOptions(String[] args, CommandLineParser cliParser, MonarchParsers dataParsers)
+      throws ParseException {
+    cli = cliParser.parse(options, args);
+
+    parserByExtension.put("yaml", dataParsers.yaml());
+    parserByExtension.put("yml", dataParsers.yaml());
   }
 
   @Override
@@ -97,8 +103,8 @@ public class CliMonarchOptions implements MonarchOptions {
         .orElseThrow(() -> new MonarchException("No hierarchy provided."));
 
     try {
-      Object parsedHierarchy = yaml.load(Files.newInputStream(pathToHierarchy));
-      return Hierarchy.fromStringListOrMap(parsedHierarchy);
+      return getParserForPath(pathToHierarchy)
+          .parseHierarchy(Files.newInputStream(pathToHierarchy));
     } catch (IOException e) {
       throw new MonarchException("Error reading hierarchy file.", e);
     }
@@ -111,20 +117,10 @@ public class CliMonarchOptions implements MonarchOptions {
         .orElseThrow(() -> new MonarchException("No changes provided."));
 
     try {
-      Iterable<Object> parsedChanges = yaml.loadAll(Files.newInputStream(pathToChanges));
-      List<Change> changes = new ArrayList<>();
-
-      for (Object parsedChange : parsedChanges) {
-        Map<String, Object> parsedAsMap = (Map<String, Object>) parsedChange;
-        changes.add(Change.fromMap(parsedAsMap));
-      }
-
-      return changes;
+      return getParserForPath(pathToChanges)
+          .parseChanges(Files.newInputStream(pathToChanges));
     } catch (IOException e) {
       throw new MonarchException("Error reading hierarchy file.", e);
-    } catch (ClassCastException e) {
-      throw new MonarchException("Expected changes yaml to parse as a map. See help for example.",
-          e);
     }
   }
 
@@ -139,31 +135,31 @@ public class CliMonarchOptions implements MonarchOptions {
     Path dataDir = Optional.ofNullable(dataDirectoryOption.getValue())
         .map(Paths::get)
         .orElseThrow(() -> new MonarchException("No data directory provided."));
-    List<String> sources = hierarchy().descendants();
-    Map<String, Map<String, Object>> data = new LinkedHashMap<>(sources.size());
+    Map<String, Map<String, Object>> data = new LinkedHashMap<>();
 
-    try {
-      for (String source : sources) {
-        Path sourcePath = dataDir.resolve(source);
-        Map<String, Object> dataForSource = (Map<String, Object>) yaml.load(
-            Files.newInputStream(sourcePath));
-        data.put(source, dataForSource);
-      }
-    } catch (IOException e) {
-      throw new MonarchException("Error reading data source.", e);
-    } catch (ClassCastException e) {
-      throw new MonarchException("Expected data source to parse as map.", e);
+    Map<String, List<String>> sourcesByExtension = new HashMap<>();
+    for (String source : hierarchy().descendants()) {
+      sourcesByExtension.merge(
+          getExtensionForFileName(source),
+          newListWith(source),
+          (l1, l2) -> { l1.addAll(l2); return l1; });
+    }
+
+    for (Map.Entry<String, List<String>> extensionSources : sourcesByExtension.entrySet()) {
+      String extension = extensionSources.getKey();
+      List<String> sources = extensionSources.getValue();
+      Map<String, Map<String, Object>> dataForExtension = getParserForExtension(extension)
+          .readData(sources, dataDir);
+      data.putAll(dataForExtension);
     }
 
     return data;
   }
 
-  @Override
   public boolean helpRequested() {
     return cli.hasOption(helpOption.getOpt());
   }
 
-  @Override
   public String helpMessage() {
     StringWriter result = new StringWriter();
     PrintWriter printWriter = new PrintWriter(result);
@@ -174,5 +170,39 @@ public class CliMonarchOptions implements MonarchOptions {
         HelpFormatter.DEFAULT_DESC_PAD, "https://github.com/alechenninger/monarch");
 
     return result.toString();
+  }
+
+  private MonarchParser getParserForPath(Path path) {
+    String fileName = path.getFileName().toString();
+    String extension = getExtensionForFileName(fileName);
+    return getParserForExtension(extension);
+  }
+
+  private MonarchParser getParserForExtension(String extension) {
+    MonarchParser parser = parserByExtension.get(extension);
+
+    if (parser == null) {
+      throw new MonarchException("Unsupported file extension: " + extension + ". Supported "
+          + "extensions: " + parserByExtension.keySet());
+    }
+
+    return parser;
+  }
+
+  private static String getExtensionForFileName(String fileName) {
+    int extensionIndex = fileName.lastIndexOf('.');
+
+    if (extensionIndex < 0) {
+      throw new MonarchException("Please use a file extension. I don't know how to parse this "
+          + "file: " + fileName);
+    }
+
+    return fileName.substring(extensionIndex);
+  }
+
+  private static List<String> newListWith(String source) {
+    List<String> list = new ArrayList<>();
+    list.add(source);
+    return list;
   }
 }

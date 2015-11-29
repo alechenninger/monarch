@@ -7,6 +7,4 @@ public interface MonarchOptions {
   Iterable<Change> changes();
   String pivotSource();
   Map<String, Map<String, Object>> data();
-  boolean helpRequested();
-  String helpMessage();
 }
