@@ -18,5 +18,7 @@ inherit defaults from). This tool allows you to start with your end state: all e
 the new configuration, and allow to tool to generate the "horizontal" promotions from QA to stage,
 as well as the "vertical" promotion from QA and stage to their parent data source.
 
-See [the tests](https://github.com/alechenninger/monarch/blob/master/test/MonarchTest.groovy) for
+See [the tests](https://github.com/alechenninger/monarch/blob/master/lib/test/MonarchTest.groovy) for
 example usage.
+
+See [bin](https://github.com/alechenninger/monarch/blob/master/bin/) for command line usage.
