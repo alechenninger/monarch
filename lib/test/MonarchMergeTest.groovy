@@ -102,4 +102,47 @@ global.yaml:
 
     assert result == expected
   }
+
+  @Test
+  public void shouldRemoveRedundantValuesWhenTheyAreMergedInFromHierarchy() {
+    def changes = '''
+---
+  source: global.yaml
+  set:
+    some::hash:
+      global_value: true
+---
+  source: myteam.yaml
+  set:
+    some::hash:
+      myteam_value: false
+'''
+
+    def result = generateFromYaml(hierarchy, changes, 'global.yaml', [
+        'global.yaml': '',
+        'myteam.yaml': '''
+some::hash:
+  myteam_value: false
+  global_value: true
+''',
+        'myteam/stage.yaml': ''
+    ], ['some::hash'])
+
+    def expected = [
+        'global.yaml': [
+            'some::hash': [
+                'global_value': true,
+            ]
+        ],
+        'myteam.yaml': [
+            'some::hash': [
+                'myteam_value': false
+            ]
+        ],
+        // This test typically fails with this source containing some part of the hash unnecessarily
+        'myteam/stage.yaml': [:]
+    ]
+
+    assert result == expected
+  }
 }
