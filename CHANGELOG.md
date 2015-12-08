@@ -1,5 +1,16 @@
 # Change Log
 
+## [v0.2.0](https://github.com/alechenninger/monarch/tree/v0.2.0) (2015-12-08)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.1.0...v0.2.0)
+
+**Implemented enhancements:**
+
+- Allow merging hashes [\#4](https://github.com/alechenninger/monarch/issues/4)
+
+**Merged pull requests:**
+
+- Add support for keys whose values are merged with ancestry \(fixes \#4\) [\#5](https://github.com/alechenninger/monarch/pull/5) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.1.0](https://github.com/alechenninger/monarch/tree/v0.1.0) (2015-11-29)
 **Fixed bugs:**
 
