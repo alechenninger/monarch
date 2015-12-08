@@ -141,8 +141,10 @@ public class Monarch {
               continue;
             }
           } else {
-            result.remove(setKey);
-            continue;
+            if (Objects.equals(flattenedSourceData.get(setKey), setValue)) {
+              result.remove(setKey);
+              continue;
+            }
           }
         }
 
