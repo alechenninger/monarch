@@ -17,13 +17,13 @@ global.yaml:
   Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data) {
     return m.generateSources(
         Hierarchy.fromStringListOrMap(yaml.load(hierarchy)),
-        yaml.loadAll(changes).collect { Change.fromMap(it as Map)},
+        yaml.loadAll(changes).collect { Change.fromMap(it as Map) },
         sourceToChange,
         data.with {
           it.each { entry ->
             entry.setValue(this.yaml.load(entry.getValue()))
           }
-        })
+        }, [])
   }
 
   @Test
@@ -162,6 +162,30 @@ otherapp::version: 5
     def expected = [
         'global.yaml': ['myapp::version': 2],
         'myteam.yaml': [:],
+        'myteam/stage.yaml': [:]
+    ]
+
+    assert result == expected
+  }
+
+  @Test
+  public void shouldNotAddInheritedValuesIfNotExplicitlySet() {
+    def changes = '''
+---
+  source: myteam.yaml
+  set:
+    myapp::version: 2
+''';
+
+    def result = generateFromYaml(hierarchy, changes, 'myteam.yaml', [
+        'global.yaml': '',
+        'myteam.yaml': 'myapp::version: 2',
+        'myteam/stage.yaml': ''
+    ])
+
+    def expected = [
+        'global.yaml': [:],
+        'myteam.yaml': ['myapp::version': 2],
         'myteam/stage.yaml': [:]
     ]
 

@@ -14,8 +14,8 @@ public class Change {
 
   public Change(String source, Map<String, Object> set, List<String> remove) {
     this.source = source;
-    this.set = new HashMap<>(set);
-    this.remove = new ArrayList<>(remove);
+    this.set = Collections.unmodifiableMap(new HashMap<>(set));
+    this.remove = Collections.unmodifiableList(new ArrayList<>(remove));
   }
 
   public static Change fromMap(Map<String, Object> map) {
@@ -30,7 +30,7 @@ public class Change {
   }
 
   public Map<String, Object> set() {
-    return Collections.unmodifiableMap(set);
+    return set;
   }
 
   public List<String> remove() {
@@ -55,5 +55,14 @@ public class Change {
   @Override
   public int hashCode() {
     return Objects.hash(source, set, remove);
+  }
+
+  @Override
+  public String toString() {
+    return "Change{" +
+        "source='" + source + '\'' +
+        ", set=" + set +
+        ", remove=" + remove +
+        '}';
   }
 }
