@@ -1,6 +1,5 @@
 package io.github.alechenninger.monarch;
 
-import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.ParseException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -12,6 +11,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Map;
 
 public class Main {
@@ -52,7 +52,7 @@ public class Main {
       Path outputDir = options.outputDir();
 
       Map<String, Map<String, Object>> result = monarch.generateSources(options.hierarchy(),
-          options.changes(), options.pivotSource(), options.data());
+          options.changes(), options.pivotSource(), options.data(), options.mergeKeys());
 
       for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
         Path source = outputDir.resolve(sourceToData.getKey());

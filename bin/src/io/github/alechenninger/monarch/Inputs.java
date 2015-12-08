@@ -21,6 +21,8 @@ public interface Inputs {
 
   Optional<String> getOutputDir();
 
+  Optional<String> getMergeKeys();
+
   default Inputs fallingBackTo(Inputs inputs) {
     return new OverridableInputs(this, inputs);
   }

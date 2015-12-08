@@ -42,6 +42,11 @@ public class OverridableInputs implements Inputs {
     return overridden(Inputs::getOutputDir);
   }
 
+  @Override
+  public Optional<String> getMergeKeys() {
+    return overridden(Inputs::getMergeKeys);
+  }
+
   private Optional<String> overridden(Function<Inputs, Optional<String>> input) {
     Optional<String> maybeOverride = input.apply(override);
 

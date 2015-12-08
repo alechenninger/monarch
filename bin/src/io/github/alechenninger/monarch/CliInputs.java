@@ -77,6 +77,17 @@ public class CliInputs implements Inputs {
           + "written using relative paths from hierarchy.")
       .build();
 
+  private final Option mergeKeysOption = Option.builder("m")
+      .longOpt("merge-keys")
+      .argName("key1,key2")
+      .hasArg()
+      .desc("Comma-delimited list of keys which should be inherited with merge semantics. That is, "
+          + "normally the value that is inherited for a given key is only the nearest ancestor's "
+          + "value. Keys that are in the merge key list however inherit values from all of their "
+          + "ancestor's and merge them together, provided they are like types of either "
+          + "collections or maps.")
+      .build();
+
   private final Option helpOption = Option.builder("?")
       .longOpt("help")
       .desc("Show this text.")
@@ -89,6 +100,7 @@ public class CliInputs implements Inputs {
       .addOption(dataDirectoryOption)
       .addOption(configPathOption)
       .addOption(outputDirOption)
+      .addOption(mergeKeysOption)
       .addOption(helpOption)
       ;
 
@@ -135,6 +147,11 @@ public class CliInputs implements Inputs {
   @Override
   public Optional<String> getOutputDir() {
     return Optional.ofNullable(cli.getOptionValue(outputDirOption.getOpt()));
+  }
+
+  @Override
+  public Optional<String> getMergeKeys() {
+    return Optional.ofNullable(cli.getOptionValue(mergeKeysOption.getOpt()));
   }
 
   public boolean helpRequested() {
