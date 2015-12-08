@@ -1,5 +1,17 @@
 # Change Log
 
+## [Unreleased](https://github.com/alechenninger/monarch/tree/HEAD)
+
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.2.0...HEAD)
+
+**Fixed bugs:**
+
+- Merged value is not optimized if it has redundant keys that would otherwise be inherited [\#8](https://github.com/alechenninger/monarch/issues/8)
+
+**Merged pull requests:**
+
+- Remove inherited keys in merged value \(fixes \#8\) [\#7](https://github.com/alechenninger/monarch/pull/7) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.2.0](https://github.com/alechenninger/monarch/tree/v0.2.0) (2015-12-08)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.1.0...v0.2.0)
 
