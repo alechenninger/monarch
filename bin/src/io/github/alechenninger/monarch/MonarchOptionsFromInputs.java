@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,6 +37,11 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
     } catch (IOException e) {
       throw new MonarchException("Error reading hierarchy file.", e);
     }
+  }
+
+  @Override
+  public List<String> mergeKeys() {
+    return Arrays.asList(inputs.getMergeKeys().orElse("").split(","));
   }
 
   @Override

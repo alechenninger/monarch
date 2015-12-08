@@ -36,8 +36,9 @@ public class Hierarchy {
   }
 
   /**
-   * Returns all of the leaf node names in order of <em>nearest to furthest</em>. The leaf nodes
-   * will be after the "branch" nodes, and later the deeper in the tree they are.
+   * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
+   * node. The leaf nodes will be after the "branch" nodes, and later the deeper in the tree they
+   * are.
    *
    * <p>For example, given the following tree structure:
    *
@@ -67,10 +68,18 @@ public class Hierarchy {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Following the semantics of {@link #descendants()}, but starting from a different {@code source}
+   * in the tree than this hierarchy's root. As with {@code descendants()}, the start of the tree is
+   * included in the result list.
+   */
   Optional<List<String>> descendantsOf(String source) {
     return hierarchyOf(source).map(Hierarchy::descendants);
   }
 
+  /**
+   * Includes the {@code source} passed in as the first element, furthest ancestors last.
+   */
   Optional<List<String>> ancestorsOf(String source) {
     return DescendantsIterator.asStream(rootNode)
         .filter(n -> Objects.equals(source, n.name()))
