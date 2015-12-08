@@ -79,7 +79,7 @@ public class CliInputs implements Inputs {
 
   private final Option mergeKeysOption = Option.builder("m")
       .longOpt("merge-keys")
-      .argName("key1,key2")
+      .argName("k1,k2")
       .hasArg()
       .desc("Comma-delimited list of keys which should be inherited with merge semantics. That is, "
           + "normally the value that is inherited for a given key is only the nearest ancestor's "
