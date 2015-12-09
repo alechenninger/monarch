@@ -1,5 +1,17 @@
 # Change Log
 
+## [v0.3.2](https://github.com/alechenninger/monarch/tree/v0.3.2) (2015-12-09)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.2.1...v0.3.2)
+
+**Implemented enhancements:**
+
+- Sort output yaml [\#11](https://github.com/alechenninger/monarch/issues/11)
+- Only write out pivot source and below [\#10](https://github.com/alechenninger/monarch/issues/10)
+
+**Merged pull requests:**
+
+- Sort output yaml; only output what's being changed [\#12](https://github.com/alechenninger/monarch/pull/12) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.2.1](https://github.com/alechenninger/monarch/tree/v0.2.1) (2015-12-08)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.2.0...v0.2.1)
 
