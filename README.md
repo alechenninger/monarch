@@ -8,6 +8,14 @@ Rule over hierarchical data!
 4. Have JAVA_HOME defined (for ex: "/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.65-3.b17.fc22.x86_64")
 5. Add a symlink 'monarch' to your path which points to ${where_you_extracted_zip}/bin/monarch-bin
 
+## install from source
+1. Fork or git clone git@github.com:alechenninger/monarch.git
+2. cd monarch
+3. Have gradle installed. I recommend using [sdkman](http://sdkman.io/usage.html).
+4. Run gradle installDist
+5. Add symlink 'monarch' to your path which points to ${where_you_put_git_things}/monarch/bin/build/install/monarch-bin/bin/monarch-bin
+6. Hack or git pull and gradle installDist whenever you want to update your executable
+
 ## usage
 See [bin](https://github.com/alechenninger/monarch/blob/master/bin/) for command line usage.
 
