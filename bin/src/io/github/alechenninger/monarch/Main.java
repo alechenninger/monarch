@@ -12,7 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class Main {
   private final Path defaultConfigPath;
@@ -50,14 +54,27 @@ public class Main {
 
       MonarchOptions options = MonarchOptions.fromInputs(inputs, fileSystem);
       Path outputDir = options.outputDir();
+      Hierarchy hierarchy = options.hierarchy();
+      List<String> affectedSources = hierarchy.hierarchyOf(options.pivotSource())
+          .orElseThrow(() -> new IllegalArgumentException("Pivot source not found in hierarchy."))
+          .descendants();
 
-      Map<String, Map<String, Object>> result = monarch.generateSources(options.hierarchy(),
+      Map<String, Map<String, Object>> result = monarch.generateSources(hierarchy,
           options.changes(), options.pivotSource(), options.data(), options.mergeKeys());
 
       for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
-        Path source = outputDir.resolve(sourceToData.getKey());
-        ensureParentDirectories(source);
-        yaml.dump(sourceToData.getValue(), Files.newBufferedWriter(source, UTF_8));
+        String source = sourceToData.getKey();
+
+        if (!affectedSources.contains(source)) {
+          continue;
+        }
+
+        Path sourcePath = outputDir.resolve(source);
+        ensureParentDirectories(sourcePath);
+
+        SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
+
+        yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
       }
     } catch (MonarchException | ParseException e) {
       e.printStackTrace();
@@ -75,6 +92,7 @@ public class Main {
   public static void main(String[] args) throws ParseException, IOException {
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
+    dumperOptions.setIndent(2);
     dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 
     new Main(
