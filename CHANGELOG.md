@@ -1,5 +1,13 @@
 # Change Log
 
+## [v0.3.3](https://github.com/alechenninger/monarch/tree/v0.3.3) (2015-12-17)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.3.2...v0.3.3)
+
+**Fixed bugs:**
+
+- Flattened view of data goes in reverse order [\#17](https://github.com/alechenninger/monarch/issues/17)
+- If key/value in a change is already present in data, but only in the pivot source, it is removed [\#16](https://github.com/alechenninger/monarch/issues/16)
+
 ## [v0.3.2](https://github.com/alechenninger/monarch/tree/v0.3.2) (2015-12-09)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.2.1...v0.3.2)
 
