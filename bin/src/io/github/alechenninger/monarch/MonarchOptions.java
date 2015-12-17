@@ -2,12 +2,12 @@ package io.github.alechenninger.monarch;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface MonarchOptions {
   Hierarchy hierarchy();
-  List<String> mergeKeys();
+  Set<String> mergeKeys();
   Iterable<Change> changes();
   String pivotSource();
   Map<String, Map<String, Object>> data();

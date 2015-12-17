@@ -56,7 +56,8 @@ public class Main {
       Path outputDir = options.outputDir();
       Hierarchy hierarchy = options.hierarchy();
       List<String> affectedSources = hierarchy.hierarchyOf(options.pivotSource())
-          .orElseThrow(() -> new IllegalArgumentException("Pivot source not found in hierarchy."))
+          .orElseThrow(() -> new IllegalArgumentException("Pivot source not found in hierarchy: "
+              + options.pivotSource()))
           .descendants();
 
       Map<String, Map<String, Object>> result = monarch.generateSources(hierarchy,

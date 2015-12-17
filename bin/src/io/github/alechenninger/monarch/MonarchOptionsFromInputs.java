@@ -10,9 +10,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MonarchOptionsFromInputs implements MonarchOptions {
   private final Inputs inputs;
@@ -40,8 +42,8 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
   }
 
   @Override
-  public List<String> mergeKeys() {
-    return Arrays.asList(inputs.getMergeKeys().orElse("").split(","));
+  public Set<String> mergeKeys() {
+    return new HashSet<>(Arrays.asList(inputs.getMergeKeys().orElse("").split(",")));
   }
 
   @Override

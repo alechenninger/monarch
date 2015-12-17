@@ -36,7 +36,7 @@ public class Monarch {
    */
   public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
       Iterable<Change> changes, String pivotSource, Map<String, Map<String, Object>> data,
-      List<String> mergeKeys) {
+      Set<String> mergeKeys) {
     List<String> descendants = hierarchy.descendantsOf(pivotSource)
         .orElseThrow(() -> new IllegalArgumentException("Could not find pivot source in " +
             "hierarchy. Pivot source: " + pivotSource + ". Hierarchy: \n" + hierarchy));
@@ -68,7 +68,7 @@ public class Monarch {
    * @param sourceToData Map of sources to their current key:values.
    */
   public Map<String, Object> flattenSource(List<String> ancestry,
-      Map<String, Map<String, Object>> sourceToData, List<String> mergeKeys) {
+      Map<String, Map<String, Object>> sourceToData, Set<String> mergeKeys) {
     if (!sourceToData.keySet().containsAll(ancestry)) {
       List<String> missing = ancestry.stream()
           .filter(s -> !sourceToData.containsKey(s))
@@ -91,7 +91,7 @@ public class Monarch {
           Object sourceValue = sourceEntry.getValue();
 
           Object newValue = mergeKeys.contains(sourceKey)
-              ? getMergedValue(flattened, sourceKey, sourceValue)
+              ? getMergedValue(flattened.get(sourceKey), sourceValue)
               : sourceValue;
 
           flattened.put(sourceKey, newValue);
@@ -107,7 +107,7 @@ public class Monarch {
    * existing hierarchy, and the existing data in the hierarchy.
    */
   private Map<String, Object> generateSingleSource(Hierarchy hierarchy, Iterable<Change> changes,
-      String pivotSource, Map<String, Map<String, Object>> data, List<String> mergeKeys) {
+      String pivotSource, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     List<String> ancestors = hierarchy.ancestorsOf(pivotSource)
         .orElseThrow(() -> new IllegalArgumentException(
             "Could not find pivot source in hierarchy. Pivot source: " + pivotSource + ". " +
@@ -149,7 +149,7 @@ public class Monarch {
         }
 
         Object newValue = mergeKeys.contains(setKey)
-            ? getMergedValue(result, setKey, setValue)
+            ? getMergedValue(result.get(setKey), setValue)
             : setValue;
 
         result.put(setKey, newValue);
@@ -219,7 +219,7 @@ public class Monarch {
   }
 
   private static boolean isValueInherited(Map<String, Object> data, String key, Object value,
-      List<String> mergeKeys) {
+      Set<String> mergeKeys) {
     if (!data.containsKey(key)) {
       return false;
     }
@@ -269,13 +269,11 @@ public class Monarch {
     return false;
   }
 
-  private static Object getMergedValue(Map<String, Object> map, String key, Object valueToMerge) {
+  static Object getMergedValue(Object currentValue, Object valueToMerge) {
     if (!(valueToMerge instanceof Map || valueToMerge instanceof Collection)) {
-      throw new IllegalArgumentException("Asked to merge " + key + " but value is not a "
+      throw new IllegalArgumentException("Asked to merge " + valueToMerge + " but it is not a "
           + "collection or map.");
     }
-
-    Object currentValue = map.get(key);
 
     if (currentValue == null) {
       return valueToMerge;
@@ -283,9 +281,9 @@ public class Monarch {
 
     if (currentValue instanceof Collection) {
       if (!(valueToMerge instanceof Collection)) {
-        throw new IllegalArgumentException("Asked to merge " + key + ", but the current value "
-            + "is a collection while the new value is not a collection. Both values must be "
-            + "similar types to be able to merge. Old value is: " + currentValue + ". New value is "
+        throw new IllegalArgumentException("Asked to merge two values but the current value is a "
+            + "collection while the new value is not a collection. Both values must be similar "
+            + "types to be able to merge. Old value is: " + currentValue + ". New value is "
             + valueToMerge);
       }
 
@@ -298,10 +296,9 @@ public class Monarch {
 
     if (currentValue instanceof Map) {
       if (!(valueToMerge instanceof Map)) {
-        throw new IllegalArgumentException("Asked to merge " + key + ", but the old value "
-            + "is a map while the new value is not a map. Both values must be "
-            + "similar types to be able to merge. Old value is: " + currentValue + ". New value is "
-            + valueToMerge);
+        throw new IllegalArgumentException("Asked to merge two values but the current value is a "
+            + "map while the new value is not a map. Both values must be similar types to be able "
+            + "to merge. Old value is: " + currentValue + ". New value is " + valueToMerge);
       }
 
       // TODO: Recurse? What if map of maps?
