@@ -26,7 +26,20 @@ public class DataLookupFromMap implements DataLookup {
   @Override
   public Optional<Object> lookup(String key) {
     if (mergeKeys.contains(key)) {
-      return lookupMerged(key).map(Merger::getMerged);
+      Merger merger = null;
+
+      for (String ancestor : sourceAncestry()) {
+        Map<String, Object> ancestorData = getDataBySource(ancestor);
+
+        if (ancestorData.containsKey(key)) {
+          if (merger == null) {
+            merger = Merger.startingWith(ancestorData.get(key));
+          } else {
+            merger.merge(ancestorData.get(key));
+          }
+        }
+      }
+      return Optional.ofNullable(merger).map(Merger::getMerged);
     }
 
     for (String ancestor : sourceAncestry()) {
@@ -98,22 +111,5 @@ public class DataLookupFromMap implements DataLookup {
 
   private Map<String, Object> getDataBySource(String source) {
     return data.getOrDefault(source, Collections.emptyMap());
-  }
-
-  private Optional<Merger> lookupMerged(String key) {
-    Merger merger = null;
-
-    for (String ancestor : sourceAncestry()) {
-      Map<String, Object> ancestorData = getDataBySource(ancestor);
-
-      if (ancestorData.containsKey(key)) {
-        if (merger == null) {
-          merger = Merger.startingWith(ancestorData.get(key));
-        } else {
-          merger.merge(ancestorData.get(key));
-        }
-      }
-    }
-    return Optional.ofNullable(merger);
   }
 }
