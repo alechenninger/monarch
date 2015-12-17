@@ -14,7 +14,7 @@ global.yaml:
     myteam/stage.yaml
 ''';
 
-  Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data, List mergeKeys) {
+  Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data, Set mergeKeys) {
     return m.generateSources(
         Hierarchy.fromStringListOrMap(yaml.load(hierarchy)),
         yaml.loadAll(changes).collect { Change.fromMap(it as Map) },
@@ -45,7 +45,7 @@ global.yaml:
         'global.yaml': '',
         'myteam.yaml': '',
         'myteam/stage.yaml': ''
-    ], ['some::hash'])
+    ], ['some::hash'] as Set)
 
     def expected = [
         'global.yaml': [:],
@@ -86,7 +86,7 @@ global.yaml:
         'global.yaml': '',
         'myteam.yaml': '',
         'myteam/stage.yaml': ''
-    ], ['some::hash'])
+    ], ['some::hash'] as Set)
 
     def expected = [
         'global.yaml': [:],
@@ -126,7 +126,7 @@ some::hash:
   global_value: true
 ''',
         'myteam/stage.yaml': ''
-    ], ['some::hash'])
+    ], ['some::hash'] as Set)
 
     def expected = [
         'global.yaml': [

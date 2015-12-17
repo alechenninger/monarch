@@ -61,48 +61,6 @@ public class Monarch {
   }
 
   /**
-   * Flattens a hierarchy of key:values into a single map. It's a "view" of the data from a child's
-   * point of view: all keys in the hierarchy, with the values from the nearest ancestor (or self).
-   *
-   * @param ancestry Ordered list of sources, child first to furthest ancestor last.
-   * @param sourceToData Map of sources to their current key:values.
-   */
-  public Map<String, Object> flattenSource(List<String> ancestry,
-      Map<String, Map<String, Object>> sourceToData, Set<String> mergeKeys) {
-    if (!sourceToData.keySet().containsAll(ancestry)) {
-      List<String> missing = ancestry.stream()
-          .filter(s -> !sourceToData.containsKey(s))
-          .collect(Collectors.toList());
-
-      // TODO: Is this exceptional or just treat as empty data?
-      throw new IllegalArgumentException("Not all sources in ancestry found in source data.\n" +
-          "  Missing sources: " + missing + "\n" +
-          "  Sources in ancestry: " + ancestry + "\n" +
-          "  Sources in source data: " + sourceToData.keySet());
-    }
-
-    Map<String, Object> flattened = new HashMap<>();
-
-    for (String source : new ListReversed<>(ancestry)) {
-      Map<String, Object> sourceData = sourceToData.get(source);
-      if (sourceData != null) {
-        for (Map.Entry<String, Object> sourceEntry : sourceData.entrySet()) {
-          String sourceKey = sourceEntry.getKey();
-          Object sourceValue = sourceEntry.getValue();
-
-          Object newValue = mergeKeys.contains(sourceKey)
-              ? getMergedValue(flattened.get(sourceKey), sourceValue)
-              : sourceValue;
-
-          flattened.put(sourceKey, newValue);
-        }
-      }
-    }
-
-    return flattened;
-  }
-
-  /**
    * Generates new data for the given source only, taking into account the desired changes, the
    * existing hierarchy, and the existing data in the hierarchy.
    */
@@ -111,17 +69,21 @@ public class Monarch {
     List<String> ancestors = hierarchy.ancestorsOf(pivotSource)
         .orElseThrow(() -> new IllegalArgumentException(
             "Could not find pivot source in hierarchy. Pivot source: " + pivotSource + ". " +
-            "Hierarchy: \n" + hierarchy));
+                "Hierarchy: \n" + hierarchy));
 
-    Map<String, Object> flattenedSourceData = flattenSource(ancestors, data, mergeKeys);
+    DataLookup sourceLookup = new DataLookupFromMap(data, pivotSource, hierarchy, mergeKeys);
 
-    Map<String, Object> original = data.get(pivotSource);
-    Map<String, Object> result = original == null ? new HashMap<>() : new HashMap<>(original);
+    Map<String, Object> sourceData = data.get(pivotSource);
+    Map<String, Object> resultSourceData = sourceData == null
+        ? new HashMap<>()
+        : new HashMap<>(sourceData);
 
     for (String ancestor : new ListReversed<>(ancestors)) {
       Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
 
-      if (!maybeChange.isPresent()) continue;
+      if (!maybeChange.isPresent()) {
+        continue;
+      }
 
       Change change = maybeChange.get();
 
@@ -130,186 +92,41 @@ public class Monarch {
         Object setValue = setEntry.getValue();
 
         if (!Objects.equals(change.source(), pivotSource)) {
-          if (mergeKeys.contains(setKey)) {
-            if (isValueInherited(flattenedSourceData, setKey, setValue, mergeKeys)) {
-              Object unmerged = getUnmergedValue(result.get(setKey), setValue);
-
-              if (mergeableIsNotEmpty(unmerged)) {
-                result.put(setKey, unmerged);
+          if (sourceLookup.isValueInherited(setKey, setValue)) {
+            if (resultSourceData.containsKey(setKey)) {
+              if (mergeKeys.contains(setKey)) {
+                Merger merger = Merger.startingWith(resultSourceData.get(setKey));
+                merger.unmerge(setValue);
+                resultSourceData.put(setKey, merger.getMerged());
+              } else {
+                resultSourceData.remove(setKey);
               }
-
-              continue;
             }
-          } else {
-            if (Objects.equals(flattenedSourceData.get(setKey), setValue)) {
-              result.remove(setKey);
-              continue;
-            }
+            continue;
           }
         }
 
-        Object newValue = mergeKeys.contains(setKey)
-            ? getMergedValue(result.get(setKey), setValue)
-            : setValue;
+        Object newValue;
+        Object currentValue = resultSourceData.get(setKey);
 
-        result.put(setKey, newValue);
+        if (mergeKeys.contains(setKey) && currentValue != null) {
+          Merger merger = Merger.startingWith(currentValue);
+          merger.merge(setValue);
+          newValue = merger.getMerged();
+        } else {
+          newValue = setValue;
+        }
+
+        resultSourceData.put(setKey, newValue);
       }
 
       // TODO: Support removing nested keys (keys in a hash)
       for (String key : change.remove()) {
-        result.remove(key);
+        resultSourceData.remove(key);
       }
     }
 
-    return result;
-  }
-
-  private static boolean mergeableIsNotEmpty(Object collectionOrMapOrNull) {
-    if (collectionOrMapOrNull == null) {
-      return false;
-    }
-
-    if (collectionOrMapOrNull instanceof Collection) {
-      return !((Collection) collectionOrMapOrNull).isEmpty();
-    }
-
-    if (collectionOrMapOrNull instanceof Map) {
-      return !((Map) collectionOrMapOrNull).isEmpty();
-    }
-
-    throw new IllegalArgumentException("Value not a mergeable type: " + collectionOrMapOrNull);
-  }
-
-  private static Object getUnmergedValue(Object mergedValue, Object setValue) {
-    if (mergedValue == null) {
-      return null;
-    }
-
-    if (mergedValue instanceof Collection) {
-      if (!(setValue instanceof Collection)) {
-        throw new IllegalArgumentException("Incompatible values for merge key: " + mergedValue +
-            " and " + setValue);
-      }
-
-      Set<Object> unmergedValue = new HashSet<>();
-      unmergedValue.addAll((Collection) mergedValue);
-      unmergedValue.removeAll((Collection) setValue);
-
-      return unmergedValue;
-    }
-
-    if (mergedValue instanceof Map) {
-      if (!(setValue instanceof Map)) {
-        throw new IllegalArgumentException("Incompatible values for merge key: " + mergedValue +
-            " and " + setValue);
-      }
-
-      Map<String, Object> mergedValueAsMap = (Map<String, Object>) mergedValue;
-      Map<String, Object> setValueAsMap = (Map<String, Object>) setValue;
-      Map<String, Object> unmergedValue = new HashMap<>(mergedValueAsMap);
-
-      for (String setValueKey : setValueAsMap.keySet()) {
-        unmergedValue.remove(setValueKey);
-      }
-
-      return unmergedValue;
-    }
-
-    throw new IllegalArgumentException("Current value not a mergeable type: " + mergedValue);
-  }
-
-  private static boolean isValueInherited(Map<String, Object> data, String key, Object value,
-      Set<String> mergeKeys) {
-    if (!data.containsKey(key)) {
-      return false;
-    }
-
-    Object dataValue = data.get(key);
-
-    if (Objects.equals(dataValue, value)) {
-      return true;
-    }
-
-    if (mergeKeys.contains(key)) {
-      if (dataValue instanceof Collection) {
-        if (!(value instanceof Collection)) {
-          throw new IllegalArgumentException("Incompatible values for merge key: " + dataValue +
-              " and " + value);
-        }
-
-        return ((Collection) dataValue).containsAll((Collection) value);
-      }
-
-      if (dataValue instanceof Map) {
-        if (!(value instanceof Map)) {
-          throw new IllegalArgumentException("Incompatible values for merge key: " + dataValue +
-              " and " + value);
-        }
-
-        Map<String, Object> dataValueAsMap = (Map<String, Object>) dataValue;
-        Map<String, Object> valueAsMap = (Map<String, Object>) value;
-
-        for (Map.Entry<String, Object> entryInValue : valueAsMap.entrySet()) {
-          String keyInValue = entryInValue.getKey();
-          Object valueForKey = entryInValue.getValue();
-
-          if (!dataValueAsMap.containsKey(keyInValue)) {
-            return false;
-          }
-
-          if (!Objects.equals(dataValueAsMap.get(keyInValue), valueForKey)) {
-            return false;
-          }
-        }
-
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  static Object getMergedValue(Object currentValue, Object valueToMerge) {
-    if (!(valueToMerge instanceof Map || valueToMerge instanceof Collection)) {
-      throw new IllegalArgumentException("Asked to merge " + valueToMerge + " but it is not a "
-          + "collection or map.");
-    }
-
-    if (currentValue == null) {
-      return valueToMerge;
-    }
-
-    if (currentValue instanceof Collection) {
-      if (!(valueToMerge instanceof Collection)) {
-        throw new IllegalArgumentException("Asked to merge two values but the current value is a "
-            + "collection while the new value is not a collection. Both values must be similar "
-            + "types to be able to merge. Old value is: " + currentValue + ". New value is "
-            + valueToMerge);
-      }
-
-      Set<Object> mergedValue = new HashSet<>();
-      mergedValue.addAll((Collection) currentValue);
-      mergedValue.addAll((Collection) valueToMerge);
-
-      return mergedValue;
-    }
-
-    if (currentValue instanceof Map) {
-      if (!(valueToMerge instanceof Map)) {
-        throw new IllegalArgumentException("Asked to merge two values but the current value is a "
-            + "map while the new value is not a map. Both values must be similar types to be able "
-            + "to merge. Old value is: " + currentValue + ". New value is " + valueToMerge);
-      }
-
-      // TODO: Recurse? What if map of maps?
-      Map<String, Object> mergedValue = new HashMap<>();
-      mergedValue.putAll((Map) currentValue);
-      mergedValue.putAll((Map) valueToMerge);
-
-      return mergedValue;
-    }
-
-    throw new IllegalArgumentException("Current value not a merge-able type: " + currentValue);
+    return resultSourceData;
   }
 
   private static Map<String, Map<String, Object>> copyMapAndValues(

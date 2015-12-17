@@ -23,7 +23,7 @@ global.yaml:
           it.each { entry ->
             entry.setValue(this.yaml.load(entry.getValue()))
           }
-        }, [])
+        }, new HashSet<>())
   }
 
   @Test
@@ -216,6 +216,30 @@ otherapp::version: 5
         'myteam.yaml': [:],
         'myteam/stage.yaml': ['myapp::version': 2]
     ]
+
+    assert result == expected
+  }
+
+  @Test
+  public void shouldDoNothingIfChangeAlreadyApplied() {
+    def changes = '''
+---
+  source: myteam.yaml
+  set:
+    myapp::version: 2
+''';
+
+    def result = generateFromYaml(
+        hierarchy, changes, 'myteam/stage.yaml', [
+        'global.yaml': '',
+        'myteam.yaml': '',
+        'myteam/stage.yaml': 'myapp::version: 2'
+    ]);
+
+    def expected = [
+        'global.yaml': [:],
+        'myteam.yaml': [:],
+        'myteam/stage.yaml': yaml.load('myapp::version: 2')]
 
     assert result == expected
   }
