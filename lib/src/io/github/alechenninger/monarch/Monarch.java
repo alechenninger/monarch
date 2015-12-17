@@ -83,7 +83,7 @@ public class Monarch {
 
     Map<String, Object> flattened = new HashMap<>();
 
-    for (String source : ancestry) {
+    for (String source : new ListReversed<>(ancestry)) {
       Map<String, Object> sourceData = sourceToData.get(source);
       if (sourceData != null) {
         for (Map.Entry<String, Object> sourceEntry : sourceData.entrySet()) {
@@ -278,8 +278,6 @@ public class Monarch {
     Object currentValue = map.get(key);
 
     if (currentValue == null) {
-      // FIXME: make sure this put operation is accounted for outside
-//      map.put(key, valueToMerge);
       return valueToMerge;
     }
 
