@@ -46,11 +46,11 @@ public class SerializableInputs implements Inputs {
     return Optional.ofNullable(mergeKeys);
   }
 
-  public void setHierarchyPathOrYaml(String hierarchyPathOrYaml) {
+  public void setHierarchy(String hierarchyPathOrYaml) {
     this.hierarchyPathOrYaml = hierarchyPathOrYaml;
   }
 
-  public void setChangesPathOrYaml(String changesPathOrYaml) {
+  public void setChanges(String changesPathOrYaml) {
     this.changesPathOrYaml = changesPathOrYaml;
   }
 
