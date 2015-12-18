@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class MonarchOptionsFromInputs implements MonarchOptions {
@@ -28,17 +28,16 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
   }
 
   @Override
-  public Hierarchy hierarchy() {
-    String pathOrYaml = inputs.getHierarchyPathOrYaml()
-        .orElseThrow(() -> new MonarchException("No hierarchy provided."));
+  public Optional<Hierarchy> hierarchy() {
+    return inputs.getHierarchyPathOrYaml().map(pathOrYaml -> {
+      try {
+        InputAndParser hierarchyInput = tryGetInputStreamForPathOrString(pathOrYaml);
 
-    try {
-      InputAndParser hierarchyInput = tryGetInputStreamForPathOrString(pathOrYaml);
-
-      return hierarchyInput.parser.parseHierarchy(hierarchyInput.stream);
-    } catch (IOException e) {
-      throw new MonarchException("Error reading hierarchy file.", e);
-    }
+        return hierarchyInput.parser.parseHierarchy(hierarchyInput.stream);
+      } catch (IOException e) {
+        throw new MonarchException("Error reading hierarchy file.", e);
+      }
+    });
   }
 
   @Override
@@ -61,41 +60,42 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
   }
 
   @Override
-  public String pivotSource() {
-    return inputs.getPivotSource().orElseThrow(() -> new MonarchException("No changes provided."));
+  public Optional<String> pivotSource() {
+    return inputs.getPivotSource();
   }
 
   @Override
-  public Map<String, Map<String, Object>> data() {
-    Path dataDir = inputs.getDataDir()
-        .map(fileSystem::getPath)
-        .orElseThrow(() -> new MonarchException("No data directory provided."));
-    Map<String, Map<String, Object>> data = new LinkedHashMap<>();
+  public Optional<Map<String, Map<String, Object>>> data() {
+    return inputs.getDataDir().map(dataDir -> {
+      Path dataDirPath = fileSystem.getPath(dataDir);
 
-    Map<String, List<String>> sourcesByExtension = new HashMap<>();
-    for (String source : hierarchy().descendants()) {
-      sourcesByExtension.merge(
-          MonarchParsers.getExtensionForFileName(source),
-          asGrowableList(source),
-          (l1, l2) -> { l1.addAll(l2); return l1; });
-    }
+      Map<String, Map<String, Object>> data = new HashMap<>();
+      Map<String, List<String>> sourcesByExtension = new HashMap<>();
 
-    for (Map.Entry<String, List<String>> extensionSources : sourcesByExtension.entrySet()) {
-      String extension = extensionSources.getKey();
-      List<String> sources = extensionSources.getValue();
-      Map<String, Map<String, Object>> dataForExtension = parsers.forExtension(extension)
-          .readData(sources, dataDir);
-      data.putAll(dataForExtension);
-    }
+      for (String source : hierarchy()
+          .orElseThrow(() -> new MonarchException("Missing hierarchy"))
+          .descendants()) {
+        sourcesByExtension.merge(
+            MonarchParsers.getExtensionForFileName(source),
+            asGrowableList(source),
+            (l1, l2) -> { l1.addAll(l2); return l1; });
+      }
 
-    return data;
+      for (Map.Entry<String, List<String>> extensionSources : sourcesByExtension.entrySet()) {
+        String extension = extensionSources.getKey();
+        List<String> sources = extensionSources.getValue();
+        Map<String, Map<String, Object>> dataForExtension = parsers.forExtension(extension)
+            .readData(sources, dataDirPath);
+        data.putAll(dataForExtension);
+      }
+
+      return data;
+    });
   }
 
   @Override
-  public Path outputDir() {
-    return inputs.getOutputDir()
-        .map(fileSystem::getPath)
-        .orElseThrow(() -> new MonarchException("No output directory provided."));
+  public Optional<Path> outputDir() {
+    return inputs.getOutputDir().map(fileSystem::getPath);
   }
 
   private InputAndParser tryGetInputStreamForPathOrString(String pathOrYaml) throws IOException {

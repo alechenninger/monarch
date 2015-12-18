@@ -10,13 +10,12 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 
 public class Main {
   private final Path defaultConfigPath;
@@ -46,22 +45,31 @@ public class Main {
         return;
       }
 
-      Path configPath = cliInputs.getConfigPath().map(Paths::get).orElse(defaultConfigPath);
+      Path configPath = cliInputs.getConfigPath().map(fileSystem::getPath).orElse(defaultConfigPath);
+      MonarchOptions optionsFromCli = MonarchOptions.fromInputs(cliInputs, fileSystem);
 
-      Inputs inputs = Files.exists(configPath)
-          ? cliInputs.fallingBackTo(Inputs.fromYaml(configPath))
-          : cliInputs;
+      MonarchOptions options = Files.exists(configPath)
+          ? optionsFromCli.fallingBackTo(MonarchOptions.fromYaml(configPath))
+          : optionsFromCli;
 
-      MonarchOptions options = MonarchOptions.fromInputs(inputs, fileSystem);
-      Path outputDir = options.outputDir();
-      Hierarchy hierarchy = options.hierarchy();
-      List<String> affectedSources = hierarchy.hierarchyOf(options.pivotSource())
+      Path outputDir = options.outputDir()
+          .orElseThrow(missingOptionException("output directory"));
+      Hierarchy hierarchy = options.hierarchy()
+          .orElseThrow(missingOptionException("hierarchy"));
+      String pivotSource = options.pivotSource()
+          .orElseThrow(missingOptionException("pivot source"));
+      Map<String, Map<String, Object>> data = options.data()
+          .orElseThrow(missingOptionException("current data"));
+      Iterable<Change> changes = options.changes();
+      Set<String> mergeKeys = options.mergeKeys();
+
+      List<String> affectedSources = hierarchy.hierarchyOf(pivotSource)
           .orElseThrow(() -> new IllegalArgumentException("Pivot source not found in hierarchy: "
               + options.pivotSource()))
           .descendants();
 
-      Map<String, Map<String, Object>> result = monarch.generateSources(hierarchy,
-          options.changes(), options.pivotSource(), options.data(), options.mergeKeys());
+      Map<String, Map<String, Object>> result = monarch.generateSources(
+          hierarchy, changes, pivotSource, data, mergeKeys);
 
       for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
         String source = sourceToData.getKey();
@@ -79,7 +87,7 @@ public class Main {
       }
     } catch (MonarchException | ParseException e) {
       e.printStackTrace();
-      run("--help");
+      System.out.print(CliInputs.parse(new String[0]).helpMessage());
     }
   }
 
@@ -88,6 +96,10 @@ public class Main {
     if (parent != null) {
       Files.createDirectories(parent);
     }
+  }
+
+  private static Supplier<? extends RuntimeException> missingOptionException(String option) {
+    return () -> new MonarchException("Missing required option: " + option);
   }
 
   public static void main(String[] args) throws ParseException, IOException {
