@@ -9,6 +9,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,16 +48,15 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
 
   @Override
   public Iterable<Change> changes() {
-    String pathOrYaml = inputs.getChangesPathOrYaml()
-        .orElseThrow(() -> new MonarchException("No changes provided."));
+    return inputs.getChangesPathOrYaml().map(pathOrYaml -> {
+      try {
+        InputAndParser changesInput = tryGetInputStreamForPathOrString(pathOrYaml);
 
-    try {
-      InputAndParser changesInput = tryGetInputStreamForPathOrString(pathOrYaml);
-
-      return changesInput.parser.parseChanges(changesInput.stream);
-    } catch (IOException e) {
-      throw new MonarchException("Error reading hierarchy file.", e);
-    }
+        return changesInput.parser.parseChanges(changesInput.stream);
+      } catch (IOException e) {
+        throw new MonarchException("Error reading hierarchy file.", e);
+      }
+    }).orElse(Collections.emptySet());
   }
 
   @Override
