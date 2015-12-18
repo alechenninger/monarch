@@ -62,8 +62,8 @@ public class OverridableOptions implements MonarchOptions {
   }
 
   @Override
-  public Optional<Map<String, Map<String, Object>>> data() {
-    return overridden(MonarchOptions::data);
+  public Optional<Map<String, Map<String, Object>>> data(Hierarchy hierarchy) {
+    return overridden(o -> o.data(hierarchy));
   }
 
   @Override

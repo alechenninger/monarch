@@ -65,16 +65,14 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
   }
 
   @Override
-  public Optional<Map<String, Map<String, Object>>> data() {
+  public Optional<Map<String, Map<String, Object>>> data(Hierarchy hierarchy) {
     return inputs.getDataDir().map(dataDir -> {
       Path dataDirPath = fileSystem.getPath(dataDir);
 
       Map<String, Map<String, Object>> data = new HashMap<>();
       Map<String, List<String>> sourcesByExtension = new HashMap<>();
 
-      for (String source : hierarchy()
-          .orElseThrow(() -> new MonarchException("Missing hierarchy"))
-          .descendants()) {
+      for (String source : hierarchy.descendants()) {
         sourcesByExtension.merge(
             MonarchParsers.getExtensionForFileName(source),
             asGrowableList(source),

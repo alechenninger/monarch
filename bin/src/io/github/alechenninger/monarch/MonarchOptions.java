@@ -18,7 +18,7 @@ public interface MonarchOptions {
   Set<String> mergeKeys();
   Iterable<Change> changes();
   Optional<String> pivotSource();
-  Optional<Map<String, Map<String, Object>>> data();
+  Optional<Map<String, Map<String, Object>>> data(Hierarchy hierarchy);
   Optional<Path> outputDir();
 
   default MonarchOptions fallingBackTo(MonarchOptions fallback) {

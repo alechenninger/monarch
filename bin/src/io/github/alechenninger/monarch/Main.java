@@ -58,7 +58,7 @@ public class Main {
           .orElseThrow(missingOptionException("hierarchy"));
       String pivotSource = options.pivotSource()
           .orElseThrow(missingOptionException("pivot source"));
-      Map<String, Map<String, Object>> data = options.data()
+      Map<String, Map<String, Object>> data = options.data(hierarchy)
           .orElseThrow(missingOptionException("current data"));
       Iterable<Change> changes = options.changes();
       Set<String> mergeKeys = options.mergeKeys();

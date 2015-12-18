@@ -41,7 +41,7 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
   }
 
   @Override
-  public Optional<Map<String, Map<String, Object>>> data() {
+  public Optional<Map<String, Map<String, Object>>> data(Hierarchy hierarchy) {
     return Optional.ofNullable(config.getData());
   }
 
