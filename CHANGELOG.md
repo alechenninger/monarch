@@ -1,5 +1,16 @@
 # Change Log
 
+## [v0.3.4](https://github.com/alechenninger/monarch/tree/v0.3.4) (2015-12-18)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.3.3...v0.3.4)
+
+**Implemented enhancements:**
+
+- Use more terse config keys in config yaml [\#19](https://github.com/alechenninger/monarch/issues/19)
+
+**Fixed bugs:**
+
+- Config file expects values to be strings; does not like arbitrary yaml [\#20](https://github.com/alechenninger/monarch/issues/20)
+
 ## [v0.3.3](https://github.com/alechenninger/monarch/tree/v0.3.3) (2015-12-17)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.3.2...v0.3.3)
 
