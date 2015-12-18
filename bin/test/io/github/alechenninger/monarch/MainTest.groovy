@@ -19,7 +19,7 @@ class MainTest {
     return it;
   }
 
-  def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs);
+  def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs, new MonarchParsers.Default());
 
   static def dataDir = '/etc/hierarchy';
   static def hierarchyFile = "/etc/hierarchy.yaml"

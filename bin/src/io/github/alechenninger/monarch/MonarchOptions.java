@@ -18,15 +18,11 @@ public interface MonarchOptions {
   Set<String> mergeKeys();
   Iterable<Change> changes();
   Optional<String> pivotSource();
-  Optional<Map<String, Map<String, Object>>> data(Hierarchy hierarchy);
+  Optional<Path> dataDir();
   Optional<Path> outputDir();
 
   default MonarchOptions fallingBackTo(MonarchOptions fallback) {
     return new OverridableOptions(this, fallback);
-  }
-
-  static MonarchOptions fromInputs(Inputs inputs, FileSystem fileSystem) {
-    return fromInputs(inputs, fileSystem, new MonarchParsers.Default());
   }
 
   static MonarchOptions fromInputs(Inputs inputs, FileSystem fileSystem, MonarchParsers parsers) {

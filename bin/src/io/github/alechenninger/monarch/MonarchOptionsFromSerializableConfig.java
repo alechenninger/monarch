@@ -41,8 +41,8 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
   }
 
   @Override
-  public Optional<Map<String, Map<String, Object>>> data(Hierarchy hierarchy) {
-    return Optional.ofNullable(config.getData());
+  public Optional<Path> dataDir() {
+    return Optional.ofNullable(config.getDataDir()).map(fileSystem::getPath);
   }
 
   @Override
@@ -55,7 +55,7 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
     private List<Map<String, Object>> changes;
     private Set<String> mergeKeys;
     private String pivotSource;
-    private Map<String, Map<String, Object>> data;
+    private String dataDir;
     private String outputDir;
 
     public Object getHierarchy() {
@@ -90,12 +90,12 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
       this.pivotSource = pivotSource;
     }
 
-    public Map<String, Map<String, Object>> getData() {
-      return data;
+    public String getDataDir() {
+      return dataDir;
     }
 
-    public void setData(Map<String, Map<String, Object>> data) {
-      this.data = data;
+    public void setData(String dataDir) {
+      this.dataDir = dataDir;
     }
 
     public String getOutputDir() {
