@@ -68,6 +68,12 @@ public class Main {
       Iterable<Change> changes = options.changes();
       Set<String> mergeKeys = options.mergeKeys();
 
+      if (!changes.iterator().hasNext()) {
+        System.out.println("No changes provided; nothing to do.");
+        System.out.println(cliInputs.helpMessage());
+        return;
+      }
+
       List<String> affectedSources = hierarchy.hierarchyOf(pivotSource)
           .orElseThrow(() -> new IllegalArgumentException("Pivot source not found in hierarchy: "
               + options.pivotSource()))

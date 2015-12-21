@@ -145,4 +145,45 @@ some::hash:
 
     assert result == expected
   }
+
+  @Test
+  public void shouldReplacePresentValueInMergeKeyWithNewValue() {
+    def currentData = [
+        'global.yaml': '',
+        'myteam.yaml': '''
+mergekey:
+  somevalue: 1
+  want_to_change: 2
+''',
+        'myteam/stage.yaml': ''
+    ]
+
+    def change = '''
+---
+  source: global.yaml
+  set:
+    mergekey:
+      somevalue: 1
+---
+  source: myteam.yaml
+  set:
+    mergekey:
+      want_to_change: x
+'''
+
+    def result = generateFromYaml(hierarchy, change, 'myteam.yaml', currentData, ['mergekey'] as Set)
+
+    def expected = [
+        'global.yaml': [:],
+        'myteam.yaml': [
+            'mergekey': [
+                'somevalue': 1,
+                'want_to_change': 'x'
+            ]
+        ],
+        'myteam/stage.yaml': [:]
+    ]
+
+    assert result == expected
+  }
 }
