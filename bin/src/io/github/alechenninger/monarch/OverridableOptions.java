@@ -75,8 +75,8 @@ public class OverridableOptions implements MonarchOptions {
   }
 
   @Override
-  public Optional<String> pivotSource() {
-    return overridden(MonarchOptions::pivotSource);
+  public Optional<String> target() {
+    return overridden(MonarchOptions::target);
   }
 
   @Override

@@ -78,8 +78,8 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
   }
 
   @Override
-  public Optional<String> pivotSource() {
-    return inputs.getPivotSource();
+  public Optional<String> target() {
+    return inputs.getTarget();
   }
 
   @Override

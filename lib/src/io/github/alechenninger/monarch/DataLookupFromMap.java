@@ -123,8 +123,8 @@ public class DataLookupFromMap implements DataLookup {
 
   private List<String> sourceAncestry() {
     return hierarchy.ancestorsOf(source)
-        .orElseThrow(() -> new NoSuchElementException("Could not find pivot source in hierarchy. "
-            + "Pivot source: " + source + ". Hierarchy: \n" + hierarchy));
+        .orElseThrow(() -> new NoSuchElementException("Could not find target source in hierarchy. "
+            + "Target: " + source + ". Hierarchy: \n" + hierarchy));
   }
 
   private Map<String, Object> getDataBySource(String source) {

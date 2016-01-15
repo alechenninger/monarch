@@ -23,7 +23,7 @@ import java.util.Optional;
 public class SerializableInputs implements Inputs {
   private String hierarchyPathOrYaml;
   private String changesPathOrYaml;
-  private String pivotSource;
+  private String target;
   private String dataDir;
   private String configPath;
   private String outputDir;
@@ -40,8 +40,8 @@ public class SerializableInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getPivotSource() {
-    return Optional.ofNullable(pivotSource);
+  public Optional<String> getTarget() {
+    return Optional.ofNullable(target);
   }
 
   @Override
@@ -72,8 +72,8 @@ public class SerializableInputs implements Inputs {
     this.changesPathOrYaml = changesPathOrYaml;
   }
 
-  public void setPivotSource(String pivotSource) {
-    this.pivotSource = pivotSource;
+  public void setTarget(String target) {
+    this.target = target;
   }
 
   public void setDataDir(String dataDir) {

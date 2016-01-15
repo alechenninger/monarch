@@ -25,10 +25,10 @@ See [the tests](https://github.com/alechenninger/monarch/blob/master/lib/test/Mo
 example library usage and edge cases.
 
 ## motivation
-The idea is something that can take a desired end state, a hierarchy of data sources, a "pivot"
+The idea is something that can take a desired end state, a hierarchy of data sources, a "target"
 data source to change among them, the current state of all data sources in the hierarchy, and
 split out a new state of all data sources in the hierarchy with the given changes applied to the
-pivot data source and its children. In other words, it automates promoting values throughout the 
+target data source and its children. In other words, it automates promoting values throughout the
 hierarchy, only affecting the data sources in the hierarchy you want, but allowing you to specify
 changes only as changes to root nodes that you eventually want applied but can't jump to right 
 away.

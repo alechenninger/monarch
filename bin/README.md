@@ -1,5 +1,5 @@
 ```
-usage: monarch --hierarchy hierarchy.yaml --changes changes.yaml --pivot
+usage: monarch --hierarchy hierarchy.yaml --changes changes.yaml --target
                teams/myteam.yaml --data-dir ~/hieradata --output-dir ./
  -?,--help                 Show this text.
  -c,--changes <path>       Path to a yaml file describing the desired end-state
@@ -37,10 +37,10 @@ usage: monarch --hierarchy hierarchy.yaml --changes changes.yaml --pivot
  -o,--output-dir <path>    Path to directory where result data sources will be
                            written. Data sources will be written using relative
                            paths from hierarchy.
- -p,--pivot <source>       A pivot source is the source in the source tree from
+ -t,--target <target>      A target is the source in the source tree from
                            where you want to change, including itself and any
                            sources beneath it in the hierarchy. Redundant keys
-                           will be removed in sources beneath the pivot (that
+                           will be removed in sources beneath the target (that
                            is, sources which inherit its values). Ex:
                            'teams/myteam.yaml'
 https://github.com/alechenninger/monarch
