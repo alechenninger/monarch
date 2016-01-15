@@ -87,9 +87,7 @@ public class Main {
       Set<String> mergeKeys = options.mergeKeys();
 
       if (!changes.iterator().hasNext()) {
-        System.out.println("No changes provided; nothing to do.");
-        System.out.println(cliInputs.helpMessage());
-        return;
+        System.out.println("No changes provided; formatting target.");
       }
 
       List<String> affectedSources = hierarchy.hierarchyOf(pivotSource)
