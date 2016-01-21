@@ -114,7 +114,12 @@ public class Main {
 
         SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
 
-        yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+        if (sorted.isEmpty()) {
+          Files.write(sourcePath, new byte[]{});
+        }
+        else {
+          yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+        }
       }
     } catch (MonarchException | ParseException e) {
       e.printStackTrace();
