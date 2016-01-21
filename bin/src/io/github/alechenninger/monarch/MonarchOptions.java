@@ -35,7 +35,7 @@ public interface MonarchOptions {
   Optional<Hierarchy> hierarchy();
   Set<String> mergeKeys();
   Iterable<Change> changes();
-  Optional<String> pivotSource();
+  Optional<String> target();
   Optional<Path> dataDir();
   Optional<Path> outputDir();
 

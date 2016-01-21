@@ -62,13 +62,13 @@ public class CliInputs implements Inputs {
           + "    myapp::favorite_website: http://stage.redhat.com")
       .build();
 
-  private final Option pivotSourceOption = Option.builder("p")
-      .longOpt("pivot")
+  private final Option targetOption = Option.builder("t")
+      .longOpt("target")
       .hasArg()
-      .argName("source")
-      .desc("A pivot source is the source in the source tree from where you want to change, "
+      .argName("target")
+      .desc("A target is the source in the source tree from where you want to change, "
           + "including itself and any sources beneath it in the hierarchy. Redundant keys will be "
-          + "removed in sources beneath the pivot (that is, sources which inherit its values). "
+          + "removed in sources beneath the target (that is, sources which inherit its values). "
           + "Ex: 'teams/myteam.yaml'")
       .build();
 
@@ -114,7 +114,7 @@ public class CliInputs implements Inputs {
   private final Options options = new Options()
       .addOption(hierarchyOption)
       .addOption(changesOption)
-      .addOption(pivotSourceOption)
+      .addOption(targetOption)
       .addOption(dataDirectoryOption)
       .addOption(configPathOption)
       .addOption(outputDirOption)
@@ -148,8 +148,8 @@ public class CliInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getPivotSource() {
-    return Optional.ofNullable(cli.getOptionValue(pivotSourceOption.getOpt()));
+  public Optional<String> getTarget() {
+    return Optional.ofNullable(cli.getOptionValue(targetOption.getOpt()));
   }
 
   @Override
@@ -181,7 +181,7 @@ public class CliInputs implements Inputs {
     PrintWriter printWriter = new PrintWriter(result);
 
     helpFormatter.printHelp(printWriter, 80,
-        "monarch --hierarchy hierarchy.yaml --changes changes.yaml --pivot teams/myteam.yaml "
+        "monarch --hierarchy hierarchy.yaml --changes changes.yaml --target teams/myteam.yaml "
             + "--data-dir ~/hieradata --output-dir ./", null, options, HelpFormatter.DEFAULT_LEFT_PAD,
         HelpFormatter.DEFAULT_DESC_PAD, "https://github.com/alechenninger/monarch");
 

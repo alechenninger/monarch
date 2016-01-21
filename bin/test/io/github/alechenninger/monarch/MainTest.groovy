@@ -92,7 +92,7 @@ global.yaml:
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
     ]);
 
-    main.run("-h ${hierarchyFile} -c /etc/changes.yaml -p teams/myteam.yaml -d $dataDir -o /output/");
+    main.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/");
 
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
     def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8');

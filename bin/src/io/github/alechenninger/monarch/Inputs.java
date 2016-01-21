@@ -31,7 +31,7 @@ public interface Inputs {
 
   Optional<String> getChangesPathOrYaml();
 
-  Optional<String> getPivotSource();
+  Optional<String> getTarget();
 
   Optional<String> getDataDir();
 

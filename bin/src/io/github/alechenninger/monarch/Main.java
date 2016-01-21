@@ -81,8 +81,8 @@ public class Main {
           .orElseThrow(missingOptionException("data directory"));
       Hierarchy hierarchy = options.hierarchy()
           .orElseThrow(missingOptionException("hierarchy"));
-      String pivotSource = options.pivotSource()
-          .orElseThrow(missingOptionException("pivot source"));
+      String target = options.target()
+          .orElseThrow(missingOptionException("target"));
       Iterable<Change> changes = options.changes();
       Set<String> mergeKeys = options.mergeKeys();
 
@@ -90,15 +90,15 @@ public class Main {
         System.out.println("No changes provided; formatting target.");
       }
 
-      List<String> affectedSources = hierarchy.hierarchyOf(pivotSource)
-          .orElseThrow(() -> new IllegalArgumentException("Pivot source not found in hierarchy: "
-              + options.pivotSource()))
+      List<String> affectedSources = hierarchy.hierarchyOf(target)
+          .orElseThrow(() -> new IllegalArgumentException("Target source not found in hierarchy: "
+              + options.target()))
           .descendants();
 
       Map<String, Map<String,Object>> currentData = readDataForHierarchy(dataDir, hierarchy);
 
       Map<String, Map<String, Object>> result = monarch.generateSources(
-          hierarchy, changes, pivotSource, currentData, mergeKeys);
+          hierarchy, changes, target, currentData, mergeKeys);
 
       for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
         String source = sourceToData.getKey();
@@ -112,7 +112,12 @@ public class Main {
 
         SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
 
-        yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+        if (sorted.isEmpty()) {
+          Files.write(sourcePath, new byte[]{});
+        }
+        else {
+          yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+        }
       }
     } catch (MonarchException | ParseException e) {
       e.printStackTrace();

@@ -54,8 +54,8 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
   }
 
   @Override
-  public Optional<String> pivotSource() {
-    return Optional.ofNullable(config.getPivotSource());
+  public Optional<String> target() {
+    return Optional.ofNullable(config.getTarget());
   }
 
   @Override
@@ -72,7 +72,7 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
     private Object hierarchy;
     private List<Map<String, Object>> changes;
     private Set<String> mergeKeys;
-    private String pivotSource;
+    private String target;
     private String dataDir;
     private String outputDir;
 
@@ -100,12 +100,12 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
       this.mergeKeys = mergeKeys;
     }
 
-    public String getPivotSource() {
-      return pivotSource;
+    public String getTarget() {
+      return target;
     }
 
-    public void setPivotSource(String pivotSource) {
-      this.pivotSource = pivotSource;
+    public void setTarget(String target) {
+      this.target = target;
     }
 
     public String getDataDir() {

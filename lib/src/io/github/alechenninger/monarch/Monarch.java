@@ -30,16 +30,16 @@ import java.util.stream.StreamSupport;
 public class Monarch {
   /**
    * Generates new data for all known sources in the hierarchy based on the hierarchy, the data
-   * changes you want applied, the existing state of the data, and a "pivot" source which you want
+   * changes you want applied, the existing state of the data, and a "target" source which you want
    * to change alongside all of its children.
    *
    * @param hierarchy A tree-structure describing which sources inherit from which parent sources.
    * @param changes The "end-state" changes to be applied assuming you could update the entire tree.
-   *                Even if you are not pivoting on the root of the tree (which would generate an
-   *                entirely new tree), the {@code pivotSource} and its children will be updated
+   *                Even if you are not targeting the root of the tree (which would generate an
+   *                entirely new tree), the {@code target} and its children will be updated
    *                such that each source's inherited values are what you want your end state to be,
    *                as described by the changes.
-   * @param pivotSource A source in the hierarchy that represents a level that we can start to
+   * @param target A source in the hierarchy that represents a level that we can start to
    *                    change values. Sources above this source will be untouched. This source and
    *                    any below it will be updated to achieve the desired {@code changes}.
    * @param data A map of sources to key:value pairs representing the existing state of the data.
@@ -48,14 +48,14 @@ public class Monarch {
    *                  {@link Collection collections} or {@link Map maps}. Keys not in the list
    *                  use values from only the nearest in a sources ancestry.
    * @return A map of sources to key:value pairs representing the new state of the data with changes
-   *         applied to the given {@code pivotSource} and its children.
+   *         applied to the given {@code target} and its children.
    */
   public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
-      Iterable<Change> changes, String pivotSource, Map<String, Map<String, Object>> data,
+      Iterable<Change> changes, String target, Map<String, Map<String, Object>> data,
       Set<String> mergeKeys) {
-    List<String> descendants = hierarchy.descendantsOf(pivotSource)
-        .orElseThrow(() -> new IllegalArgumentException("Could not find pivot source in " +
-            "hierarchy. Pivot source: " + pivotSource + ". Hierarchy: \n" + hierarchy));
+    List<String> descendants = hierarchy.descendantsOf(target)
+        .orElseThrow(() -> new IllegalArgumentException("Could not find target in " +
+            "hierarchy. Target: " + target + ". Hierarchy: \n" + hierarchy));
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
@@ -81,15 +81,15 @@ public class Monarch {
    * existing hierarchy, and the existing data in the hierarchy.
    */
   private Map<String, Object> generateSingleSource(Hierarchy hierarchy, Iterable<Change> changes,
-      String pivotSource, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-    List<String> ancestors = hierarchy.ancestorsOf(pivotSource)
+      String target, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    List<String> ancestors = hierarchy.ancestorsOf(target)
         .orElseThrow(() -> new IllegalArgumentException(
-            "Could not find pivot source in hierarchy. Pivot source: " + pivotSource + ". " +
+            "Could not find target in hierarchy. Target: " + target + ". " +
                 "Hierarchy: \n" + hierarchy));
 
-    DataLookup sourceLookup = new DataLookupFromMap(data, pivotSource, hierarchy, mergeKeys);
+    DataLookup sourceLookup = new DataLookupFromMap(data, target, hierarchy, mergeKeys);
 
-    Map<String, Object> sourceData = data.get(pivotSource);
+    Map<String, Object> sourceData = data.get(target);
     Map<String, Object> resultSourceData = sourceData == null
         ? new HashMap<>()
         : new HashMap<>(sourceData);
@@ -107,7 +107,7 @@ public class Monarch {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
-        if (!Objects.equals(change.source(), pivotSource)) {
+        if (!Objects.equals(change.source(), target)) {
           if (sourceLookup.isValueInherited(setKey, setValue)) {
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {

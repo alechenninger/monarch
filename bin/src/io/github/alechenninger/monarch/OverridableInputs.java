@@ -41,8 +41,8 @@ public class OverridableInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getPivotSource() {
-    return overridden(Inputs::getPivotSource);
+  public Optional<String> getTarget() {
+    return overridden(Inputs::getTarget);
   }
 
   @Override
