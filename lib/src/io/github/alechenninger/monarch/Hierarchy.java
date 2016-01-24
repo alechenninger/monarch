@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,21 +33,16 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class Hierarchy {
-  private final Node rootNode;
+  private final List<Node> rootNodes;
 
-  public Hierarchy(List<Node> nodes) {
-    if (nodes.size() == 1) {
-      this.rootNode = Objects.requireNonNull(nodes.get(0), "rootNode");
-    } else {
-      rootNode = new Node(null);
-      for (Node node : nodes) {
-        rootNode.append(node);
-      }
-    }
+  public Hierarchy(List<Node> rootNodes) {
+    Objects.requireNonNull(rootNodes, "rootNodes");
+    this.rootNodes = new ArrayList<>(rootNodes);
   }
 
-  public Hierarchy(Node rootNode) {
-    this.rootNode = Objects.requireNonNull(rootNode, "rootNode");
+  public Hierarchy(Node rootNodes) {
+    Objects.requireNonNull(rootNodes, "rootNode");
+    this.rootNodes = Collections.singletonList(rootNodes);
   }
 
   public static Hierarchy fromStringListOrMap(Object object) {
@@ -76,12 +72,7 @@ public class Hierarchy {
    * it is first. Blue is at the bottom so it is last.
    */
   public List<String> descendants() {
-    Collection<Node> children = rootNode.children();
-    if (children.isEmpty()) {
-      return Collections.singletonList(rootNode.name());
-    }
-
-    return DescendantsIterator.asStream(rootNode)
+    return DescendantsIterator.asStream(rootNodes)
         .map(Node::name)
         .collect(Collectors.toList());
   }
@@ -99,7 +90,7 @@ public class Hierarchy {
    * Includes the {@code source} passed in as the first element, furthest ancestors last.
    */
   Optional<List<String>> ancestorsOf(String source) {
-    return DescendantsIterator.asStream(rootNode)
+    return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .collect(Collect.<Node>maxOneResultOrThrow(IllegalStateException::new))
         .map(n -> AncestorsIterator.asStream(n).map(Node::name).collect(Collectors.toList()));
@@ -109,7 +100,7 @@ public class Hierarchy {
    * Finds a descendant source node and returns it as the root of a new {@link Hierarchy}.
    */
   Optional<Hierarchy> hierarchyOf(String source) {
-    return DescendantsIterator.asStream(rootNode)
+    return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .collect(Collect.<Node>maxOneResultOrThrow(IllegalStateException::new))
         .map(Hierarchy::new);
@@ -124,48 +115,55 @@ public class Hierarchy {
       return false;
     }
     Hierarchy hierarchy = (Hierarchy) o;
-    return Objects.equals(rootNode, hierarchy.rootNode);
+    return Objects.equals(rootNodes, hierarchy.rootNodes);
   }
 
   @Override
   public int hashCode() {
-    return rootNode.hashCode();
+    return rootNodes.hashCode();
   }
 
   @Override
   public String toString() {
-    return "[" + nodeToString(rootNode) + "]";
+    StringBuilder sb = new StringBuilder("[\n");
+
+    for (Node rootNode : rootNodes) {
+      sb.append(prefixLines(nodeToString(rootNode), "  "));
+    }
+
+    return sb.append("]").toString();
   }
 
   private static String nodeToString(Node node) {
     StringBuilder sb = new StringBuilder();
 
     sb.append(node.name());
-
-    for (Node child : node.children()) {
-      sb.append('\n');
-
-      Stream<String> lines = Arrays.stream(nodeToString(child).split("\n"));
-
-      sb.append(lines
-          .map(s -> "  " + s)
-          .reduce("", (string, line) -> string + "\n" + line));
-    }
-
     sb.append('\n');
 
+    for (Node child : node.children()) {
+      sb.append(prefixLines(nodeToString(child), "  "));
+    }
+
     return sb.toString();
+  }
+
+  private static String prefixLines(String toPrefix, String prefix) {
+    Stream<String> lines = Arrays.stream(toPrefix.split("\n"));
+
+    return lines
+        .map(s -> prefix + s)
+        .collect(Collectors.joining("\n")) + '\n';
   }
 
   private static class DescendantsIterator implements Iterator<Node> {
     private Queue<Node> currentLevel = new LinkedList<>();
 
-    DescendantsIterator(Node node) {
-      currentLevel.add(node);
+    DescendantsIterator(Collection<Node> nodes) {
+      currentLevel.addAll(nodes);
     }
 
-    static Stream<Node> asStream(Node node) {
-      Iterable<Node> descendantsIterable = () -> new DescendantsIterator(node);
+    static Stream<Node> asStream(Collection<Node> nodes) {
+      Iterable<Node> descendantsIterable = () -> new DescendantsIterator(nodes);
       return StreamSupport.stream(descendantsIterable.spliterator(), false);
     }
 

@@ -46,4 +46,18 @@ foo:
     assert ['foo', 'a', 'b', '1', '2', 'bob', 'jannet', 'bar',
             'baz', 'biz', 'y', 'z', 'true', 'blue', 'red'] == descendants
   }
+
+  @Test
+  public void shouldParseMapWithMultipleTopLevelNodes() {
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
+a:
+  - a1
+  - a2
+b:
+  - b1
+  - b2
+'''))
+
+    assert ['a', 'b', 'a1', 'a2', 'b1', 'b2'] == hierarchy.descendants()
+  }
 }

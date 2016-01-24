@@ -72,7 +72,7 @@ public class Monarch {
     return StreamSupport.stream(changes.spliterator(), false)
         .filter(c -> Objects.equals(c.source(), source))
         .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
-            "Expected only one change with matching source in list of changes, but got: " +
+            "Expected at most one change with matching source in list of changes, but got: " +
                 changes)));
   }
 
