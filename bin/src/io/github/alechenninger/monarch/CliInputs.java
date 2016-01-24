@@ -28,6 +28,8 @@ import org.apache.commons.cli.ParseException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 public class CliInputs implements Inputs {
@@ -83,8 +85,9 @@ public class CliInputs implements Inputs {
   private final Option configPathOption = Option.builder()
       .longOpt("config")
       .argName("path")
-      .hasArg()
-      .desc("Path to file which configures default values for command line options.")
+      .hasArgs()
+      .desc("Paths to files which configures default values for command line options. "
+          + "The default config path of ~/.monarch/config.yaml")
       .build();
 
   private final Option outputDirOption = Option.builder("o")
@@ -158,8 +161,10 @@ public class CliInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getConfigPath() {
-    return Optional.ofNullable(cli.getOptionValue(configPathOption.getLongOpt()));
+  public List<String> getConfigPath() {
+    String[] maybeConfigPaths = cli.getOptionValues(configPathOption.getLongOpt());
+    return Arrays.asList(
+        Optional.ofNullable(maybeConfigPaths).orElse(new String[0]));
   }
 
   @Override

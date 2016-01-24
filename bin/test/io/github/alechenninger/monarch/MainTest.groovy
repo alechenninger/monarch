@@ -100,4 +100,36 @@ global.yaml:
     print myteamYaml;
     print stageYaml;
   }
+
+  @Test
+  public void shouldReadConfigFromInputsAndConfigFiles() {
+    writeFile('/etc/changes.yaml', '''
+---
+  source: teams/myteam.yaml
+  set:
+    myapp::favorite_website: http://www.redhat.com
+''');
+
+    writeDataSources([
+        'global.yaml': 'foo: "bar"',
+        'teams/myteam.yaml': 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ]);
+
+    writeFile("/etc/monarch.yaml", '''
+dataDir: /etc/hierarchy/
+''')
+
+    writeFile("/etc/some_other_config.yaml", '''
+outputDir: /output/
+''')
+
+    main.run("-h ${hierarchyFile} --config /etc/some_other_config.yaml -c /etc/changes.yaml -t teams/myteam.yaml");
+
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8');
+
+    print myteamYaml;
+    print stageYaml;
+  }
 }

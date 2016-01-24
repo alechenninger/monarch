@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class SerializableInputs implements Inputs {
@@ -25,7 +27,7 @@ public class SerializableInputs implements Inputs {
   private String changesPathOrYaml;
   private String target;
   private String dataDir;
-  private String configPath;
+  private List<String> configPaths = new ArrayList<>();
   private String outputDir;
   private String mergeKeys;
 
@@ -50,8 +52,8 @@ public class SerializableInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getConfigPath() {
-    return Optional.ofNullable(configPath);
+  public List<String> getConfigPath() {
+    return configPaths;
   }
 
   @Override
@@ -80,8 +82,8 @@ public class SerializableInputs implements Inputs {
     this.dataDir = dataDir;
   }
 
-  public void setConfigPath(String configPath) {
-    this.configPath = configPath;
+  public void setConfigPath(List<String> configPaths) {
+    this.configPaths = configPaths;
   }
 
   public void setOutputDir(String outputDir) {

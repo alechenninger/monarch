@@ -24,6 +24,7 @@ import org.yaml.snakeyaml.constructor.Constructor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 public interface Inputs {
@@ -35,7 +36,7 @@ public interface Inputs {
 
   Optional<String> getDataDir();
 
-  Optional<String> getConfigPath();
+  List<String> getConfigPath();
 
   Optional<String> getOutputDir();
 

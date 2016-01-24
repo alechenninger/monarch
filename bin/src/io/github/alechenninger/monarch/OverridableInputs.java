@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -51,8 +53,11 @@ public class OverridableInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getConfigPath() {
-    return overridden(Inputs::getConfigPath);
+  public List<String> getConfigPath() {
+    List<String> paths = new ArrayList<>();
+    paths.addAll(override.getConfigPath());
+    paths.addAll(fallback.getConfigPath());
+    return paths;
   }
 
   @Override

@@ -112,7 +112,7 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
       return dataDir;
     }
 
-    public void setData(String dataDir) {
+    public void setDataDir(String dataDir) {
       this.dataDir = dataDir;
     }
 
