@@ -36,7 +36,7 @@ public interface Inputs {
 
   Optional<String> getDataDir();
 
-  List<String> getConfigPath();
+  List<String> getConfigPaths();
 
   Optional<String> getOutputDir();
 

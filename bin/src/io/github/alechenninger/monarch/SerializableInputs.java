@@ -52,7 +52,7 @@ public class SerializableInputs implements Inputs {
   }
 
   @Override
-  public List<String> getConfigPath() {
+  public List<String> getConfigPaths() {
     return configPaths;
   }
 

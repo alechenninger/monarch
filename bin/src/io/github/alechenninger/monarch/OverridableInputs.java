@@ -53,10 +53,10 @@ public class OverridableInputs implements Inputs {
   }
 
   @Override
-  public List<String> getConfigPath() {
+  public List<String> getConfigPaths() {
     List<String> paths = new ArrayList<>();
-    paths.addAll(override.getConfigPath());
-    paths.addAll(fallback.getConfigPath());
+    paths.addAll(override.getConfigPaths());
+    paths.addAll(fallback.getConfigPaths());
     return paths;
   }
 

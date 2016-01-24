@@ -19,7 +19,7 @@
 apply plugin: 'application'
 apply plugin: 'groovy'
 
-version = '0.3.4'
+version = '0.4.0'
 
 sourceCompatibility = 1.8
 mainClassName = 'io.github.alechenninger.monarch.Main'

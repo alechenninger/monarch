@@ -125,7 +125,7 @@ public class Main {
       MonarchParsers parsers) {
     MonarchOptions options = MonarchOptions.fromInputs(cliInputs, fileSystem, parsers);
 
-    List<Path> pathsFromCli = cliInputs.getConfigPath()
+    List<Path> pathsFromCli = cliInputs.getConfigPaths()
         .stream()
         .map(fileSystem::getPath)
         .collect(Collectors.toList());

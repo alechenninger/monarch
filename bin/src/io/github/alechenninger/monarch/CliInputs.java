@@ -82,12 +82,12 @@ public class CliInputs implements Inputs {
           + "hierarchy is looked using the paths in the hierarchy relative to this folder.")
       .build();
 
-  private final Option configPathOption = Option.builder()
-      .longOpt("config")
-      .argName("path")
+  private final Option configPathsOption = Option.builder()
+      .longOpt("configs")
+      .argName("path1 path2")
       .hasArgs()
-      .desc("Paths to files which configures default values for command line options. "
-          + "The default config path of ~/.monarch/config.yaml")
+      .desc("Space delimited paths to files which configures default values for command line "
+          + "options. The default config path of ~/.monarch/config.yaml is always checked.")
       .build();
 
   private final Option outputDirOption = Option.builder("o")
@@ -119,7 +119,7 @@ public class CliInputs implements Inputs {
       .addOption(changesOption)
       .addOption(targetOption)
       .addOption(dataDirectoryOption)
-      .addOption(configPathOption)
+      .addOption(configPathsOption)
       .addOption(outputDirOption)
       .addOption(mergeKeysOption)
       .addOption(helpOption)
@@ -161,8 +161,8 @@ public class CliInputs implements Inputs {
   }
 
   @Override
-  public List<String> getConfigPath() {
-    String[] maybeConfigPaths = cli.getOptionValues(configPathOption.getLongOpt());
+  public List<String> getConfigPaths() {
+    String[] maybeConfigPaths = cli.getOptionValues(configPathsOption.getLongOpt());
     return Arrays.asList(
         Optional.ofNullable(maybeConfigPaths).orElse(new String[0]));
   }
