@@ -1,5 +1,28 @@
 # Change Log
 
+## [v0.4.0](https://github.com/alechenninger/monarch/tree/v0.4.0) (2016-01-24)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.3.4...v0.4.0)
+
+**Implemented enhancements:**
+
+- Allow declaration of multiple 'root' hierarchies in config file [\#26](https://github.com/alechenninger/monarch/issues/26)
+- Allow multiple config files [\#22](https://github.com/alechenninger/monarch/issues/22)
+
+**Fixed bugs:**
+
+- Config data dir parser reads "data" not "dataDir" [\#30](https://github.com/alechenninger/monarch/issues/30)
+- Having a changeset that ends with '---' causes a null pointer exception [\#25](https://github.com/alechenninger/monarch/issues/25)
+- Missing warning when no changes are provided [\#24](https://github.com/alechenninger/monarch/issues/24)
+
+**Closed issues:**
+
+- Rename "pivot source" -\> "target" [\#23](https://github.com/alechenninger/monarch/issues/23)
+
+**Merged pull requests:**
+
+- Format the file if no changes are provided [\#29](https://github.com/alechenninger/monarch/pull/29) ([kahowell](https://github.com/kahowell))
+- Change "pivotSource" to "target" \(fixes \#23\) [\#28](https://github.com/alechenninger/monarch/pull/28) ([kahowell](https://github.com/kahowell))
+
 ## [v0.3.4](https://github.com/alechenninger/monarch/tree/v0.3.4) (2015-12-18)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.3.3...v0.3.4)
 
