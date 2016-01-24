@@ -37,6 +37,10 @@ public class Change {
   }
 
   public static Change fromMap(Map<String, Object> map) {
+    if (map == null) {
+      throw new IllegalArgumentException("Cannot create a change from 'null'.");
+    }
+
     return new Change(
         (String) map.get("source"),
         (Map<String, Object>) map.getOrDefault("set", Collections.emptyMap()),

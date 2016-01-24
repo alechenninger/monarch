@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,8 @@ public class YamlMonarchParser implements MonarchParser {
       List<Change> changes = new ArrayList<>();
 
       for (Object parsedChange : parsedChanges) {
+        if (parsedChange == null) continue;
+
         Map<String, Object> parsedAsMap = (Map<String, Object>) parsedChange;
         changes.add(Change.fromMap(parsedAsMap));
       }
@@ -72,6 +75,11 @@ public class YamlMonarchParser implements MonarchParser {
         if (Files.exists(sourcePath)) {
           Map<String, Object> dataForSource = (Map<String, Object>) yaml.load(
               Files.newInputStream(sourcePath));
+
+          if (dataForSource == null) {
+            dataForSource = Collections.emptyMap();
+          }
+
           data.put(source, dataForSource);
         }
       }
