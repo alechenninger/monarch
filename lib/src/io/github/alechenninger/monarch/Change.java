@@ -40,11 +40,16 @@ public class Change {
     if (map == null) {
       throw new IllegalArgumentException("Cannot create a change from 'null'.");
     }
+    Map<String, Object> set = (Map<String, Object>) map.get("set");
+    List<String> remove = (List<String>) map.get("remove");
+    if (set == null) {
+      set = Collections.emptyMap();
+    }
+    if (remove == null) {
+      remove = Collections.emptyList();
+    }
 
-    return new Change(
-        (String) map.get("source"),
-        (Map<String, Object>) map.getOrDefault("set", Collections.emptyMap()),
-        (List<String>) map.getOrDefault("remove", Collections.emptyList()));
+    return new Change((String) map.get("source"), set, remove);
   }
 
   public String source() {
