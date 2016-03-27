@@ -100,9 +100,9 @@ public class CliInputs implements Inputs {
 
   private final Option mergeKeysOption = Option.builder("m")
       .longOpt("merge-keys")
-      .argName("k1,k2")
-      .hasArg()
-      .desc("Comma-delimited list of keys which should be inherited with merge semantics. That is, "
+      .argName("k1 k2")
+      .hasArgs()
+      .desc("Space-delimited list of keys which should be inherited with merge semantics. That is, "
           + "normally the value that is inherited for a given key is only the nearest ancestor's "
           + "value. Keys that are in the merge key list however inherit values from all of their "
           + "ancestor's and merge them together, provided they are like types of either "
@@ -173,8 +173,10 @@ public class CliInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getMergeKeys() {
-    return Optional.ofNullable(cli.getOptionValue(mergeKeysOption.getOpt()));
+  public List<String> getMergeKeys() {
+    String[] maybeMergeKeys = cli.getOptionValues(mergeKeysOption.getOpt());
+    return Arrays.asList(
+        Optional.ofNullable(maybeMergeKeys).orElse(new String[0]));
   }
 
   public boolean helpRequested() {

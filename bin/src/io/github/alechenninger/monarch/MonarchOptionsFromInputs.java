@@ -61,7 +61,7 @@ public class MonarchOptionsFromInputs implements MonarchOptions {
 
   @Override
   public Set<String> mergeKeys() {
-    return new HashSet<>(Arrays.asList(inputs.getMergeKeys().orElse("").split(",")));
+    return new HashSet<>(inputs.getMergeKeys());
   }
 
   @Override

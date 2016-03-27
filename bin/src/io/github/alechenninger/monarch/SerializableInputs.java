@@ -29,7 +29,7 @@ public class SerializableInputs implements Inputs {
   private String dataDir;
   private List<String> configPaths = new ArrayList<>();
   private String outputDir;
-  private String mergeKeys;
+  private List<String> mergeKeys;
 
   @Override
   public Optional<String> getHierarchyPathOrYaml() {
@@ -62,8 +62,8 @@ public class SerializableInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getMergeKeys() {
-    return Optional.ofNullable(mergeKeys);
+  public List<String> getMergeKeys() {
+    return mergeKeys;
   }
 
   public void setHierarchy(String hierarchyPathOrYaml) {
@@ -90,7 +90,7 @@ public class SerializableInputs implements Inputs {
     this.outputDir = outputDir;
   }
 
-  public void setMergeKeys(String mergeKeys) {
+  public void setMergeKeys(List<String> mergeKeys) {
     this.mergeKeys = mergeKeys;
   }
 }

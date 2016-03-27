@@ -66,8 +66,11 @@ public class OverridableInputs implements Inputs {
   }
 
   @Override
-  public Optional<String> getMergeKeys() {
-    return overridden(Inputs::getMergeKeys);
+  public List<String> getMergeKeys() {
+    List<String> mergeKeys = new ArrayList<>();
+    mergeKeys.addAll(override.getMergeKeys());
+    mergeKeys.addAll(fallback.getMergeKeys());
+    return mergeKeys;
   }
 
   private Optional<String> overridden(Function<Inputs, Optional<String>> input) {
