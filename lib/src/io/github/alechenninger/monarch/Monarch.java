@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class Monarch {
@@ -68,12 +69,10 @@ public class Monarch {
     return result;
   }
 
-  public Optional<Change> findChangeForSource(String source, Iterable<Change> changes) {
+  public List<Change> findChangesForSource(String source, Iterable<Change> changes) {
     return StreamSupport.stream(changes.spliterator(), false)
         .filter(c -> Objects.equals(c.source(), source))
-        .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
-            "Expected at most one change with matching source in list of changes, but got: " +
-                changes)));
+        .collect(Collectors.toList());
   }
 
   /**
@@ -95,50 +94,47 @@ public class Monarch {
         : new HashMap<>(sourceData);
 
     for (String ancestor : new ListReversed<>(ancestors)) {
-      Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
+      List<Change> changesForSource = findChangesForSource(ancestor, changes);
 
-      if (!maybeChange.isPresent()) {
-        continue;
-      }
+      for (Change change : changesForSource) {
 
-      Change change = maybeChange.get();
+        for (Map.Entry<String, Object> setEntry : change.set().entrySet()) {
+          String setKey = setEntry.getKey();
+          Object setValue = setEntry.getValue();
 
-      for (Map.Entry<String, Object> setEntry : change.set().entrySet()) {
-        String setKey = setEntry.getKey();
-        Object setValue = setEntry.getValue();
-
-        if (!Objects.equals(change.source(), target)) {
-          if (sourceLookup.isValueInherited(setKey, setValue)) {
-            if (resultSourceData.containsKey(setKey)) {
-              if (mergeKeys.contains(setKey)) {
-                Merger merger = Merger.startingWith(resultSourceData.get(setKey));
-                merger.unmerge(setValue);
-                resultSourceData.put(setKey, merger.getMerged());
-              } else {
-                resultSourceData.remove(setKey);
+          if (!Objects.equals(change.source(), target)) {
+            if (sourceLookup.isValueInherited(setKey, setValue)) {
+              if (resultSourceData.containsKey(setKey)) {
+                if (mergeKeys.contains(setKey)) {
+                  Merger merger = Merger.startingWith(resultSourceData.get(setKey));
+                  merger.unmerge(setValue);
+                  resultSourceData.put(setKey, merger.getMerged());
+                } else {
+                  resultSourceData.remove(setKey);
+                }
               }
+              continue;
             }
-            continue;
           }
+
+          Object newValue;
+          Object currentValue = resultSourceData.get(setKey);
+
+          if (mergeKeys.contains(setKey) && currentValue != null) {
+            Merger merger = Merger.startingWith(currentValue);
+            merger.merge(setValue);
+            newValue = merger.getMerged();
+          } else {
+            newValue = setValue;
+          }
+
+          resultSourceData.put(setKey, newValue);
         }
 
-        Object newValue;
-        Object currentValue = resultSourceData.get(setKey);
-
-        if (mergeKeys.contains(setKey) && currentValue != null) {
-          Merger merger = Merger.startingWith(currentValue);
-          merger.merge(setValue);
-          newValue = merger.getMerged();
-        } else {
-          newValue = setValue;
+        // TODO: Support removing nested keys (keys in a hash)
+        for (String key : change.remove()) {
+          resultSourceData.remove(key);
         }
-
-        resultSourceData.put(setKey, newValue);
-      }
-
-      // TODO: Support removing nested keys (keys in a hash)
-      for (String key : change.remove()) {
-        resultSourceData.remove(key);
       }
     }
 
