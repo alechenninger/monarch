@@ -147,23 +147,48 @@ public class ArgParseCommandInput implements CommandInput {
               + "  teams/otherteam.yaml");
 
       subparser.addArgument("--changeset", "--changes", "-c")
-          .dest("changes");
+          .dest("changes")
+          .help("Path to a yaml file describing the desired end-state changes. For example: \n"
+              + "---\n"
+              + "  source: teams/myteam.yaml\n"
+              + "  set:\n"
+              + "    myapp::version: 2\n"
+              + "    myapp::favorite_website: http://www.redhat.com\n"
+              + "---\n"
+              + "  source: teams/myteam/stage.yaml\n"
+              + "  set:\n"
+              + "    myapp::favorite_website: http://stage.redhat.com");
 
       subparser.addArgument("--target", "-t")
-          .dest("target");
+          .dest("target")
+          .help("A target is the source in the source tree from where you want to change, "
+              + "including itself and any sources beneath it in the hierarchy. Redundant keys will be "
+              + "removed in sources beneath the target (that is, sources which inherit its values). "
+              + "Ex: 'teams/myteam.yaml'");
 
       subparser.addArgument("--data-dir", "-d")
-          .dest("data_dir");
+          .dest("data_dir")
+          .help("Path to where existing data sources life. The data for sources describe in the "
+              + "hierarchy is looked using the paths in the hierarchy relative to this folder.");
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")
-          .nargs("+");
+          .nargs("+")
+          .help("Space delimited paths to files which configures default values for command line "
+              + "options. The default config path of ~/.monarch/config.yaml is always checked.");
 
       subparser.addArgument("--output-dir", "-o")
-          .dest("output_dir");
+          .dest("output_dir")
+          .help("Path to directory where result data sources will be written. Data sources will be "
+              + "written using relative paths from hierarchy.");
 
       subparser.addArgument("--merge-keys", "-m")
-          .dest("merge_keys");
+          .dest("merge_keys")
+          .help("Space-delimited list of keys which should be inherited with merge semantics. That is, "
+              + "normally the value that is inherited for a given key is only the nearest ancestor's "
+              + "value. Keys that are in the merge key list however inherit values from all of their "
+              + "ancestor's and merge them together, provided they are like types of either "
+              + "collections or maps.");
 
       return parsed -> new ApplyChangesetInput() {
         @Override

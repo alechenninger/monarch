@@ -184,9 +184,16 @@ target: teams/myteam.yaml
 
   @Test
   public void shouldPrintHelpForSpecificCommand() {
-    main.run("apply --help");
+    assert main.run("apply --help") == 0
 
     assert getConsole().contains("usage: monarch apply");
+  }
+
+  @Test
+  public void shouldPrintHelp() {
+    assert main.run("--help") == 0
+
+    assert getConsole().contains("usage: monarch");
   }
 
   @Test
