@@ -193,7 +193,7 @@ target: teams/myteam.yaml
   public void shouldPrintHelp() {
     assert main.run("--help") == 0
 
-    assert getConsole().contains("usage: monarch");
+    assert getConsole() =~ /usage: monarch.*\{apply/
   }
 
   @Test
