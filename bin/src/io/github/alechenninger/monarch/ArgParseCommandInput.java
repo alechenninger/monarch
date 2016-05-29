@@ -20,6 +20,8 @@ package io.github.alechenninger.monarch;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
+import net.sourceforge.argparse4j.inf.Argument;
+import net.sourceforge.argparse4j.inf.ArgumentAction;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -30,6 +32,7 @@ import net.sourceforge.argparse4j.internal.UnrecognizedArgumentException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class ArgParseCommandInput implements CommandInput {
@@ -44,10 +47,14 @@ public class ArgParseCommandInput implements CommandInput {
         .epilog(appInfo.url());
 
     parser.addArgument("--help", "-?")
+        .dest("help")
+        .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show this message and exit.");
 
     Subparsers subparsers = parser.addSubparsers().dest("subparser")
-        .help("Available commands. Defaults to " + applySpec.name());
+        .title("Available commands")
+        .description("If none chosen, defaults to '" + applySpec.name() + "'")
+        .help("Pass --help to a command for more information.");
 
     applyChangesetFactory = applySpec.addToSubparsers(subparsers);
 
@@ -57,8 +64,10 @@ public class ArgParseCommandInput implements CommandInput {
   private Namespace parseArgsDefaultingToApply(String[] args) throws ArgumentParserException {
     try {
       return parser.parseArgs(args);
+    } catch (AbortParsingException e) {
+      return new Namespace(e.attrs);
     } catch (UnrecognizedArgumentException e) {
-      // Assume unrecognized because command ommitted.
+      // Assume unrecognized because command omitted.
       List<String> defaultedArgs = new ArrayList<>(args.length + 1);
       defaultedArgs.add(applySpec.name());
       Collections.addAll(defaultedArgs, args);
@@ -106,13 +115,13 @@ public class ArgParseCommandInput implements CommandInput {
       Subparser subparser = subparsers.addParser(name(), false)
           .help("Applies a changeset to a target data source and its descendants.");
 
-      subparser.addArgument("-?", "--help")
+      subparser.addArgument("--help", "-?")
+          .dest("apply_help")
           .action(Arguments.storeTrue())
-          .help("Show help for '" + name() + "' command.");
+          .help("Show help for '" + name() + "' and exit.");
 
-      subparser.addArgument("-h", "--hierarchy")
+      subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
-          .metavar("path")
           .help("Path to a yaml file describing the source hierarchy, relative to the data directory "
               + "(see data-dir option). For example: \n"
               + "global.yaml:\n"
@@ -122,24 +131,23 @@ public class ArgParseCommandInput implements CommandInput {
               + "    teams/myteam/prod.yaml\n"
               + "  teams/otherteam.yaml");
 
-      subparser.addArgument("-c", "--changes", "--changeset")
-          .dest("changes")
-          .metavar("path");
+      subparser.addArgument("--changeset", "--changes", "-c")
+          .dest("changes");
 
-      subparser.addArgument("-t", "--target")
+      subparser.addArgument("--target", "-t")
           .dest("target");
 
-      subparser.addArgument("-d", "--data-dir")
+      subparser.addArgument("--data-dir", "-d")
           .dest("data_dir");
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")
           .nargs("+");
 
-      subparser.addArgument("-o", "--output-dir")
+      subparser.addArgument("--output-dir", "-o")
           .dest("output_dir");
 
-      subparser.addArgument("-m", "--merge-keys")
+      subparser.addArgument("--merge-keys", "-m")
           .dest("merge_keys");
 
       return parsed -> new ApplyChangesetInput() {
@@ -182,7 +190,7 @@ public class ArgParseCommandInput implements CommandInput {
 
         @Override
         public boolean isHelpRequested() {
-          return Optional.ofNullable(parsed.getBoolean("help")).orElse(false);
+          return Optional.ofNullable(parsed.getBoolean("apply_help")).orElse(false);
         }
 
         @Override
@@ -193,4 +201,44 @@ public class ArgParseCommandInput implements CommandInput {
     }
   };
 
+  static class AbortParsingException extends ArgumentParserException {
+    final Argument arg;
+    final Map<String, Object> attrs;
+    final String flag;
+    final Object value;
+
+    public AbortParsingException(ArgumentParser parser, Argument arg, Map<String, Object> attrs,
+        String flag, Object value) {
+      super(parser);
+      this.arg = arg;
+      this.attrs = Collections.unmodifiableMap(attrs);
+      this.flag = flag;
+      this.value = value;
+    }
+  }
+
+  static class AbortParsingAction implements ArgumentAction {
+    private final ArgumentAction delegate;
+
+    AbortParsingAction(ArgumentAction delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
+        Object value) throws ArgumentParserException {
+      delegate.run(parser, arg, attrs, flag, value);
+      throw new AbortParsingException(parser, arg, attrs, flag, value);
+    }
+
+    @Override
+    public void onAttach(Argument arg) {
+      delegate.onAttach(arg);
+    }
+
+    @Override
+    public boolean consumeArgument() {
+      return delegate.consumeArgument();
+    }
+  }
 }

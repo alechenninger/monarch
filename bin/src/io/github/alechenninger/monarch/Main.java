@@ -43,6 +43,8 @@ public class Main {
   private final Monarch monarch;
   private final MonarchParsers parsers;
   private final Yaml yaml;
+  // TODO make this configurable; maybe use a 'real' logger
+  private final boolean debugInfo = true;
 
   private static final Charset UTF_8 = Charset.forName("UTF-8");
 
@@ -55,68 +57,102 @@ public class Main {
     this.fileSystem = fileSystem;
   }
 
-  public void run(String argsSpaceDelimited) throws IOException, ArgumentParserException {
-    run(argsSpaceDelimited.split(" "));
+  public int run(String argsSpaceDelimited) {
+    return run(argsSpaceDelimited.split(" "));
   }
 
-  public void run(String[] args) throws IOException, ArgumentParserException {
+  public int run(String[] args) {
     try {
-      ApplyChangesetInput cliInputs = new ArgParseCommandInput(new DefaultAppInfo(), args).getApplyCommands().get(0);
+      CommandInput commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
 
-      if (cliInputs.isHelpRequested()) {
-        System.out.print(cliInputs.getHelpMessage());
-        return;
+      if (commandInput.isHelpRequested()) {
+        System.out.print(commandInput.getHelpMessage());
       }
 
-      ApplyChangesetOptions options = ApplyChangesetOptions.fromInputAndConfigFiles(
-          cliInputs, fileSystem, parsers, defaultConfigPath);
-
-      Path outputDir = options.outputDir()
-          .orElseThrow(missingOptionException("output directory"));
-      Path dataDir = options.dataDir()
-          .orElseThrow(missingOptionException("data directory"));
-      Hierarchy hierarchy = options.hierarchy()
-          .orElseThrow(missingOptionException("hierarchy"));
-      String target = options.target()
-          .orElseThrow(missingOptionException("target"));
-      Iterable<Change> changes = options.changes();
-      Set<String> mergeKeys = options.mergeKeys();
-
-      if (!changes.iterator().hasNext()) {
-        System.out.println("No changes provided; formatting target.");
-      }
-
-      List<String> affectedSources = hierarchy.hierarchyOf(target)
-          .orElseThrow(() -> new IllegalArgumentException("Target source not found in hierarchy: "
-              + options.target()))
-          .descendants();
-
-      Map<String, Map<String,Object>> currentData = readDataForHierarchy(dataDir, hierarchy);
-
-      Map<String, Map<String, Object>> result = monarch.generateSources(
-          hierarchy, changes, target, currentData, mergeKeys);
-
-      for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
-        String source = sourceToData.getKey();
-
-        if (!affectedSources.contains(source)) {
+      for (ApplyChangesetInput applyChangesetInput : commandInput.getApplyCommands()) {
+        if (applyChangesetInput.isHelpRequested()) {
+          System.out.print(applyChangesetInput.getHelpMessage());
           continue;
         }
 
-        Path sourcePath = outputDir.resolve(source);
-        ensureParentDirectories(sourcePath);
+        try {
+          doApply(applyChangesetInput);
+        } catch (Exception e) {
+          if (debugInfo) {
+            e.printStackTrace();
+          } else {
+            System.out.println("Error: " + e.getMessage());
+          }
 
-        SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
+          System.out.println();
 
-        if (sorted.isEmpty()) {
-          Files.write(sourcePath, new byte[]{});
-        }
-        else {
-          yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+          run("apply --help");
         }
       }
-    } catch (MonarchException e) {
-      e.printStackTrace();
+
+      return 0;
+    } catch (Exception e) {
+      if (debugInfo) {
+        e.printStackTrace();
+      } else {
+        System.out.println("Error: " + e.getMessage());
+      }
+
+      System.out.println();
+
+      run("--help");
+
+      return 2;
+    }
+  }
+
+  private void doApply(ApplyChangesetInput cliInputs) throws IOException {
+    ApplyChangesetOptions options = ApplyChangesetOptions.fromInputAndConfigFiles(
+        cliInputs, fileSystem, parsers, defaultConfigPath);
+
+    Path outputDir = options.outputDir()
+        .orElseThrow(missingOptionException("output directory"));
+    Path dataDir = options.dataDir()
+        .orElseThrow(missingOptionException("data directory"));
+    Hierarchy hierarchy = options.hierarchy()
+        .orElseThrow(missingOptionException("hierarchy"));
+    String target = options.target()
+        .orElseThrow(missingOptionException("target"));
+    Iterable<Change> changes = options.changes();
+    Set<String> mergeKeys = options.mergeKeys();
+
+    if (!changes.iterator().hasNext()) {
+      System.out.println("No changes provided; formatting target.");
+    }
+
+    List<String> affectedSources = hierarchy.hierarchyOf(target)
+        .orElseThrow(() -> new IllegalArgumentException("Target source not found in hierarchy: "
+            + options.target()))
+        .descendants();
+
+    Map<String, Map<String,Object>> currentData = readDataForHierarchy(dataDir, hierarchy);
+
+    Map<String, Map<String, Object>> result = monarch.generateSources(
+        hierarchy, changes, target, currentData, mergeKeys);
+
+    for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
+      String source = sourceToData.getKey();
+
+      if (!affectedSources.contains(source)) {
+        continue;
+      }
+
+      Path sourcePath = outputDir.resolve(source);
+      ensureParentDirectories(sourcePath);
+
+      SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
+
+      if (sorted.isEmpty()) {
+        Files.write(sourcePath, new byte[]{});
+      }
+      else {
+        yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+      }
     }
   }
 
@@ -168,12 +204,14 @@ public class Main {
 
     Yaml yaml = new Yaml(dumperOptions);
 
-    new Main(
+    int exitCode = new Main(
         new Monarch(),
         yaml,
         System.getProperty("user.home") + "/.monarch/config.yaml",
         FileSystems.getDefault(),
         new MonarchParsers.Default(yaml))
         .run(args);
+
+    System.exit(exitCode);
   }
 }

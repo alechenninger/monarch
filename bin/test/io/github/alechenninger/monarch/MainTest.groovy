@@ -138,4 +138,10 @@ target: teams/myteam.yaml
         'myapp::favorite_website': 'http://www.redhat.com'
     ]
   }
+
+  @Test
+  public void shouldPrintHelpForSpecificCommand() {
+    main.run("apply --help");
+
+  }
 }
