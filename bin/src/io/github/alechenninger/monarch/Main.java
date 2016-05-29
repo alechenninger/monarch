@@ -18,7 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
-import org.apache.commons.cli.ParseException;
+import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -36,7 +36,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class Main {
   private final Path defaultConfigPath;
@@ -56,20 +55,21 @@ public class Main {
     this.fileSystem = fileSystem;
   }
 
-  public void run(String argsSpaceDelimited) throws IOException, ParseException {
+  public void run(String argsSpaceDelimited) throws IOException, ArgumentParserException {
     run(argsSpaceDelimited.split(" "));
   }
 
-  public void run(String[] args) throws ParseException, IOException {
+  public void run(String[] args) throws IOException, ArgumentParserException {
     try {
-      CliInputs cliInputs = CliInputs.parse(args);
+      ApplyChangesetInput cliInputs = new ArgParseCommandInput(new DefaultAppInfo(), args).getApplyCommands().get(0);
 
-      if (cliInputs.helpRequested()) {
-        System.out.print(cliInputs.helpMessage());
+      if (cliInputs.isHelpRequested()) {
+        System.out.print(cliInputs.getHelpMessage());
         return;
       }
 
-      MonarchOptions options = getOptionsFromInputsAndConfigFiles(cliInputs, fileSystem, parsers);
+      ApplyChangesetOptions options = ApplyChangesetOptions.fromInputAndConfigFiles(
+          cliInputs, fileSystem, parsers, defaultConfigPath);
 
       Path outputDir = options.outputDir()
           .orElseThrow(missingOptionException("output directory"));
@@ -115,32 +115,9 @@ public class Main {
           yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
         }
       }
-    } catch (MonarchException | ParseException e) {
+    } catch (MonarchException e) {
       e.printStackTrace();
-      System.out.print(CliInputs.parse(new String[0]).helpMessage());
     }
-  }
-
-  private MonarchOptions getOptionsFromInputsAndConfigFiles(CliInputs cliInputs, FileSystem fileSystem,
-      MonarchParsers parsers) {
-    MonarchOptions options = MonarchOptions.fromInputs(cliInputs, fileSystem, parsers);
-
-    List<Path> pathsFromCli = cliInputs.getConfigPaths()
-        .stream()
-        .map(fileSystem::getPath)
-        .collect(Collectors.toList());
-
-    List<Path> configPaths = new ArrayList<>();
-    configPaths.addAll(pathsFromCli);
-    configPaths.add(defaultConfigPath);
-
-    for (Path configPath : configPaths) {
-      if (Files.exists(configPath)) {
-        options = options.fallingBackTo(MonarchOptions.fromYaml(configPath));
-      }
-    }
-
-    return options;
   }
 
   private Map<String, Map<String, Object>> readDataForHierarchy(Path dataDir, Hierarchy hierarchy) {
@@ -183,7 +160,7 @@ public class Main {
     return list;
   }
 
-  public static void main(String[] args) throws ParseException, IOException {
+  public static void main(String[] args) throws IOException, ArgumentParserException {
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
     dumperOptions.setIndent(2);

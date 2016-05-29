@@ -29,9 +29,7 @@ class YamlMonarchParserTest {
 
   @Test
   public void shouldTolerateEmptyYamlDocumentsWhenParseChangeset() {
-    def changesetInput = new ByteArrayInputStream('''
----
-'''.getBytes("UTF-8"));
+    def changesetInput = new ByteArrayInputStream('\n---\n'.getBytes("UTF-8"));
 
     Iterable<Change> parsed = parser.parseChanges(changesetInput);
 

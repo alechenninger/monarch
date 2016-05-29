@@ -27,11 +27,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
+public class ApplyChangesetOptionsFromSerializableConfig implements ApplyChangesetOptions {
   private final Config config;
   private final FileSystem fileSystem;
 
-  public MonarchOptionsFromSerializableConfig(Config config, FileSystem fileSystem) {
+  public ApplyChangesetOptionsFromSerializableConfig(Config config, FileSystem fileSystem) {
     this.config = config;
     this.fileSystem = fileSystem;
   }

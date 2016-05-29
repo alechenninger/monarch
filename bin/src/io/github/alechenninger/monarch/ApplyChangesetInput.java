@@ -27,7 +27,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-public interface Inputs {
+/** User input for applying a changeset to a target in a hierarchy. */
+public interface ApplyChangesetInput {
   Optional<String> getHierarchyPathOrYaml();
 
   Optional<String> getChangesPathOrYaml();
@@ -42,20 +43,7 @@ public interface Inputs {
 
   List<String> getMergeKeys();
 
-  default Inputs fallingBackTo(Inputs inputs) {
-    return new OverridableInputs(this, inputs);
-  }
+  boolean isHelpRequested();
 
-  default Inputs overriddenWith(Inputs inputs) {
-    return new OverridableInputs(inputs, this);
-  }
-
-  static Inputs fromYaml(Path configPath) {
-    try {
-      return (Inputs) new Yaml(new Constructor(SerializableInputs.class))
-          .load(Files.newInputStream(configPath));
-    } catch (IOException e) {
-      throw new MonarchException("Unable to read config file: " + configPath, e);
-    }
-  }
+  String getHelpMessage();
 }

@@ -23,6 +23,13 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 
+/**
+ * Parses some kind(s) of {@link InputStream} into monarch primitives like {@link Hierarchy} and
+ * {@link Change}.
+ *
+ * <p>For example, the {@link YamlMonarchParser} can parse YAML files. Other parsers capable of
+ * parsing other kinds of input streams may exist.
+ */
 public interface MonarchParser {
   Hierarchy parseHierarchy(InputStream hierarchyInput);
   Iterable<Change> parseChanges(InputStream changesInput);

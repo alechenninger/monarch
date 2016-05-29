@@ -21,23 +21,23 @@ package io.github.alechenninger.monarch;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-public class OverridableOptions implements MonarchOptions {
-  private final MonarchOptions override;
-  private final MonarchOptions fallback;
+public class OverridableApplyChangesetOptions implements ApplyChangesetOptions {
+  private final ApplyChangesetOptions override;
+  private final ApplyChangesetOptions fallback;
 
-  public OverridableOptions(MonarchOptions override, MonarchOptions fallback) {
+  public OverridableApplyChangesetOptions(ApplyChangesetOptions override,
+      ApplyChangesetOptions fallback) {
     this.override = override;
     this.fallback = fallback;
   }
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return overridden(MonarchOptions::hierarchy);
+    return overridden(ApplyChangesetOptions::hierarchy);
   }
 
   @Override
@@ -76,20 +76,20 @@ public class OverridableOptions implements MonarchOptions {
 
   @Override
   public Optional<String> target() {
-    return overridden(MonarchOptions::target);
+    return overridden(ApplyChangesetOptions::target);
   }
 
   @Override
   public Optional<Path> dataDir() {
-    return overridden(MonarchOptions::dataDir);
+    return overridden(ApplyChangesetOptions::dataDir);
   }
 
   @Override
   public Optional<Path> outputDir() {
-    return overridden(MonarchOptions::outputDir);
+    return overridden(ApplyChangesetOptions::outputDir);
   }
 
-  private <T> Optional<T> overridden(Function<MonarchOptions, Optional<T>> input) {
+  private <T> Optional<T> overridden(Function<ApplyChangesetOptions, Optional<T>> input) {
     Optional<T> maybeOverride = input.apply(override);
 
     if (maybeOverride.isPresent()) {

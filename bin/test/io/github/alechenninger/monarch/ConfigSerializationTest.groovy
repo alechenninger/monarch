@@ -26,7 +26,7 @@ import org.yaml.snakeyaml.constructor.Constructor
 
 import java.nio.file.FileSystems
 
-import static io.github.alechenninger.monarch.MonarchOptionsFromSerializableConfig.Config
+import static ApplyChangesetOptionsFromSerializableConfig.Config
 
 @RunWith(JUnit4.class)
 class ConfigSerializationTest {
@@ -42,7 +42,7 @@ mergeKeys:
   - bar
 ''');
 
-    def options = new MonarchOptionsFromSerializableConfig(config, FileSystems.default)
+    def options = new ApplyChangesetOptionsFromSerializableConfig(config, FileSystems.default)
 
     assert options.hierarchy().get().descendants() == ['foo', 'baz']
     assert options.mergeKeys() == ['bar'] as Set

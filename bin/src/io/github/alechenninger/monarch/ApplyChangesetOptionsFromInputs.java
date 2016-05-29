@@ -25,22 +25,17 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class MonarchOptionsFromInputs implements MonarchOptions {
-  private final Inputs inputs;
+public class ApplyChangesetOptionsFromInputs implements ApplyChangesetOptions {
+  private final ApplyChangesetInput inputs;
   private final MonarchParsers parsers;
   private final FileSystem fileSystem;
 
-  public MonarchOptionsFromInputs(Inputs inputs, MonarchParsers parsers, FileSystem fileSystem) {
+  public ApplyChangesetOptionsFromInputs(ApplyChangesetInput inputs, MonarchParsers parsers, FileSystem fileSystem) {
     this.inputs = inputs;
     this.parsers = parsers;
     this.fileSystem = fileSystem;
