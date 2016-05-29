@@ -91,4 +91,13 @@ public class YamlMonarchParser implements MonarchParser {
 
     return data;
   }
+
+  @Override
+  public Map<String, Object> readAsMap(InputStream inputStream) {
+    try {
+      return (Map<String, Object>) yaml.load(inputStream);
+    } catch (ClassCastException e) {
+      throw new MonarchException("Expected path to parse as map.", e);
+    }
+  }
 }

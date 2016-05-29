@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,21 +18,19 @@
 
 package io.github.alechenninger.monarch;
 
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Map;
+import java.util.Optional;
 
-/**
- * Parses some kind(s) of {@link InputStream} into monarch primitives like {@link Hierarchy} and
- * {@link Change}.
- *
- * <p>For example, the {@link YamlMonarchParser} can parse YAML files. Other parsers capable of
- * parsing other kinds of input streams may exist.
- */
-public interface MonarchParser {
-  Hierarchy parseHierarchy(InputStream hierarchyInput);
-  Iterable<Change> parseChanges(InputStream changesInput);
-  Map<String, Map<String, Object>> readData(Collection<String> sources, Path dataDir);
-  Map<String, Object> readAsMap(InputStream inputStream);
+public class DefaultAppInfo implements AppInfo {
+  public String version() {
+    return Optional.ofNullable(Main.class.getPackage().getImplementationVersion())
+        .orElse("0.0.0");
+  }
+
+  public String description() {
+    return "A tool to manage hierarchical data.";
+  }
+
+  public String url() {
+    return "https://github.com/alechenninger/monarch";
+  }
 }

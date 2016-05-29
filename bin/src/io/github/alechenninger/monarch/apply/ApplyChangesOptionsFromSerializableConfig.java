@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,22 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.apply;
+
+import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.Hierarchy;
+import io.github.alechenninger.monarch.SerializableConfig;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
-  private final Config config;
+public class ApplyChangesOptionsFromSerializableConfig implements ApplyChangesOptions {
+  private final SerializableConfig config;
   private final FileSystem fileSystem;
 
-  public MonarchOptionsFromSerializableConfig(Config config, FileSystem fileSystem) {
+  public ApplyChangesOptionsFromSerializableConfig(SerializableConfig config, FileSystem fileSystem) {
     this.config = config;
     this.fileSystem = fileSystem;
   }
@@ -66,62 +68,5 @@ public class MonarchOptionsFromSerializableConfig implements MonarchOptions {
   @Override
   public Optional<Path> outputDir() {
     return Optional.ofNullable(config.getOutputDir()).map(fileSystem::getPath);
-  }
-
-  public static class Config {
-    private Object hierarchy;
-    private List<Map<String, Object>> changes;
-    private Set<String> mergeKeys;
-    private String target;
-    private String dataDir;
-    private String outputDir;
-
-    public Object getHierarchy() {
-      return hierarchy;
-    }
-
-    public void setHierarchy(Object hierarchy) {
-      this.hierarchy = hierarchy;
-    }
-
-    public List<Map<String, Object>> getChanges() {
-      return changes;
-    }
-
-    public void setChanges(List<Map<String, Object>> changes) {
-      this.changes = changes;
-    }
-
-    public Set<String> getMergeKeys() {
-      return mergeKeys;
-    }
-
-    public void setMergeKeys(Set<String> mergeKeys) {
-      this.mergeKeys = mergeKeys;
-    }
-
-    public String getTarget() {
-      return target;
-    }
-
-    public void setTarget(String target) {
-      this.target = target;
-    }
-
-    public String getDataDir() {
-      return dataDir;
-    }
-
-    public void setDataDir(String dataDir) {
-      this.dataDir = dataDir;
-    }
-
-    public String getOutputDir() {
-      return outputDir;
-    }
-
-    public void setOutputDir(String outputDir) {
-      this.outputDir = outputDir;
-    }
   }
 }

@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,18 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.apply;
 
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-public interface Inputs {
+/** User input for applying a changeset to a target in a hierarchy. */
+public interface ApplyChangesInput {
   Optional<String> getHierarchyPathOrYaml();
 
   Optional<String> getChangesPathOrYaml();
@@ -42,20 +37,7 @@ public interface Inputs {
 
   List<String> getMergeKeys();
 
-  default Inputs fallingBackTo(Inputs inputs) {
-    return new OverridableInputs(this, inputs);
-  }
+  boolean isHelpRequested();
 
-  default Inputs overriddenWith(Inputs inputs) {
-    return new OverridableInputs(inputs, this);
-  }
-
-  static Inputs fromYaml(Path configPath) {
-    try {
-      return (Inputs) new Yaml(new Constructor(SerializableInputs.class))
-          .load(Files.newInputStream(configPath));
-    } catch (IOException e) {
-      throw new MonarchException("Unable to read config file: " + configPath, e);
-    }
-  }
+  String getHelpMessage();
 }

@@ -22,6 +22,10 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.nio.file.Path;
 
+/**
+ * Represents both a collection of known {@link MonarchParser}s by capability, and a strategy for
+ * determining which parser to use given a {@link Path} or file extension, etc.
+ */
 public interface MonarchParsers {
   MonarchParser yaml();
 

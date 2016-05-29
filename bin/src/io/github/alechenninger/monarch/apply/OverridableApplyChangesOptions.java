@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,28 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.apply;
+
+import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.util.ConcatIterable;
+import io.github.alechenninger.monarch.Hierarchy;
 
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-public class OverridableOptions implements MonarchOptions {
-  private final MonarchOptions override;
-  private final MonarchOptions fallback;
+public class OverridableApplyChangesOptions implements ApplyChangesOptions {
+  private final ApplyChangesOptions override;
+  private final ApplyChangesOptions fallback;
 
-  public OverridableOptions(MonarchOptions override, MonarchOptions fallback) {
+  public OverridableApplyChangesOptions(ApplyChangesOptions override,
+      ApplyChangesOptions fallback) {
     this.override = override;
     this.fallback = fallback;
   }
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return overridden(MonarchOptions::hierarchy);
+    return overridden(ApplyChangesOptions::hierarchy);
   }
 
   @Override
@@ -50,46 +53,25 @@ public class OverridableOptions implements MonarchOptions {
 
   @Override
   public Iterable<Change> changes() {
-    return () -> new Iterator<Change>() {
-      Iterator<Change> overrideIterator = override.changes().iterator();
-      Iterator<Change> fallbackIterator = fallback.changes().iterator();
-
-      @Override
-      public boolean hasNext() {
-        return overrideIterator.hasNext() || fallbackIterator.hasNext();
-      }
-
-      @Override
-      public Change next() {
-        if (overrideIterator.hasNext()) {
-          return overrideIterator.next();
-        }
-
-        if (fallbackIterator.hasNext()) {
-          return fallbackIterator.next();
-        }
-
-        throw new IndexOutOfBoundsException();
-      }
-    };
+    return new ConcatIterable<>(override.changes(), fallback.changes());
   }
 
   @Override
   public Optional<String> target() {
-    return overridden(MonarchOptions::target);
+    return overridden(ApplyChangesOptions::target);
   }
 
   @Override
   public Optional<Path> dataDir() {
-    return overridden(MonarchOptions::dataDir);
+    return overridden(ApplyChangesOptions::dataDir);
   }
 
   @Override
   public Optional<Path> outputDir() {
-    return overridden(MonarchOptions::outputDir);
+    return overridden(ApplyChangesOptions::outputDir);
   }
 
-  private <T> Optional<T> overridden(Function<MonarchOptions, Optional<T>> input) {
+  private <T> Optional<T> overridden(Function<ApplyChangesOptions, Optional<T>> input) {
     Optional<T> maybeOverride = input.apply(override);
 
     if (maybeOverride.isPresent()) {
