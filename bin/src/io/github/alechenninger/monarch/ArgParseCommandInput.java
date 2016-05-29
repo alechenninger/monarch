@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -140,6 +141,7 @@ public class ArgParseCommandInput implements CommandInput {
     @Override
     public InputFactory<ApplyChangesInput> addToSubparsers(Subparsers subparsers) {
       Subparser subparser = subparsers.addParser(name(), false)
+          .description("Applies a changeset to a target data source and its descendants.")
           .help("Applies a changeset to a target data source and its descendants.");
 
       subparser.addArgument("-?", "--help")
@@ -262,6 +264,7 @@ public class ArgParseCommandInput implements CommandInput {
     @Override
     public InputFactory<UpdateSetInput> addToSubparsers(Subparsers subparsers) {
       Subparser subparser = subparsers.addParser(name(), false)
+          .description("Add or remove key value pairs to set within a change.")
           .help("Add or remove key value pairs to set within a change.");
 
       subparser.addArgument("-?", "--help")

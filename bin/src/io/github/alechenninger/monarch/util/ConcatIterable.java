@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.util;
 
 import java.util.ArrayList;
 import java.util.Iterator;

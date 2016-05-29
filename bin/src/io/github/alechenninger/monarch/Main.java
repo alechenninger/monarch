@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.apply.ApplyChangesInput;
+import io.github.alechenninger.monarch.apply.ApplyChangesOptions;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;

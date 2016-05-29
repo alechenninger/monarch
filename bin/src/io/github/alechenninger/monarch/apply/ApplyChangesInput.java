@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.apply;
 
 import java.util.List;
 import java.util.Optional;

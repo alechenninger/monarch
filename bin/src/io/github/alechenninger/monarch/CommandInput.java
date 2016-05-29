@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 
 import java.util.List;

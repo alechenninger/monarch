@@ -19,7 +19,7 @@
 package io.github.alechenninger.monarch.set;
 
 import io.github.alechenninger.monarch.Change;
-import io.github.alechenninger.monarch.ConcatIterable;
+import io.github.alechenninger.monarch.util.ConcatIterable;
 import io.github.alechenninger.monarch.Hierarchy;
 
 import java.nio.file.Path;
