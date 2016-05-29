@@ -1,6 +1,8 @@
 # monarch
 Rule over hierarchical data!
 
+[![asciicast](https://asciinema.org/a/dnekai4t298rcchndc84kgwe3.png)](https://asciinema.org/a/dnekai4t298rcchndc84kgwe3)
+
 ## install from tarball
 1. Download tar or zip @ https://github.com/alechenninger/monarch/releases
 2. Extract somewhere you like to put things
