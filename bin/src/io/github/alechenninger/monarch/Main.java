@@ -84,28 +84,17 @@ public class Main {
         try {
           doApply(applyChangesetInput);
         } catch (Exception e) {
-          if (debugInfo) {
-            e.printStackTrace(consoleOut);
-          } else {
-            consoleOut.println("Error: " + e.getMessage());
-          }
-
+          printError(e);
           consoleOut.println();
-
-          run("apply --help");
+          consoleOut.print(applyChangesetInput.getHelpMessage());
+          return 2;
         }
       }
 
       return 0;
     } catch (Exception e) {
-      if (debugInfo) {
-        e.printStackTrace(consoleOut);
-      } else {
-        consoleOut.println("Error: " + e.getMessage());
-      }
-
+      printError(e);
       consoleOut.println();
-
       run("--help");
 
       return 2;
@@ -200,6 +189,14 @@ public class Main {
     List<String> list = new ArrayList<>();
     list.add(source);
     return list;
+  }
+
+  private void printError(Exception e) {
+    if (debugInfo) {
+      e.printStackTrace(consoleOut);
+    } else {
+      consoleOut.println("Error: " + e.getMessage());
+    }
   }
 
   public static void main(String[] args) throws IOException, ArgumentParserException {
