@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch
 
 import com.google.common.jimfs.Jimfs
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,8 +38,10 @@ class MainTest {
     return it;
   }
   def yaml = new Yaml();
+  def consoleCapture = new PrintStream(Files.newOutputStream(fs.getPath("console")));
 
-  def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs, new MonarchParsers.Default());
+  def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs,
+      new MonarchParsers.Default(), consoleCapture);
 
   static def dataDir = '/etc/hierarchy';
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -68,9 +71,18 @@ global.yaml:
     sourceToData.each { key, value -> writeDataSource(key, value)};
   }
 
+  String getConsole() {
+    return new String(Files.readAllBytes(fs.getPath("console")));
+  }
+
   @Before
   public void writeHierarchyYaml() {
     writeFile(hierarchyFile, hierarchy);
+  }
+
+  @After
+  public void printConsole() {
+    System.out.print(getConsole());
   }
 
   @Test
@@ -143,5 +155,6 @@ target: teams/myteam.yaml
   public void shouldPrintHelpForSpecificCommand() {
     main.run("apply --help");
 
+    assert getConsole().contains("usage: monarch apply");
   }
 }

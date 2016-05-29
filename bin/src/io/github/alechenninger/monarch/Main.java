@@ -23,6 +23,8 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -43,16 +45,20 @@ public class Main {
   private final Monarch monarch;
   private final MonarchParsers parsers;
   private final Yaml yaml;
+  private final PrintStream consoleOut;
   // TODO make this configurable; maybe use a 'real' logger
   private final boolean debugInfo = true;
 
   private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      MonarchParsers parsers) {
+      MonarchParsers parsers, OutputStream consoleOut) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.parsers = parsers;
+    this.consoleOut = consoleOut instanceof PrintStream
+        ? (PrintStream) consoleOut
+        : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
   }
@@ -66,12 +72,12 @@ public class Main {
       CommandInput commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
 
       if (commandInput.isHelpRequested()) {
-        System.out.print(commandInput.getHelpMessage());
+        consoleOut.print(commandInput.getHelpMessage());
       }
 
       for (ApplyChangesetInput applyChangesetInput : commandInput.getApplyCommands()) {
         if (applyChangesetInput.isHelpRequested()) {
-          System.out.print(applyChangesetInput.getHelpMessage());
+          consoleOut.print(applyChangesetInput.getHelpMessage());
           continue;
         }
 
@@ -79,12 +85,12 @@ public class Main {
           doApply(applyChangesetInput);
         } catch (Exception e) {
           if (debugInfo) {
-            e.printStackTrace();
+            e.printStackTrace(consoleOut);
           } else {
-            System.out.println("Error: " + e.getMessage());
+            consoleOut.println("Error: " + e.getMessage());
           }
 
-          System.out.println();
+          consoleOut.println();
 
           run("apply --help");
         }
@@ -93,12 +99,12 @@ public class Main {
       return 0;
     } catch (Exception e) {
       if (debugInfo) {
-        e.printStackTrace();
+        e.printStackTrace(consoleOut);
       } else {
-        System.out.println("Error: " + e.getMessage());
+        consoleOut.println("Error: " + e.getMessage());
       }
 
-      System.out.println();
+      consoleOut.println();
 
       run("--help");
 
@@ -122,7 +128,7 @@ public class Main {
     Set<String> mergeKeys = options.mergeKeys();
 
     if (!changes.iterator().hasNext()) {
-      System.out.println("No changes provided; formatting target.");
+      consoleOut.println("No changes provided; formatting target.");
     }
 
     List<String> affectedSources = hierarchy.hierarchyOf(target)
@@ -209,7 +215,8 @@ public class Main {
         yaml,
         System.getProperty("user.home") + "/.monarch/config.yaml",
         FileSystems.getDefault(),
-        new MonarchParsers.Default(yaml))
+        new MonarchParsers.Default(yaml),
+        System.out)
         .run(args);
 
     System.exit(exitCode);
