@@ -1,8 +1,8 @@
 # Change Log
 
-## [Unreleased](https://github.com/alechenninger/monarch/tree/HEAD)
+## [v0.5.0](https://github.com/alechenninger/monarch/tree/v0.5.0) (2016-05-29)
 
-[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.4.0...HEAD)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.4.0...v0.5.0)
 
 **Closed issues:**
 
