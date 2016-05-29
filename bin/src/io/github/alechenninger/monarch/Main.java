@@ -220,6 +220,11 @@ public class Main {
       return (Comparator<Change>) (c1, c2) -> {
         int c1Index = descendants.indexOf(c1.source());
         int c2Index = descendants.indexOf(c2.source());
+
+        if (c1Index < 0 || c2Index < 0) {
+          return c1.source().compareTo(c2.source());
+        }
+
         return c1Index - c2Index;
       };
     }).orElse((c1, c2) -> c1.source().compareTo(c2.source()));
