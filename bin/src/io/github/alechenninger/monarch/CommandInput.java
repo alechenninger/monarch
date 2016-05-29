@@ -24,4 +24,6 @@ public interface CommandInput {
   List<ApplyChangesetInput> getApplyCommands();
   String getHelpMessage();
   boolean isHelpRequested();
+  boolean isVersionRequested();
+  String getVersionMessage();
 }

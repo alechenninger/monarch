@@ -75,6 +75,10 @@ public class Main {
         consoleOut.print(commandInput.getHelpMessage());
       }
 
+      if (commandInput.isVersionRequested()) {
+        consoleOut.print(commandInput.getVersionMessage());
+      }
+
       for (ApplyChangesetInput applyChangesetInput : commandInput.getApplyCommands()) {
         if (applyChangesetInput.isHelpRequested()) {
           consoleOut.print(applyChangesetInput.getHelpMessage());

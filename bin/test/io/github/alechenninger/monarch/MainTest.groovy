@@ -28,6 +28,7 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -38,7 +39,8 @@ class MainTest {
     return it;
   }
   def yaml = new Yaml();
-  def consoleCapture = new PrintStream(Files.newOutputStream(fs.getPath("console")));
+  def consolePath = fs.getPath("console");
+  def consoleCapture = new PrintStream(Files.newOutputStream(consolePath));
 
   def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs,
       new MonarchParsers.Default(), consoleCapture);
@@ -50,7 +52,7 @@ class MainTest {
 global.yaml:
   teams/myteam.yaml:
     teams/myteam/stage.yaml
-''';
+'''
 
   void writeFile(String file, String data) {
     def path = fs.getPath(file);
@@ -72,7 +74,7 @@ global.yaml:
   }
 
   String getConsole() {
-    return new String(Files.readAllBytes(fs.getPath("console")));
+    return new String(Files.readAllBytes(consolePath));
   }
 
   @Before
@@ -86,7 +88,7 @@ global.yaml:
   }
 
   @Test
-  public void shouldWriteToFileSystemUsingCommandLineArguments() {
+  public void shouldDefaultToApplyCommand() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -106,6 +108,35 @@ global.yaml:
     ]);
 
     main.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/");
+
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8');
+
+    print myteamYaml;
+    print stageYaml;
+  }
+
+  @Test
+  public void applyShouldWriteToFileSystemUsingCommandLineArguments() {
+    writeFile('/etc/changes.yaml', '''
+---
+  source: teams/myteam.yaml
+  set:
+    myapp::version: 2
+    myapp::favorite_website: http://www.redhat.com
+---
+  source: teams/myteam/stage.yaml
+  set:
+    myapp::favorite_website: http://stage.redhat.com
+''');
+
+    writeDataSources([
+        'global.yaml': 'foo: "bar"',
+        'teams/myteam.yaml': 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ]);
+
+    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/");
 
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
     def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8');
@@ -156,5 +187,12 @@ target: teams/myteam.yaml
     main.run("apply --help");
 
     assert getConsole().contains("usage: monarch apply");
+  }
+
+  @Test
+  public void shouldShowVersion() {
+    main.run("--version");
+
+    assert getConsole() ==~ /[0-9].[0-9].[0-9]\n/
   }
 }

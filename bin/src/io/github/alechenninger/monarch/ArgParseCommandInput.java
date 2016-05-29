@@ -51,6 +51,11 @@ public class ArgParseCommandInput implements CommandInput {
         .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show this message and exit.");
 
+    parser.addArgument("--version")
+        .dest("show_version")
+        .action(new AbortParsingAction(Arguments.storeTrue()))
+        .help("Show the running version of monarch and exit.");
+
     Subparsers subparsers = parser.addSubparsers().dest("subparser")
         .title("Available commands")
         .description("If none chosen, defaults to '" + applySpec.name() + "'")
@@ -93,6 +98,16 @@ public class ArgParseCommandInput implements CommandInput {
   @Override
   public boolean isHelpRequested() {
     return parsed.getBoolean("help");
+  }
+
+  @Override
+  public boolean isVersionRequested() {
+    return parsed.getBoolean("show_version");
+  }
+
+  @Override
+  public String getVersionMessage() {
+    return parser.formatVersion() + '\n';
   }
 
   interface CommandSpec<T> {
@@ -190,7 +205,7 @@ public class ArgParseCommandInput implements CommandInput {
 
         @Override
         public boolean isHelpRequested() {
-          return Optional.ofNullable(parsed.getBoolean("apply_help")).orElse(false);
+          return parsed.getBoolean("apply_help");
         }
 
         @Override

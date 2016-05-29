@@ -18,9 +18,12 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Optional;
+
 public class DefaultAppInfo implements AppInfo {
   public String version() {
-    return Main.class.getPackage().getImplementationVersion();
+    return Optional.ofNullable(Main.class.getPackage().getImplementationVersion())
+        .orElse("0.0.0");
   }
 
   public String description() {
