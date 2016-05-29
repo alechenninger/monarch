@@ -21,9 +21,12 @@ package io.github.alechenninger.monarch;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class Change {
   private final String source;
@@ -32,10 +35,11 @@ public class Change {
 
   public Change(String source, Map<String, Object> set, List<String> remove) {
     this.source = source;
-    this.set = Collections.unmodifiableMap(new HashMap<>(set));
+    this.set = Collections.unmodifiableMap(new TreeMap<>(set));
     this.remove = Collections.unmodifiableList(new ArrayList<>(remove));
   }
 
+  /** @see #toMap */
   public static Change fromMap(Map<String, Object> map) {
     if (map == null) {
       throw new IllegalArgumentException("Cannot create a change from 'null'.");
@@ -62,7 +66,19 @@ public class Change {
 
   public List<String> remove() {
     return remove;
+  }
 
+  /** @see #fromMap(Map) */
+  public Map<String, Object> toMap() {
+    Map<String, Object> map = new LinkedHashMap<>();
+    map.put("source", source);
+    if (set != null && !set.isEmpty()) {
+      map.put("set", set);
+    }
+    if (remove != null && !remove.isEmpty()) {
+      map.put("remove", remove);
+    }
+    return Collections.unmodifiableMap(map);
   }
 
   @Override

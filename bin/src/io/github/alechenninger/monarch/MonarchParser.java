@@ -34,4 +34,5 @@ public interface MonarchParser {
   Hierarchy parseHierarchy(InputStream hierarchyInput);
   Iterable<Change> parseChanges(InputStream changesInput);
   Map<String, Map<String, Object>> readData(Collection<String> sources, Path dataDir);
+  Map<String, Object> readAsMap(InputStream inputStream);
 }

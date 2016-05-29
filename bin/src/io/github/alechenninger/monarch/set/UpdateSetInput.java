@@ -16,22 +16,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
-
-import io.github.alechenninger.monarch.set.UpdateSetInput;
+package io.github.alechenninger.monarch.set;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface CommandInput {
-  List<ApplyChangesInput> getApplyCommands();
+public interface UpdateSetInput {
+  /**
+   * Path of changes to read from and update (or create, if the path does not exist).
+   */
+  Optional<String> getChangesPath();
 
-  List<UpdateSetInput> getUpdateSetCommands();
+  /**
+   * Source for the change we wish to modify or create.
+   */
+  Optional<String> getSource();
 
-  String getHelpMessage();
+  /**
+   * A list of key value pairs to add or replace in the set block of the source's change.
+   *
+   * <p>The list may contain paths to yaml files or inline yaml heterogeneously.
+   */
+  List<String> getPutPathsOrYaml();
+
+  /**
+   * A list of keys to remove from the set block of the source's change.
+   */
+  List<String> getRemovals();
+
+  Optional<String> getHierarchyPathOrYaml();
+
+  List<String> getConfigPaths();
 
   boolean isHelpRequested();
 
-  boolean isVersionRequested();
-
-  String getVersionMessage();
+  String getHelpMessage();
 }

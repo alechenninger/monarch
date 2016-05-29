@@ -26,15 +26,13 @@ import org.yaml.snakeyaml.constructor.Constructor
 
 import java.nio.file.FileSystems
 
-import static ApplyChangesetOptionsFromSerializableConfig.Config
-
 @RunWith(JUnit4.class)
 class ConfigSerializationTest {
-  def yaml = new Yaml(new Constructor(Config.class));
+  def yaml = new Yaml(new Constructor(SerializableConfig.class));
 
   @Test
   public void shouldDeserialize() {
-    Config config = (Config) yaml.load('''
+    SerializableConfig config = (SerializableConfig) yaml.load('''
 hierarchy:
   foo:
     - baz
@@ -42,7 +40,7 @@ mergeKeys:
   - bar
 ''');
 
-    def options = new ApplyChangesetOptionsFromSerializableConfig(config, FileSystems.default)
+    def options = new ApplyChangesOptionsFromSerializableConfig(config, FileSystems.default)
 
     assert options.hierarchy().get().descendants() == ['foo', 'baz']
     assert options.mergeKeys() == ['bar'] as Set

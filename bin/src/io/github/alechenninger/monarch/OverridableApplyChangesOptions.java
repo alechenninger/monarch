@@ -25,19 +25,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-public class OverridableApplyChangesetOptions implements ApplyChangesetOptions {
-  private final ApplyChangesetOptions override;
-  private final ApplyChangesetOptions fallback;
+public class OverridableApplyChangesOptions implements ApplyChangesOptions {
+  private final ApplyChangesOptions override;
+  private final ApplyChangesOptions fallback;
 
-  public OverridableApplyChangesetOptions(ApplyChangesetOptions override,
-      ApplyChangesetOptions fallback) {
+  public OverridableApplyChangesOptions(ApplyChangesOptions override,
+      ApplyChangesOptions fallback) {
     this.override = override;
     this.fallback = fallback;
   }
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return overridden(ApplyChangesetOptions::hierarchy);
+    return overridden(ApplyChangesOptions::hierarchy);
   }
 
   @Override
@@ -50,46 +50,25 @@ public class OverridableApplyChangesetOptions implements ApplyChangesetOptions {
 
   @Override
   public Iterable<Change> changes() {
-    return () -> new Iterator<Change>() {
-      Iterator<Change> overrideIterator = override.changes().iterator();
-      Iterator<Change> fallbackIterator = fallback.changes().iterator();
-
-      @Override
-      public boolean hasNext() {
-        return overrideIterator.hasNext() || fallbackIterator.hasNext();
-      }
-
-      @Override
-      public Change next() {
-        if (overrideIterator.hasNext()) {
-          return overrideIterator.next();
-        }
-
-        if (fallbackIterator.hasNext()) {
-          return fallbackIterator.next();
-        }
-
-        throw new IndexOutOfBoundsException();
-      }
-    };
+    return new ConcatIterable<>(override.changes(), fallback.changes());
   }
 
   @Override
   public Optional<String> target() {
-    return overridden(ApplyChangesetOptions::target);
+    return overridden(ApplyChangesOptions::target);
   }
 
   @Override
   public Optional<Path> dataDir() {
-    return overridden(ApplyChangesetOptions::dataDir);
+    return overridden(ApplyChangesOptions::dataDir);
   }
 
   @Override
   public Optional<Path> outputDir() {
-    return overridden(ApplyChangesetOptions::outputDir);
+    return overridden(ApplyChangesOptions::outputDir);
   }
 
-  private <T> Optional<T> overridden(Function<ApplyChangesetOptions, Optional<T>> input) {
+  private <T> Optional<T> overridden(Function<ApplyChangesOptions, Optional<T>> input) {
     Optional<T> maybeOverride = input.apply(override);
 
     if (maybeOverride.isPresent()) {

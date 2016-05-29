@@ -21,17 +21,15 @@ package io.github.alechenninger.monarch;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ApplyChangesetOptionsFromSerializableConfig implements ApplyChangesetOptions {
-  private final Config config;
+public class ApplyChangesOptionsFromSerializableConfig implements ApplyChangesOptions {
+  private final SerializableConfig config;
   private final FileSystem fileSystem;
 
-  public ApplyChangesetOptionsFromSerializableConfig(Config config, FileSystem fileSystem) {
+  public ApplyChangesOptionsFromSerializableConfig(SerializableConfig config, FileSystem fileSystem) {
     this.config = config;
     this.fileSystem = fileSystem;
   }
@@ -66,62 +64,5 @@ public class ApplyChangesetOptionsFromSerializableConfig implements ApplyChanges
   @Override
   public Optional<Path> outputDir() {
     return Optional.ofNullable(config.getOutputDir()).map(fileSystem::getPath);
-  }
-
-  public static class Config {
-    private Object hierarchy;
-    private List<Map<String, Object>> changes;
-    private Set<String> mergeKeys;
-    private String target;
-    private String dataDir;
-    private String outputDir;
-
-    public Object getHierarchy() {
-      return hierarchy;
-    }
-
-    public void setHierarchy(Object hierarchy) {
-      this.hierarchy = hierarchy;
-    }
-
-    public List<Map<String, Object>> getChanges() {
-      return changes;
-    }
-
-    public void setChanges(List<Map<String, Object>> changes) {
-      this.changes = changes;
-    }
-
-    public Set<String> getMergeKeys() {
-      return mergeKeys;
-    }
-
-    public void setMergeKeys(Set<String> mergeKeys) {
-      this.mergeKeys = mergeKeys;
-    }
-
-    public String getTarget() {
-      return target;
-    }
-
-    public void setTarget(String target) {
-      this.target = target;
-    }
-
-    public String getDataDir() {
-      return dataDir;
-    }
-
-    public void setDataDir(String dataDir) {
-      this.dataDir = dataDir;
-    }
-
-    public String getOutputDir() {
-      return outputDir;
-    }
-
-    public void setOutputDir(String outputDir) {
-      this.outputDir = outputDir;
-    }
   }
 }

@@ -18,17 +18,11 @@
 
 package io.github.alechenninger.monarch;
 
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
 /** User input for applying a changeset to a target in a hierarchy. */
-public interface ApplyChangesetInput {
+public interface ApplyChangesInput {
   Optional<String> getHierarchyPathOrYaml();
 
   Optional<String> getChangesPathOrYaml();

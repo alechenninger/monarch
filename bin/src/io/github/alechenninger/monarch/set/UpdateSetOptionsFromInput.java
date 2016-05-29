@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.set;
+
+import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.Hierarchy;
+import io.github.alechenninger.monarch.MonarchException;
+import io.github.alechenninger.monarch.MonarchParser;
+import io.github.alechenninger.monarch.MonarchParsers;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,24 +32,27 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class ApplyChangesetOptionsFromInputs implements ApplyChangesetOptions {
-  private final ApplyChangesetInput inputs;
+public class UpdateSetOptionsFromInput implements UpdateSetOptions {
+  private final UpdateSetInput input;
   private final MonarchParsers parsers;
   private final FileSystem fileSystem;
 
-  public ApplyChangesetOptionsFromInputs(ApplyChangesetInput inputs, MonarchParsers parsers, FileSystem fileSystem) {
-    this.inputs = inputs;
+  public UpdateSetOptionsFromInput(UpdateSetInput input, MonarchParsers parsers, FileSystem
+      fileSystem) {
+    this.input = input;
     this.parsers = parsers;
     this.fileSystem = fileSystem;
   }
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return inputs.getHierarchyPathOrYaml().map(pathOrYaml -> {
+    return input.getHierarchyPathOrYaml().map(pathOrYaml -> {
       try {
         InputAndParser hierarchyInput = tryGetInputStreamForPathOrString(pathOrYaml);
 
@@ -55,43 +64,58 @@ public class ApplyChangesetOptionsFromInputs implements ApplyChangesetOptions {
   }
 
   @Override
-  public Set<String> mergeKeys() {
-    return new HashSet<>(inputs.getMergeKeys());
+  public Optional<Path> outputPath() {
+    return input.getChangesPath().map(fileSystem::getPath);
   }
 
   @Override
   public Iterable<Change> changes() {
-    return inputs.getChangesPathOrYaml().map(pathOrYaml -> {
+    return input.getChangesPath().map(pathString -> {
       try {
-        InputAndParser changesInput = tryGetInputStreamForPathOrString(pathOrYaml);
+        Path path = fileSystem.getPath(pathString);
 
-        return changesInput.parser.parseChanges(changesInput.stream);
+        if (Files.notExists(path)) {
+          return Collections.<Change>emptyList();
+        }
+
+        MonarchParser parser = parsers.forPath(path);
+        InputStream stream = Files.newInputStream(path);
+        return parser.parseChanges(stream);
       } catch (IOException e) {
         throw new MonarchException("Error reading hierarchy file.", e);
       }
-    }).orElse(Collections.emptySet());
+    }).orElse(Collections.emptyList());
   }
 
   @Override
-  public Optional<String> target() {
-    return inputs.getTarget();
+  public Set<String> removeFromSet() {
+    return new HashSet<>(input.getRemovals());
   }
 
   @Override
-  public Optional<Path> dataDir() {
-    return inputs.getDataDir().map(fileSystem::getPath);
+  public Map<String, Object> putInSet() {
+    return input.getPutPathsOrYaml().stream()
+        .map(pathOrYaml -> {
+          try {
+            InputAndParser inputAndParser = tryGetInputStreamForPathOrString(pathOrYaml);
+            return inputAndParser.parser.readAsMap(inputAndParser.stream);
+          } catch (IOException e) {
+            throw new MonarchException("Error parsing " + pathOrYaml, e);
+          }
+        })
+        .reduce(new HashMap<>(), (m1, m2) -> { m1.putAll(m2); return m1; });
   }
 
   @Override
-  public Optional<Path> outputDir() {
-    return inputs.getOutputDir().map(fileSystem::getPath);
+  public Optional<String> source() {
+    return input.getSource();
   }
 
   private InputAndParser tryGetInputStreamForPathOrString(String pathOrYaml) throws IOException {
     try {
       Path path = fileSystem.getPath(pathOrYaml);
       return new InputAndParser(Files.newInputStream(path), parsers.forPath(path));
-    } catch (InvalidPathException e) {
+    } catch (IOException e) {
       return new InputAndParser(new ByteArrayInputStream(pathOrYaml.getBytes("UTF-8")),
           /* Assume yaml */ parsers.yaml());
     }

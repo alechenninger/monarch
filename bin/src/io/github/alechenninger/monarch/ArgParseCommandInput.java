@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.set.UpdateSetInput;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Argument;
@@ -38,7 +39,8 @@ import java.util.Optional;
 public class ArgParseCommandInput implements CommandInput {
   private final ArgumentParser parser;
   private final Namespace parsed;
-  private final InputFactory<ApplyChangesetInput> applyChangesetFactory;
+  private final InputFactory<ApplyChangesInput> applyChangesetFactory;
+  private final InputFactory<UpdateSetInput> updateSetFactory;
 
   public ArgParseCommandInput(AppInfo appInfo, String[] args) throws ArgumentParserException {
     parser = ArgumentParsers.newArgumentParser("monarch", false)
@@ -46,7 +48,7 @@ public class ArgParseCommandInput implements CommandInput {
         .description(appInfo.description())
         .epilog(appInfo.url());
 
-    parser.addArgument("--help", "-?")
+    parser.addArgument("-?", "--help")
         .dest("help")
         .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show this message and exit.");
@@ -57,11 +59,12 @@ public class ArgParseCommandInput implements CommandInput {
         .help("Show the running version of monarch and exit.");
 
     Subparsers subparsers = parser.addSubparsers().dest("subparser")
-        .title("Available commands")
+        .title("commands")
         .description("If none chosen, defaults to '" + applySpec.name() + "'")
         .help("Pass --help to a command for more information.");
 
     applyChangesetFactory = applySpec.addToSubparsers(subparsers);
+    updateSetFactory = updateSetSpec.addToSubparsers(subparsers);
 
     parsed = parseArgsDefaultingToApply(args);
   }
@@ -82,9 +85,18 @@ public class ArgParseCommandInput implements CommandInput {
   }
 
   @Override
-  public List<ApplyChangesetInput> getApplyCommands() {
+  public List<ApplyChangesInput> getApplyCommands() {
     if (applySpec.name().equals(parsed.getString("subparser"))) {
       return Collections.singletonList(applyChangesetFactory.getInput(parsed));
+    }
+
+    return Collections.emptyList();
+  }
+
+  @Override
+  public List<UpdateSetInput> getUpdateSetCommands() {
+    if (updateSetSpec.name().equals(parsed.getString("subparser"))) {
+      return Collections.singletonList(updateSetFactory.getInput(parsed));
     }
 
     return Collections.emptyList();
@@ -119,21 +131,21 @@ public class ArgParseCommandInput implements CommandInput {
     T getInput(Namespace parsed);
   }
 
-  static CommandSpec<ApplyChangesetInput> applySpec = new CommandSpec<ApplyChangesetInput>() {
+  static CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
     @Override
     public String name() {
       return "apply";
     }
 
     @Override
-    public InputFactory<ApplyChangesetInput> addToSubparsers(Subparsers subparsers) {
+    public InputFactory<ApplyChangesInput> addToSubparsers(Subparsers subparsers) {
       Subparser subparser = subparsers.addParser(name(), false)
           .help("Applies a changeset to a target data source and its descendants.");
 
-      subparser.addArgument("--help", "-?")
+      subparser.addArgument("-?", "--help")
           .dest("apply_help")
           .action(Arguments.storeTrue())
-          .help("Show help for '" + name() + "' and exit.");
+          .help("Show this message and exit.");
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
@@ -190,7 +202,7 @@ public class ArgParseCommandInput implements CommandInput {
               + "ancestor's and merge them together, provided they are like types of either "
               + "collections or maps.");
 
-      return parsed -> new ApplyChangesetInput() {
+      return parsed -> new ApplyChangesInput() {
         @Override
         public Optional<String> getHierarchyPathOrYaml() {
           return Optional.ofNullable(parsed.getString("hierarchy"));
@@ -231,6 +243,99 @@ public class ArgParseCommandInput implements CommandInput {
         @Override
         public boolean isHelpRequested() {
           return parsed.getBoolean("apply_help");
+        }
+
+        @Override
+        public String getHelpMessage() {
+          return subparser.formatHelp();
+        }
+      };
+    }
+  };
+
+  static CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
+    @Override
+    public String name() {
+      return "set";
+    }
+
+    @Override
+    public InputFactory<UpdateSetInput> addToSubparsers(Subparsers subparsers) {
+      Subparser subparser = subparsers.addParser(name(), false)
+          .help("Add or remove key value pairs to set within a change.");
+
+      subparser.addArgument("-?", "--help")
+          .dest("set_help")
+          .help("Show this message and exit.")
+          .action(Arguments.storeTrue());
+
+      subparser.addArgument("--changes", "--changeset", "-c")
+          .dest("changes")
+          .help("Path to a changeset to modify or create.");
+
+      subparser.addArgument("--source", "-s")
+          .dest("source")
+          .help("Identifies the change to operate on by its data source.");
+
+      subparser.addArgument("--put", "-p")
+          .dest("put")
+          .nargs("+")
+          .help("Key value pairs to add or replace in the set block of the source's "
+              + "change.\n"
+              + "The list may contain paths to yaml files or inline yaml heterogeneously.");
+
+      subparser.addArgument("--remove", "-r")
+          .dest("remove")
+          .nargs("+")
+          .help("List of keys to remove from the set block of a change.\n"
+              + "Applied after 'put' so this may remove keys set by the 'put' argument.");
+
+      subparser.addArgument("--hierarchy", "-h")
+          .dest("hierarchy")
+          .help("Optional path to hierarchy. Only used for sorting entries in the output changes.");
+
+      subparser.addArgument("--configs", "--config")
+          .dest("configs")
+          .nargs("+")
+          .help("Paths to config files to use for the hierarchy. First one with a hierarchy wins.");
+
+      return parsed -> new UpdateSetInput() {
+        @Override
+        public Optional<String> getChangesPath() {
+          return Optional.ofNullable(parsed.getString("changes"));
+        }
+
+        @Override
+        public Optional<String> getSource() {
+          return Optional.ofNullable(parsed.getString("source"));
+        }
+
+        @Override
+        public List<String> getPutPathsOrYaml() {
+          return Optional.ofNullable(parsed.<String>getList("put"))
+              .orElse(Collections.emptyList());
+        }
+
+        @Override
+        public List<String> getRemovals() {
+          return Optional.ofNullable(parsed.<String>getList("remove"))
+              .orElse(Collections.emptyList());
+        }
+
+        @Override
+        public Optional<String> getHierarchyPathOrYaml() {
+          return Optional.ofNullable(parsed.getString("hierarchy"));
+        }
+
+        @Override
+        public List<String> getConfigPaths() {
+          return Optional.ofNullable(parsed.<String>getList("configs"))
+              .orElse(Collections.emptyList());
+        }
+
+        @Override
+        public boolean isHelpRequested() {
+          return parsed.getBoolean("set_help");
         }
 
         @Override

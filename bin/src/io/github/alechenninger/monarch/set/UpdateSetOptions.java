@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2016  Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.set;
 
-import static io.github.alechenninger.monarch.ApplyChangesetOptionsFromSerializableConfig.Config;
-
+import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.Hierarchy;
+import io.github.alechenninger.monarch.MonarchException;
+import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.SerializableConfig;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -29,32 +32,31 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Parsed options for applying a changeset to a target in a hierarchy.
- */
-public interface ApplyChangesetOptions {
+public interface UpdateSetOptions {
   Optional<Hierarchy> hierarchy();
-  Set<String> mergeKeys();
+  Optional<Path> outputPath();
   Iterable<Change> changes();
-  Optional<String> target();
-  Optional<Path> dataDir();
-  Optional<Path> outputDir();
+  Set<String> removeFromSet();
+  Map<String, Object> putInSet();
+  Optional<String> source();
 
-  default ApplyChangesetOptions fallingBackTo(ApplyChangesetOptions fallback) {
-    return new OverridableApplyChangesetOptions(this, fallback);
+  default UpdateSetOptions fallingBackTo(UpdateSetOptions fallback) {
+    return new OverridableUpdateSetOptions(this, fallback);
   }
 
-  static ApplyChangesetOptions fromInput(ApplyChangesetInput inputs, FileSystem fileSystem, MonarchParsers parsers) {
-    return new ApplyChangesetOptionsFromInputs(inputs, parsers, fileSystem);
+  static UpdateSetOptions fromInput(UpdateSetInput input, FileSystem fileSystem,
+      MonarchParsers parsers) {
+    return new UpdateSetOptionsFromInput(input, parsers, fileSystem);
   }
 
-  static ApplyChangesetOptions fromInputAndConfigFiles(ApplyChangesetInput input, FileSystem
-      fileSystem, MonarchParsers parsers, Path defaultConfigPath) {
-    ApplyChangesetOptions options = fromInput(input, fileSystem, parsers);
+  static UpdateSetOptions fromInputAndConfigFiles(UpdateSetInput input,
+      FileSystem fileSystem, MonarchParsers parsers, Path defaultConfigPath) {
+    UpdateSetOptions options = fromInput(input, fileSystem, parsers);
 
     List<Path> configPaths = input.getConfigPaths()
         .stream()
@@ -66,18 +68,18 @@ public interface ApplyChangesetOptions {
     for (Path configPath : configPaths) {
       if (Files.exists(configPath)) {
         // TODO: eventually maybe don't assume YAML
-        options = options.fallingBackTo(ApplyChangesetOptions.fromYaml(configPath));
+        options = options.fallingBackTo(UpdateSetOptions.fromYaml(configPath));
       }
     }
 
     return options;
   }
 
-  static ApplyChangesetOptions fromYaml(Path configPath) {
+  static UpdateSetOptions fromYaml(Path configPath) {
     try {
-      Config config = (Config) new Yaml(new Constructor(Config.class))
+      SerializableConfig config = (SerializableConfig) new Yaml(new Constructor(SerializableConfig.class))
           .load(Files.newInputStream(configPath));
-      return new ApplyChangesetOptionsFromSerializableConfig(config, configPath.getFileSystem());
+      return new UpdateSetOptionsFromSerializableConfig(config);
     } catch (IOException e) {
       throw new MonarchException("Unable to read config file: " + configPath, e);
     }
