@@ -1,7 +1,13 @@
 # Change Log
 
-## [v0.5.0](https://github.com/alechenninger/monarch/tree/v0.5.0) (2016-05-29)
+## [v0.5.1](https://github.com/alechenninger/monarch/tree/v0.5.1) (2016-05-30)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.0...v0.5.1)
 
+**Merged pull requests:**
+
+- Improve help and error handling [\#46](https://github.com/alechenninger/monarch/pull/46) ([alechenninger](https://github.com/alechenninger))
+
+## [v0.5.0](https://github.com/alechenninger/monarch/tree/v0.5.0) (2016-05-29)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.4.0...v0.5.0)
 
 **Closed issues:**
