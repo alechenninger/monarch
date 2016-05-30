@@ -167,7 +167,7 @@ public class Main {
             + target))
         .descendants();
 
-    Map<String, Map<String,Object>> currentData = readDataForHierarchy(dataDir, hierarchy);
+    Map<String, Map<String,Object>> currentData = parsers.readDataForHierarchy(dataDir, hierarchy);
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
         hierarchy, changes, target, currentData, mergeKeys);
@@ -241,28 +241,6 @@ public class Main {
     yaml.dumpAll(serializableChanges.iterator(), Files.newBufferedWriter(outputPath));
   }
 
-  private Map<String, Map<String, Object>> readDataForHierarchy(Path dataDir, Hierarchy hierarchy) {
-    Map<String, Map<String, Object>> data = new HashMap<>();
-    Map<String, List<String>> sourcesByExtension = new HashMap<>();
-
-    for (String source : hierarchy.descendants()) {
-      sourcesByExtension.merge(
-          MonarchParsers.getExtensionForFileName(source),
-          asGrowableList(source),
-          (l1, l2) -> { l1.addAll(l2); return l1; });
-    }
-
-    for (Map.Entry<String, List<String>> extensionSources : sourcesByExtension.entrySet()) {
-      String extension = extensionSources.getKey();
-      List<String> sources = extensionSources.getValue();
-      Map<String, Map<String, Object>> dataForExtension = parsers.forExtension(extension)
-          .readData(sources, dataDir);
-      data.putAll(dataForExtension);
-    }
-
-    return data;
-  }
-
   private static void ensureParentDirectories(Path path) throws IOException {
     Path parent = path.getParent();
     if (parent != null) {
@@ -272,13 +250,6 @@ public class Main {
 
   private static Supplier<? extends RuntimeException> missingOptionException(String option) {
     return () -> new MonarchException("Missing required option: " + option);
-  }
-
-  /** As opposed to {@link java.util.Arrays#asList(Object[])}. */
-  private static List<String> asGrowableList(String source) {
-    List<String> list = new ArrayList<>();
-    list.add(source);
-    return list;
   }
 
   private void printError(Throwable e) {

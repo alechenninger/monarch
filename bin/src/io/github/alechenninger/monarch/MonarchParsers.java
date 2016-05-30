@@ -21,6 +21,10 @@ package io.github.alechenninger.monarch;
 import org.yaml.snakeyaml.Yaml;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Represents both a collection of known {@link MonarchParser}s by capability, and a strategy for
@@ -42,6 +46,28 @@ public interface MonarchParsers {
       default:
         throw new UnsupportedOperationException("Extension not supported: " + extension);
     }
+  }
+
+  default Map<String, Map<String, Object>> readDataForHierarchy(Path dataDir, Hierarchy hierarchy) {
+    Map<String, Map<String, Object>> data = new HashMap<>();
+    Map<String, List<String>> sourcesByExtension = new HashMap<>();
+
+    for (String source : hierarchy.descendants()) {
+      List<String> sources = new ArrayList<>();
+      sources.add(source);
+      sourcesByExtension.merge(
+          getExtensionForFileName(source), sources, (l1, l2) -> { l1.addAll(l2); return l1; });
+    }
+
+    for (Map.Entry<String, List<String>> extensionSources : sourcesByExtension.entrySet()) {
+      String extension = extensionSources.getKey();
+      List<String> sources = extensionSources.getValue();
+      Map<String, Map<String, Object>> dataForExtension = forExtension(extension)
+          .readData(sources, dataDir);
+      data.putAll(dataForExtension);
+    }
+
+    return data;
   }
 
   static String getExtensionForFileName(String fileName) {
