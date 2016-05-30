@@ -1,7 +1,7 @@
 # monarch
 Rule over hierarchical data!
 
-<a href="https://asciinema.org/a/dnekai4t298rcchndc84kgwe3?speed=2&autoplay=1"><img src="https://asciinema.org/a/dnekai4t298rcchndc84kgwe3.png" width="750"/></a>
+<a href="https://asciinema.org/a/47206?speed=2&autoplay=1" target="_blank"><img src="https://asciinema.org/a/47206.png" width="589"/></a>
 
 ## install from tarball
 1. Download tar or zip @ https://github.com/alechenninger/monarch/releases
