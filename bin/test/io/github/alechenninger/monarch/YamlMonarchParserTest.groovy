@@ -25,13 +25,13 @@ import org.yaml.snakeyaml.Yaml
 
 @RunWith(JUnit4.class)
 class YamlMonarchParserTest {
-  def parser = new YamlMonarchParser(new Yaml());
+  def parser = new YamlMonarchParser(new Yaml())
 
   @Test
-  public void shouldTolerateEmptyYamlDocumentsWhenParseChangeset() {
-    def changesetInput = new ByteArrayInputStream('\n---\n'.getBytes("UTF-8"));
+  void shouldTolerateEmptyYamlDocumentsWhenParseChangeset() {
+    def changesetInput = new ByteArrayInputStream('\n---\n'.getBytes("UTF-8"))
 
-    Iterable<Change> parsed = parser.parseChanges(changesetInput);
+    Iterable<Change> parsed = parser.parseChanges(changesetInput)
 
     assert parsed.iterator().hasNext() == false
   }

@@ -29,17 +29,17 @@ import java.nio.file.FileSystems
 
 @RunWith(JUnit4.class)
 class ConfigSerializationTest {
-  def yaml = new Yaml(new Constructor(SerializableConfig.class));
+  def yaml = new Yaml(new Constructor(SerializableConfig.class))
 
   @Test
-  public void shouldDeserialize() {
+  void shouldDeserialize() {
     SerializableConfig config = (SerializableConfig) yaml.load('''
 hierarchy:
   foo:
     - baz
 mergeKeys:
   - bar
-''');
+''')
 
     def options = new ApplyChangesOptionsFromSerializableConfig(config, FileSystems.default)
 

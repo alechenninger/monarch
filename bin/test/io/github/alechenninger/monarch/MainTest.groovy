@@ -28,7 +28,6 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -78,17 +77,17 @@ global.yaml:
   }
 
   @Before
-  public void writeHierarchyYaml() {
+  void writeHierarchyYaml() {
     writeFile(hierarchyFile, hierarchy)
   }
 
   @After
-  public void printConsole() {
+  void printConsole() {
     System.out.print(getConsole())
   }
 
   @Test
-  public void shouldDefaultToApplyCommand() {
+  void shouldDefaultToApplyCommand() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -117,7 +116,7 @@ global.yaml:
   }
 
   @Test
-  public void applyShouldWriteToFileSystemUsingCommandLineArguments() {
+  void applyShouldWriteToFileSystemUsingCommandLineArguments() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -146,7 +145,7 @@ global.yaml:
   }
 
   @Test
-  public void shouldReadConfigFromInputsAndConfigFiles() {
+  void shouldReadConfigFromInputsAndConfigFiles() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -180,7 +179,7 @@ outputDir: /output/
   }
 
   @Test
-  public void shouldPrintHelpForMonarch() {
+  void shouldPrintHelpForMonarch() {
     assert main.run("--help") == 0
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
@@ -188,43 +187,43 @@ outputDir: /output/
   }
 
   @Test
-  public void shouldPrintHelpForApplyCommand() {
+  void shouldPrintHelpForApplyCommand() {
     assert main.run("apply --help") == 0
     assert getConsole().contains("usage: monarch apply")
   }
 
   @Test
-  public void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
+  void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
     assert main.run("apply --wat") == 2
     assert getConsole().contains("usage: monarch apply")
   }
 
   @Test
-  public void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
+  void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
     assert main.run("apply --wat") == 2
     assert getConsole().contains("usage: monarch apply")
   }
 
   @Test
-  public void shouldPrintHelpForSetCommand() {
+  void shouldPrintHelpForSetCommand() {
     assert main.run("set --help") == 0
     assert getConsole().contains("usage: monarch set")
   }
 
   @Test
-  public void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
+  void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
     assert main.run("set --wat") == 2
     assert getConsole().contains("usage: monarch set")
   }
 
   @Test
-  public void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
+  void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
     assert main.run("set --wat") == 2
     assert getConsole().contains("usage: monarch set")
   }
 
   @Test
-  public void shouldShowVersion() {
+  void shouldShowVersion() {
     assert main.run("--version") == 0
     assert getConsole() ==~ /[0-9].[0-9].[0-9]\n/
   }
