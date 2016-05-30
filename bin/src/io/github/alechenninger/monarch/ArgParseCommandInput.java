@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class ArgParseCommandInput implements CommandInput {
+  private static final String SUBPARSER_DEST = "subparser";
   private final ArgumentParser parser;
   private final Namespace parsed;
   private final InputFactory<ApplyChangesInput> applyChangesetFactory;
@@ -59,7 +60,7 @@ public class ArgParseCommandInput implements CommandInput {
         .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show the running version of monarch and exit.");
 
-    Subparsers subparsers = parser.addSubparsers().dest("subparser")
+    Subparsers subparsers = parser.addSubparsers().dest(SUBPARSER_DEST)
         .title("commands")
         .description("If none chosen, defaults to '" + applySpec.name() + "'")
         .help("Pass --help to a command for more information.");
@@ -74,21 +75,26 @@ public class ArgParseCommandInput implements CommandInput {
     try {
       return parser.parseArgs(args);
     } catch (AbortParsingException e) {
+      e.subparser.ifPresent(s -> e.attrs.put(SUBPARSER_DEST, s));
       return new Namespace(e.attrs);
     } catch (UnrecognizedArgumentException e) {
-      // Assume unrecognized because command omitted.
-      List<String> defaultedArgs = new ArrayList<>(args.length + 1);
-      defaultedArgs.add(applySpec.name());
-      Collections.addAll(defaultedArgs, args);
-      // TODO: warn to user here
-      return parser.parseArgs(defaultedArgs.stream().toArray(String[]::new));
+      // Is it because command omitted? If so default to apply command.
+      // Eventually remove this as it is deprecated behavior
+      if (args[0].startsWith("-")) {
+        List<String> defaultedArgs = new ArrayList<>(args.length + 1);
+        defaultedArgs.add(applySpec.name());
+        Collections.addAll(defaultedArgs, args);
+        // TODO: warn to user here
+        return parser.parseArgs(defaultedArgs.stream().toArray(String[]::new));
+      }
+
+      throw e;
     }
   }
 
   @Override
   public List<ApplyChangesInput> getApplyCommands() {
-    if (applySpec.name().equals(parsed.getString("subparser")) ||
-        Boolean.TRUE.equals(parsed.getBoolean("apply_help"))) {
+    if (applySpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
       return Collections.singletonList(applyChangesetFactory.getInput(parsed));
     }
 
@@ -97,8 +103,7 @@ public class ArgParseCommandInput implements CommandInput {
 
   @Override
   public List<UpdateSetInput> getUpdateSetCommands() {
-    if (updateSetSpec.name().equals(parsed.getString("subparser")) ||
-        Boolean.TRUE.equals(parsed.getBoolean("set_help"))) {
+    if (updateSetSpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
       return Collections.singletonList(updateSetFactory.getInput(parsed));
     }
 
@@ -148,7 +153,7 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("-?", "--help")
           .dest("apply_help")
-          .action(new AbortParsingAction(Arguments.storeTrue()))
+          .action(new AbortParsingAction(Arguments.storeTrue(), name()))
           .help("Show this message and exit.");
 
       subparser.addArgument("--hierarchy", "-h")
@@ -248,7 +253,7 @@ public class ArgParseCommandInput implements CommandInput {
 
         @Override
         public boolean isHelpRequested() {
-          return parsed.getBoolean("apply_help");
+          return Optional.ofNullable(parsed.getBoolean("apply_help")).orElse(false);
         }
 
         @Override
@@ -274,7 +279,7 @@ public class ArgParseCommandInput implements CommandInput {
       subparser.addArgument("-?", "--help")
           .dest("set_help")
           .help("Show this message and exit.")
-          .action(new AbortParsingAction(Arguments.storeTrue()));
+          .action(new AbortParsingAction(Arguments.storeTrue(), name()));
 
       subparser.addArgument("--changes", "--changeset", "-c")
           .dest("changes")
@@ -344,7 +349,7 @@ public class ArgParseCommandInput implements CommandInput {
 
         @Override
         public boolean isHelpRequested() {
-          return parsed.getBoolean("set_help");
+          return Optional.ofNullable(parsed.getBoolean("set_help")).orElse(false);
         }
 
         @Override
@@ -356,16 +361,18 @@ public class ArgParseCommandInput implements CommandInput {
   };
 
   static class AbortParsingException extends ArgumentParserException {
+    final Optional<String> subparser;
     final Argument arg;
     final Map<String, Object> attrs;
     final String flag;
     final Object value;
 
-    public AbortParsingException(ArgumentParser parser, Argument arg, Map<String, Object> attrs,
-        String flag, Object value) {
+    public AbortParsingException(Optional<String> subparser, ArgumentParser parser, Argument arg,
+        Map<String, Object> attrs, String flag, Object value) {
       super(parser);
+      this.subparser = subparser;
       this.arg = arg;
-      this.attrs = Collections.unmodifiableMap(attrs);
+      this.attrs = attrs;
       this.flag = flag;
       this.value = value;
     }
@@ -373,16 +380,23 @@ public class ArgParseCommandInput implements CommandInput {
 
   static class AbortParsingAction implements ArgumentAction {
     private final ArgumentAction delegate;
+    private final Optional<String> subparser;
 
     AbortParsingAction(ArgumentAction delegate) {
       this.delegate = delegate;
+      this.subparser = Optional.empty();
+    }
+
+    AbortParsingAction(ArgumentAction delegate, String subparser) {
+      this.delegate = delegate;
+      this.subparser = Optional.of(subparser);
     }
 
     @Override
     public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
         Object value) throws ArgumentParserException {
       delegate.run(parser, arg, attrs, flag, value);
-      throw new AbortParsingException(parser, arg, attrs, flag, value);
+      throw new AbortParsingException(subparser, parser, arg, attrs, flag, value);
     }
 
     @Override
