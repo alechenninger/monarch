@@ -20,7 +20,7 @@ petstore::version: '2'
 <a href="https://asciinema.org/a/47206?speed=2&autoplay=1" target="_blank"><img src="https://asciinema.org/a/47206.png" width="589"/></a>
 
 ## install from tarball
-1. Download tar or zip @ https://github.com/alechenninger/monarch/releases
+1. Download tar or zip @ https://github.com/alechenninger/monarch/releases/latest
 2. Extract somewhere you like to put things
 3. Have JRE8 installed
 4. Have JAVA_HOME defined (for ex: "/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.65-3.b17.fc22.x86_64")
