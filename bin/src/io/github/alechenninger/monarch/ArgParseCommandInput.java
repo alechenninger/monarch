@@ -157,17 +157,6 @@ public class ArgParseCommandInput implements CommandInput {
           .action(new AbortParsingAction(Arguments.storeTrue(), name()))
           .help("Show this message and exit.");
 
-      subparser.addArgument("--hierarchy", "-h")
-          .dest("hierarchy")
-          .help("Path to a yaml file describing the source hierarchy, relative to the data directory "
-              + "(see data-dir option). For example: \n"
-              + "global.yaml:\n"
-              + "  teams/myteam.yaml:\n"
-              + "    teams/myteam/dev.yaml\n"
-              + "    teams/myteam/stage.yaml\n"
-              + "    teams/myteam/prod.yaml\n"
-              + "  teams/otherteam.yaml");
-
       subparser.addArgument("--changes", "--changeset", "-c")
           .dest("changes")
           .required(true)
@@ -190,29 +179,47 @@ public class ArgParseCommandInput implements CommandInput {
               + "removed in sources beneath the target (that is, sources which inherit its values). "
               + "Ex: 'teams/myteam.yaml'");
 
-      subparser.addArgument("--data-dir", "-d")
-          .dest("data_dir")
-          .help("Path to where existing data sources life. The data for sources describe in the "
-              + "hierarchy is looked using the paths in the hierarchy relative to this folder.");
-
       subparser.addArgument("--configs", "--config")
           .dest("configs")
+          .metavar("CONFIG")
           .nargs("+")
           .help("Space delimited paths to files which configures default values for command line "
               + "options. The default config path of ~/.monarch/config.yaml is always checked.");
 
+      subparser.addArgument("--hierarchy", "-h")
+          .dest("hierarchy")
+          .help("Path to a yaml file describing the source hierarchy, relative to the data directory "
+              + "(see data-dir option). If not provided, will look for a value in config files with "
+              + "key 'hierarchy'. Expected YAML structure looks like: \n"
+              + "global.yaml:\n"
+              + "  teams/myteam.yaml:\n"
+              + "    - teams/myteam/dev.yaml\n"
+              + "    - teams/myteam/stage.yaml\n"
+              + "    - teams/myteam/prod.yaml\n"
+              + "  teams/otherteam.yaml");
+
+      subparser.addArgument("--data-dir", "-d")
+          .dest("data_dir")
+          .help("Path to where existing data sources life. The data for sources describe in the "
+              + "hierarchy is looked using the paths in the hierarchy relative to this folder. "
+              + "If not provided, will look for a value in config files with key 'dataDir'.");
+
       subparser.addArgument("--output-dir", "-o")
           .dest("output_dir")
           .help("Path to directory where result data sources will be written. Data sources will be "
-              + "written using relative paths from hierarchy.");
+              + "written using relative paths from hierarchy. If not provided, will look for a "
+              + "value in config files with key 'outputDir'.");
 
       subparser.addArgument("--merge-keys", "-m")
           .dest("merge_keys")
+          .metavar("MERGE_KEY")
+          .nargs("+")
           .help("Space-delimited list of keys which should be inherited with merge semantics. That is, "
               + "normally the value that is inherited for a given key is only the nearest ancestor's "
               + "value. Keys that are in the merge key list however inherit values from all of their "
               + "ancestor's and merge them together, provided they are like types of either "
-              + "collections or maps.");
+              + "collections or maps. If not provided, will look for an array value in config "
+              + "files with key 'outputDir'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
@@ -311,6 +318,7 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")
+          .metavar("CONFIG")
           .nargs("+")
           .help("Paths to config files to use for the hierarchy. First one with a hierarchy wins.");
 
