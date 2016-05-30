@@ -187,6 +187,14 @@ outputDir: /output/
   }
 
   @Test
+  void shouldPrintHelpForMonarchIfCommandUnrecognized() {
+    assert main.run("foobar") == 2
+    // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
+    // This means that it is not showing the help for a command but for monarch itself.
+    assert getConsole() =~ /usage: monarch.*\{apply/
+  }
+
+  @Test
   void shouldPrintHelpForApplyCommand() {
     assert main.run("apply --help") == 0
     assert getConsole().contains("usage: monarch apply")
@@ -194,13 +202,13 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
-    assert main.run("apply --wat") == 2
+    assert main.run("apply --target foo --changes bar --wat") == 2
     assert getConsole().contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
-    assert main.run("apply --wat") == 2
+    assert main.run("apply") == 2
     assert getConsole().contains("usage: monarch apply")
   }
 
@@ -212,13 +220,13 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
-    assert main.run("set --changes petstore.yaml --put 'petstore::version: \"2\"'") == 2
+    main.run("set --source global.yaml foo --changes petstore.yaml")
     assert getConsole().contains("usage: monarch set")
   }
 
   @Test
   void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
-    assert main.run("set --wat") == 2
+    assert main.run("set") == 2
     assert getConsole().contains("usage: monarch set")
   }
 

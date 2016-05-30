@@ -35,7 +35,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -44,10 +43,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -61,6 +58,8 @@ public class Main {
   // TODO make this configurable; maybe use a 'real' logger
   private final boolean debugInfo = true;
 
+  private final MonarchArgParser parser;
+
   private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
@@ -73,35 +72,22 @@ public class Main {
         : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
+    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut);
   }
 
   public int run(String argsSpaceDelimited) {
     return run(argsSpaceDelimited.split(" "));
   }
 
-  public int run(String[] args) {
+  public int run(String... args) {
     final CommandInput commandInput;
 
     try {
-      commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
-    } catch (ArgumentParserException e) {
-      printError(e);
+      commandInput = parser.parse(args);
+    } catch (MonarchArgParserException e) {
+      printError(e.getCause());
       consoleOut.println();
-
-      StringBuilder commandArgs = new StringBuilder();
-
-      for (String arg : args) {
-        if (arg.startsWith("-")) {
-          break;
-        }
-
-        commandArgs.append(arg).append(" ");
-      }
-
-      commandArgs.append("--help");
-
-      run(commandArgs.toString());
-
+      consoleOut.print(e.getHelpMessage());
       return 2;
     }
 
@@ -295,7 +281,7 @@ public class Main {
     return list;
   }
 
-  private void printError(Exception e) {
+  private void printError(Throwable e) {
     if (debugInfo) {
       e.printStackTrace(consoleOut);
     } else {
