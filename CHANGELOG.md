@@ -1,5 +1,15 @@
 # Change Log
 
+## [v0.5.2](https://github.com/alechenninger/monarch/tree/v0.5.2) (2016-05-30)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.1...v0.5.2)
+
+**Merged pull requests:**
+
+- Add '--change' as alias for '--changes' [\#50](https://github.com/alechenninger/monarch/pull/50) ([alechenninger](https://github.com/alechenninger))
+- Warn when defaulting to 'apply' command [\#49](https://github.com/alechenninger/monarch/pull/49) ([alechenninger](https://github.com/alechenninger))
+- Fix unregonized command help [\#48](https://github.com/alechenninger/monarch/pull/48) ([alechenninger](https://github.com/alechenninger))
+- Fix help output when arg error with multiple args [\#47](https://github.com/alechenninger/monarch/pull/47) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.5.1](https://github.com/alechenninger/monarch/tree/v0.5.1) (2016-05-30)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.0...v0.5.1)
 
