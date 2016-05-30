@@ -91,12 +91,16 @@ public class Main {
       StringBuilder commandArgs = new StringBuilder();
 
       for (String arg : args) {
-        if (!arg.startsWith("-")) {
-          commandArgs.append(arg);
+        if (arg.startsWith("-")) {
+          break;
         }
+
+        commandArgs.append(arg).append(" ");
       }
 
-      run(commandArgs + " --help");
+      commandArgs.append("--help");
+
+      run(commandArgs.toString());
 
       return 2;
     }

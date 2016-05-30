@@ -212,7 +212,7 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
-    assert main.run("set --wat") == 2
+    assert main.run("set --changes petstore.yaml --put 'petstore::version: \"2\"'") == 2
     assert getConsole().contains("usage: monarch set")
   }
 
