@@ -56,6 +56,6 @@ data sources. During releases, you might promote values from one environment's c
 another. It can be tedious to copy these values among horizontal promotions, which do not inherit
 each other (say, a QA environment to a staging environment), as well as, finally, vertical
 promotions (say from QA and stage environments to a base configuration file which all environments
-inherit defaults from). This tool allows you to start with your end state: all environments get 
-the new configuration, and allow to tool to generate the "horizontal" promotions from QA to stage,
-as well as the "vertical" promotion from QA and stage to their parent data source.
+inherit defaults from). This tool allows you to start with your end state, but be able to generate
+intermediate stages as you promote your release from one environment to another. Finally, when you
+are ready to generate your final state, redundant keys are removed.
