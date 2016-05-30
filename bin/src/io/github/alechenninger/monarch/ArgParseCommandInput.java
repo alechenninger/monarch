@@ -40,8 +40,10 @@ import java.util.Optional;
 public class ArgParseCommandInput implements CommandInput {
   private final ArgumentParser parser;
   private final Namespace parsed;
-  private final InputFactory<ApplyChangesInput> applyChangesetFactory;
+  private final InputFactory<ApplyChangesInput> applyChangesFactory;
   private final InputFactory<UpdateSetInput> updateSetFactory;
+
+  private static final String SUBPARSER_DEST = "subparser";
 
   public ArgParseCommandInput(AppInfo appInfo, String[] args) throws ArgumentParserException {
     parser = ArgumentParsers.newArgumentParser("monarch", false)
@@ -59,12 +61,12 @@ public class ArgParseCommandInput implements CommandInput {
         .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show the running version of monarch and exit.");
 
-    Subparsers subparsers = parser.addSubparsers().dest("subparser")
+    Subparsers subparsers = parser.addSubparsers().dest(SUBPARSER_DEST)
         .title("commands")
         .description("If none chosen, defaults to '" + applySpec.name() + "'")
         .help("Pass --help to a command for more information.");
 
-    applyChangesetFactory = applySpec.addToSubparsers(subparsers);
+    applyChangesFactory = applySpec.addToSubparsers(subparsers);
     updateSetFactory = updateSetSpec.addToSubparsers(subparsers);
 
     parsed = parseArgsDefaultingToApply(args);
@@ -74,21 +76,27 @@ public class ArgParseCommandInput implements CommandInput {
     try {
       return parser.parseArgs(args);
     } catch (AbortParsingException e) {
+      e.subparser.ifPresent(s -> e.attrs.put(SUBPARSER_DEST, s));
       return new Namespace(e.attrs);
     } catch (UnrecognizedArgumentException e) {
-      // Assume unrecognized because command omitted.
-      List<String> defaultedArgs = new ArrayList<>(args.length + 1);
-      defaultedArgs.add(applySpec.name());
-      Collections.addAll(defaultedArgs, args);
-      // TODO: warn to user here
-      return parser.parseArgs(defaultedArgs.stream().toArray(String[]::new));
+      // Is it because command omitted? If so default to apply command.
+      // Eventually remove this as it is deprecated behavior
+      if (args[0].startsWith("-")) {
+        List<String> defaultedArgs = new ArrayList<>(args.length + 1);
+        defaultedArgs.add(applySpec.name());
+        Collections.addAll(defaultedArgs, args);
+        // TODO: warn to user here
+        return parser.parseArgs(defaultedArgs.stream().toArray(String[]::new));
+      }
+
+      throw e;
     }
   }
 
   @Override
   public List<ApplyChangesInput> getApplyCommands() {
-    if (applySpec.name().equals(parsed.getString("subparser"))) {
-      return Collections.singletonList(applyChangesetFactory.getInput(parsed));
+    if (applySpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
+      return Collections.singletonList(applyChangesFactory.getInput(parsed));
     }
 
     return Collections.emptyList();
@@ -96,7 +104,7 @@ public class ArgParseCommandInput implements CommandInput {
 
   @Override
   public List<UpdateSetInput> getUpdateSetCommands() {
-    if (updateSetSpec.name().equals(parsed.getString("subparser"))) {
+    if (updateSetSpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
       return Collections.singletonList(updateSetFactory.getInput(parsed));
     }
 
@@ -141,27 +149,17 @@ public class ArgParseCommandInput implements CommandInput {
     @Override
     public InputFactory<ApplyChangesInput> addToSubparsers(Subparsers subparsers) {
       Subparser subparser = subparsers.addParser(name(), false)
-          .description("Applies a changeset to a target data source and its descendants.")
-          .help("Applies a changeset to a target data source and its descendants.");
+          .description("Applies changes to a target data source and its descendants.")
+          .help("Applies changes to a target data source and its descendants.");
 
       subparser.addArgument("-?", "--help")
           .dest("apply_help")
-          .action(Arguments.storeTrue())
+          .action(new AbortParsingAction(Arguments.storeTrue(), name()))
           .help("Show this message and exit.");
 
-      subparser.addArgument("--hierarchy", "-h")
-          .dest("hierarchy")
-          .help("Path to a yaml file describing the source hierarchy, relative to the data directory "
-              + "(see data-dir option). For example: \n"
-              + "global.yaml:\n"
-              + "  teams/myteam.yaml:\n"
-              + "    teams/myteam/dev.yaml\n"
-              + "    teams/myteam/stage.yaml\n"
-              + "    teams/myteam/prod.yaml\n"
-              + "  teams/otherteam.yaml");
-
-      subparser.addArgument("--changeset", "--changes", "-c")
+      subparser.addArgument("--changes", "--changeset", "-c")
           .dest("changes")
+          .required(true)
           .help("Path to a yaml file describing the desired end-state changes. For example: \n"
               + "---\n"
               + "  source: teams/myteam.yaml\n"
@@ -175,34 +173,53 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("--target", "-t")
           .dest("target")
+          .required(true)
           .help("A target is the source in the source tree from where you want to change, "
               + "including itself and any sources beneath it in the hierarchy. Redundant keys will be "
               + "removed in sources beneath the target (that is, sources which inherit its values). "
               + "Ex: 'teams/myteam.yaml'");
 
-      subparser.addArgument("--data-dir", "-d")
-          .dest("data_dir")
-          .help("Path to where existing data sources life. The data for sources describe in the "
-              + "hierarchy is looked using the paths in the hierarchy relative to this folder.");
-
       subparser.addArgument("--configs", "--config")
           .dest("configs")
+          .metavar("CONFIG")
           .nargs("+")
           .help("Space delimited paths to files which configures default values for command line "
               + "options. The default config path of ~/.monarch/config.yaml is always checked.");
 
+      subparser.addArgument("--hierarchy", "-h")
+          .dest("hierarchy")
+          .help("Path to a yaml file describing the source hierarchy, relative to the data directory "
+              + "(see data-dir option). If not provided, will look for a value in config files with "
+              + "key 'hierarchy'. Expected YAML structure looks like: \n"
+              + "global.yaml:\n"
+              + "  teams/myteam.yaml:\n"
+              + "    - teams/myteam/dev.yaml\n"
+              + "    - teams/myteam/stage.yaml\n"
+              + "    - teams/myteam/prod.yaml\n"
+              + "  teams/otherteam.yaml");
+
+      subparser.addArgument("--data-dir", "-d")
+          .dest("data_dir")
+          .help("Path to where existing data sources life. The data for sources describe in the "
+              + "hierarchy is looked using the paths in the hierarchy relative to this folder. "
+              + "If not provided, will look for a value in config files with key 'dataDir'.");
+
       subparser.addArgument("--output-dir", "-o")
           .dest("output_dir")
           .help("Path to directory where result data sources will be written. Data sources will be "
-              + "written using relative paths from hierarchy.");
+              + "written using relative paths from hierarchy. If not provided, will look for a "
+              + "value in config files with key 'outputDir'.");
 
       subparser.addArgument("--merge-keys", "-m")
           .dest("merge_keys")
+          .metavar("MERGE_KEY")
+          .nargs("+")
           .help("Space-delimited list of keys which should be inherited with merge semantics. That is, "
               + "normally the value that is inherited for a given key is only the nearest ancestor's "
               + "value. Keys that are in the merge key list however inherit values from all of their "
               + "ancestor's and merge them together, provided they are like types of either "
-              + "collections or maps.");
+              + "collections or maps. If not provided, will look for an array value in config "
+              + "files with key 'outputDir'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
@@ -244,7 +261,7 @@ public class ArgParseCommandInput implements CommandInput {
 
         @Override
         public boolean isHelpRequested() {
-          return parsed.getBoolean("apply_help");
+          return Optional.ofNullable(parsed.getBoolean("apply_help")).orElse(false);
         }
 
         @Override
@@ -270,14 +287,16 @@ public class ArgParseCommandInput implements CommandInput {
       subparser.addArgument("-?", "--help")
           .dest("set_help")
           .help("Show this message and exit.")
-          .action(Arguments.storeTrue());
+          .action(new AbortParsingAction(Arguments.storeTrue(), name()));
 
       subparser.addArgument("--changes", "--changeset", "-c")
           .dest("changes")
-          .help("Path to a changeset to modify or create.");
+          .required(true)
+          .help("Path to a file with changes to modify or create.");
 
       subparser.addArgument("--source", "-s")
           .dest("source")
+          .required(true)
           .help("Identifies the change to operate on by its data source.");
 
       subparser.addArgument("--put", "-p")
@@ -299,6 +318,7 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")
+          .metavar("CONFIG")
           .nargs("+")
           .help("Paths to config files to use for the hierarchy. First one with a hierarchy wins.");
 
@@ -338,7 +358,7 @@ public class ArgParseCommandInput implements CommandInput {
 
         @Override
         public boolean isHelpRequested() {
-          return parsed.getBoolean("set_help");
+          return Optional.ofNullable(parsed.getBoolean("set_help")).orElse(false);
         }
 
         @Override
@@ -350,33 +370,59 @@ public class ArgParseCommandInput implements CommandInput {
   };
 
   static class AbortParsingException extends ArgumentParserException {
+    final Optional<String> subparser;
     final Argument arg;
     final Map<String, Object> attrs;
     final String flag;
     final Object value;
 
-    public AbortParsingException(ArgumentParser parser, Argument arg, Map<String, Object> attrs,
-        String flag, Object value) {
+    public AbortParsingException(Optional<String> subparser, ArgumentParser parser, Argument arg,
+        Map<String, Object> attrs, String flag, Object value) {
       super(parser);
+      this.subparser = subparser;
       this.arg = arg;
-      this.attrs = Collections.unmodifiableMap(attrs);
+      this.attrs = attrs;
       this.flag = flag;
       this.value = value;
     }
   }
 
+  /**
+   * Performs some argument action then aborts, throwing {@link AbortParsingException} to the
+   * parser.
+   */
   static class AbortParsingAction implements ArgumentAction {
     private final ArgumentAction delegate;
+    private final Optional<String> subparser;
 
+    /**
+     * Aborts parsing such that no subparser is recorded being found. If you want to keep the
+     * current subparser, see {@link #AbortParsingAction(ArgumentAction, String)}
+     *
+     * @param delegate What to do before aborting.
+     */
     AbortParsingAction(ArgumentAction delegate) {
       this.delegate = delegate;
+      this.subparser = Optional.empty();
+    }
+
+    /**
+     * Aborts parsing, tracking the subparser which was parsing the argument.
+     *
+     * @param delegate What to do before aborting
+     * @param subparser The subparser to track when aborting. Available in the
+     * {@link AbortParsingException} thrown.
+     */
+    AbortParsingAction(ArgumentAction delegate, String subparser) {
+      this.delegate = delegate;
+      this.subparser = Optional.of(subparser);
     }
 
     @Override
     public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag,
         Object value) throws ArgumentParserException {
       delegate.run(parser, arg, attrs, flag, value);
-      throw new AbortParsingException(parser, arg, attrs, flag, value);
+      throw new AbortParsingException(subparser, parser, arg, attrs, flag, value);
     }
 
     @Override

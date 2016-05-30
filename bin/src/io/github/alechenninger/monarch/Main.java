@@ -35,6 +35,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -43,8 +44,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -77,79 +80,90 @@ public class Main {
   }
 
   public int run(String[] args) {
+    final CommandInput commandInput;
+
     try {
-      CommandInput commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
-
-      if (commandInput.isHelpRequested()) {
-        consoleOut.print(commandInput.getHelpMessage());
-      }
-
-      if (commandInput.isVersionRequested()) {
-        consoleOut.print(commandInput.getVersionMessage());
-      }
-
-      for (UpdateSetInput updateSetInput : commandInput.getUpdateSetCommands()) {
-        if (updateSetInput.isHelpRequested()) {
-          consoleOut.print(updateSetInput.getHelpMessage());
-          continue;
-        }
-
-        try {
-          UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
-              fileSystem, parsers, defaultConfigPath);
-
-          String source = options.source()
-              .orElseThrow(missingOptionException("source"));
-          Path outputPath = options.outputPath()
-              .orElseThrow(missingOptionException("output path"));
-
-          updateSetInChange(source, outputPath, options.changes(), options.putInSet(),
-              options.removeFromSet(), options.hierarchy());
-        } catch (Exception e) {
-          printError(e);
-          consoleOut.println();
-          consoleOut.print(updateSetInput.getHelpMessage());
-          return 2;
-        }
-      }
-
-      for (ApplyChangesInput applyChangesInput : commandInput.getApplyCommands()) {
-        if (applyChangesInput.isHelpRequested()) {
-          consoleOut.print(applyChangesInput.getHelpMessage());
-          continue;
-        }
-
-        try {
-          ApplyChangesOptions options = ApplyChangesOptions.fromInputAndConfigFiles(
-              applyChangesInput, fileSystem, parsers, defaultConfigPath);
-
-          Path outputDir = options.outputDir()
-              .orElseThrow(missingOptionException("output directory"));
-          Path dataDir = options.dataDir()
-              .orElseThrow(missingOptionException("data directory"));
-          Hierarchy hierarchy = options.hierarchy()
-              .orElseThrow(missingOptionException("hierarchy"));
-          String target = options.target()
-              .orElseThrow(missingOptionException("target"));
-
-          applyChanges(outputDir, dataDir, hierarchy, target, options.changes(),
-              options.mergeKeys());
-        } catch (Exception e) {
-          printError(e);
-          consoleOut.println();
-          consoleOut.print(applyChangesInput.getHelpMessage());
-          return 2;
-        }
-      }
-
-      return 0;
-    } catch (Exception e) {
+      commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
+    } catch (ArgumentParserException e) {
       printError(e);
       consoleOut.println();
-      run("--help");
+
+      StringBuilder commandArgs = new StringBuilder();
+
+      for (String arg : args) {
+        if (!arg.startsWith("-")) {
+          commandArgs.append(arg);
+        }
+      }
+
+      run(commandArgs + " --help");
 
       return 2;
     }
+
+    if (commandInput.isHelpRequested()) {
+      consoleOut.print(commandInput.getHelpMessage());
+    }
+
+    if (commandInput.isVersionRequested()) {
+      consoleOut.print(commandInput.getVersionMessage());
+    }
+
+    for (UpdateSetInput updateSetInput : commandInput.getUpdateSetCommands()) {
+      if (updateSetInput.isHelpRequested()) {
+        consoleOut.print(updateSetInput.getHelpMessage());
+        return 0;
+      }
+
+      try {
+        UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
+            fileSystem, parsers, defaultConfigPath);
+
+        String source = options.source()
+            .orElseThrow(missingOptionException("source"));
+        Path outputPath = options.outputPath()
+            .orElseThrow(missingOptionException("output path"));
+
+        updateSetInChange(source, outputPath, options.changes(), options.putInSet(),
+            options.removeFromSet(), options.hierarchy());
+      } catch (Exception e) {
+        printError(e);
+        consoleOut.println();
+        consoleOut.print(updateSetInput.getHelpMessage());
+        return 2;
+      }
+    }
+
+    for (ApplyChangesInput applyChangesInput : commandInput.getApplyCommands()) {
+      if (applyChangesInput.isHelpRequested()) {
+        consoleOut.print(applyChangesInput.getHelpMessage());
+        return 0;
+      }
+
+      try {
+        ApplyChangesOptions options = ApplyChangesOptions.fromInputAndConfigFiles(
+            applyChangesInput, fileSystem, parsers, defaultConfigPath);
+
+        Path outputDir = options.outputDir()
+            .orElseThrow(missingOptionException("output directory"));
+        Path dataDir = options.dataDir()
+            .orElseThrow(missingOptionException("data directory"));
+        Hierarchy hierarchy = options.hierarchy()
+            .orElseThrow(missingOptionException("hierarchy"));
+        String target = options.target()
+            .orElseThrow(missingOptionException("target"));
+
+        applyChanges(outputDir, dataDir, hierarchy, target, options.changes(),
+            options.mergeKeys());
+      } catch (Exception e) {
+        printError(e);
+        consoleOut.println();
+        consoleOut.print(applyChangesInput.getHelpMessage());
+        return 2;
+      }
+    }
+
+    return 0;
   }
 
   private void applyChanges(Path outputDir, Path dataDir, Hierarchy hierarchy, String target,

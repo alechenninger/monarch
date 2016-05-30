@@ -8,7 +8,7 @@
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
@@ -32,20 +32,20 @@ import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
-  def fs = Jimfs.newFileSystem();
+  def fs = Jimfs.newFileSystem()
   def dumperOptions = new DumperOptions().with {
-    defaultFlowStyle = DumperOptions.FlowStyle.BLOCK;
-    prettyFlow = true;
-    return it;
+    defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+    prettyFlow = true
+    return it
   }
-  def yaml = new Yaml();
-  def consolePath = fs.getPath("console");
-  def consoleCapture = new PrintStream(Files.newOutputStream(consolePath));
+  def yaml = new Yaml()
+  def consolePath = fs.getPath("console")
+  def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
 
   def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs,
-      new MonarchParsers.Default(), consoleCapture);
+      new MonarchParsers.Default(), consoleCapture)
 
-  static def dataDir = '/etc/hierarchy';
+  static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
 
   static def hierarchy = '''
@@ -55,36 +55,36 @@ global.yaml:
 '''
 
   void writeFile(String file, String data) {
-    def path = fs.getPath(file);
-    def parent = path.getParent();
+    def path = fs.getPath(file)
+    def parent = path.getParent()
 
     if (parent != null) {
-      Files.createDirectories(parent);
+      Files.createDirectories(parent)
     }
 
-    Files.write(path, data.getBytes('UTF-8'));
+    Files.write(path, data.getBytes('UTF-8'))
   }
 
   void writeDataSource(String source, String data) {
-    writeFile("$dataDir/$source", data);
+    writeFile("$dataDir/$source", data)
   }
 
   void writeDataSources(Map<String, String> sourceToData) {
-    sourceToData.each { key, value -> writeDataSource(key, value)};
+    sourceToData.each { key, value -> writeDataSource(key, value)}
   }
 
   String getConsole() {
-    return new String(Files.readAllBytes(consolePath));
+    return new String(Files.readAllBytes(consolePath))
   }
 
   @Before
   public void writeHierarchyYaml() {
-    writeFile(hierarchyFile, hierarchy);
+    writeFile(hierarchyFile, hierarchy)
   }
 
   @After
   public void printConsole() {
-    System.out.print(getConsole());
+    System.out.print(getConsole())
   }
 
   @Test
@@ -99,21 +99,21 @@ global.yaml:
   source: teams/myteam/stage.yaml
   set:
     myapp::favorite_website: http://stage.redhat.com
-''');
+''')
 
     writeDataSources([
         'global.yaml': 'foo: "bar"',
         'teams/myteam.yaml': 'bar: "baz"',
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
-    ]);
+    ])
 
-    main.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/");
+    main.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
-    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8');
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
 
-    print myteamYaml;
-    print stageYaml;
+    print myteamYaml
+    print stageYaml
   }
 
   @Test
@@ -128,21 +128,21 @@ global.yaml:
   source: teams/myteam/stage.yaml
   set:
     myapp::favorite_website: http://stage.redhat.com
-''');
+''')
 
     writeDataSources([
         'global.yaml': 'foo: "bar"',
         'teams/myteam.yaml': 'bar: "baz"',
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
-    ]);
+    ])
 
-    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/");
+    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
-    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8');
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
 
-    print myteamYaml;
-    print stageYaml;
+    print myteamYaml
+    print stageYaml
   }
 
   @Test
@@ -152,13 +152,13 @@ global.yaml:
   source: teams/myteam.yaml
   set:
     myapp::favorite_website: http://www.redhat.com
-''');
+''')
 
     writeDataSources([
         'global.yaml': 'foo: "bar"',
         'teams/myteam.yaml': 'bar: "baz"',
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
-    ]);
+    ])
 
     writeFile("/etc/monarch.yaml", '''
 dataDir: /etc/hierarchy/
@@ -168,13 +168,10 @@ dataDir: /etc/hierarchy/
 outputDir: /output/
 ''')
 
-    writeFile("/etc/and_one_more.yaml", '''
-target: teams/myteam.yaml
-''')
+    main.run("-h ${hierarchyFile} --target teams/myteam.yaml " +
+        "--config /etc/some_other_config.yaml /etc/and_one_more.yaml -c /etc/changes.yaml")
 
-    main.run("-h ${hierarchyFile} --config /etc/some_other_config.yaml /etc/and_one_more.yaml -c /etc/changes.yaml");
-
-    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8');
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
 
     assert yaml.load(myteamYaml) == [
         'bar': 'baz',
@@ -183,23 +180,52 @@ target: teams/myteam.yaml
   }
 
   @Test
-  public void shouldPrintHelpForSpecificCommand() {
-    assert main.run("apply --help") == 0
-
-    assert getConsole().contains("usage: monarch apply");
-  }
-
-  @Test
-  public void shouldPrintHelp() {
+  public void shouldPrintHelpForMonarch() {
     assert main.run("--help") == 0
-
+    // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
+    // This means that it is not showing the help for a command but for monarch itself.
     assert getConsole() =~ /usage: monarch.*\{apply/
   }
 
   @Test
-  public void shouldShowVersion() {
-    main.run("--version");
+  public void shouldPrintHelpForApplyCommand() {
+    assert main.run("apply --help") == 0
+    assert getConsole().contains("usage: monarch apply")
+  }
 
+  @Test
+  public void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
+    assert main.run("apply --wat") == 2
+    assert getConsole().contains("usage: monarch apply")
+  }
+
+  @Test
+  public void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
+    assert main.run("apply --wat") == 2
+    assert getConsole().contains("usage: monarch apply")
+  }
+
+  @Test
+  public void shouldPrintHelpForSetCommand() {
+    assert main.run("set --help") == 0
+    assert getConsole().contains("usage: monarch set")
+  }
+
+  @Test
+  public void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
+    assert main.run("set --wat") == 2
+    assert getConsole().contains("usage: monarch set")
+  }
+
+  @Test
+  public void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
+    assert main.run("set --wat") == 2
+    assert getConsole().contains("usage: monarch set")
+  }
+
+  @Test
+  public void shouldShowVersion() {
+    assert main.run("--version") == 0
     assert getConsole() ==~ /[0-9].[0-9].[0-9]\n/
   }
 }
