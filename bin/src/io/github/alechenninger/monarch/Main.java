@@ -23,6 +23,8 @@ import io.github.alechenninger.monarch.apply.ApplyChangesOptions;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.internal.UnrecognizedArgumentException;
+import net.sourceforge.argparse4j.internal.UnrecognizedCommandException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -48,6 +50,7 @@ import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -79,28 +82,45 @@ public class Main {
     return run(argsSpaceDelimited.split(" "));
   }
 
-  public int run(String[] args) {
+  public int run(String... args) {
     final CommandInput commandInput;
 
+    // Catch failure and try to give as helpful error messages as possible.
+    // This involves catching more specific cases if possible.
     try {
       commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
+    } catch (UnrecognizedCommandException e) {
+      printError(e);
+      consoleOut.println();
+
+      run("--help");
+
+      return 2;
+    } catch (UnrecognizedArgumentException e) {
+      printError(e);
+      consoleOut.println();
+
+      List<String> helpArgs = new ArrayList<>();
+      Collections.addAll(helpArgs, args);
+      helpArgs.remove(e.getArgument());
+      helpArgs.add("--help");
+
+      run(helpArgs.stream().toArray(String[]::new));
+
+      return 2;
     } catch (ArgumentParserException e) {
       printError(e);
       consoleOut.println();
 
-      StringBuilder commandArgs = new StringBuilder();
+      List<String> helpArgs = new ArrayList<>();
+      Collections.addAll(helpArgs, args);
 
-      for (String arg : args) {
-        if (arg.startsWith("-")) {
-          break;
-        }
-
-        commandArgs.append(arg).append(" ");
+      if (helpArgs.contains("--help") || helpArgs.contains("-?")) {
+        run("--help");
+      } else {
+        helpArgs.add("--help");
+        run(helpArgs.stream().toArray(String[]::new));
       }
-
-      commandArgs.append("--help");
-
-      run(commandArgs.toString());
 
       return 2;
     }

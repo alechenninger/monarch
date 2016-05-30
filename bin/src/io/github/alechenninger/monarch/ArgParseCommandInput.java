@@ -69,12 +69,20 @@ public class ArgParseCommandInput implements CommandInput {
     applyChangesFactory = applySpec.addToSubparsers(subparsers);
     updateSetFactory = updateSetSpec.addToSubparsers(subparsers);
 
-    parsed = parseArgsDefaultingToApply(args);
+    List<String> unknownArgs = new ArrayList<>();
+
+    parsed = parseArgsDefaultingToApply(args, unknownArgs);
+
+    if (!unknownArgs.isEmpty()) {
+      String unknownArg = unknownArgs.get(0);
+      throw new UnrecognizedArgumentException("unrecognized argument: " + unknownArg,
+          parser, unknownArg);
+    }
   }
 
-  private Namespace parseArgsDefaultingToApply(String[] args) throws ArgumentParserException {
+  private Namespace parseArgsDefaultingToApply(String[] args, List<String> unknownArgs) throws ArgumentParserException {
     try {
-      return parser.parseArgs(args);
+      return parser.parseKnownArgs(args, unknownArgs);
     } catch (AbortParsingException e) {
       e.subparser.ifPresent(s -> e.attrs.put(SUBPARSER_DEST, s));
       return new Namespace(e.attrs);
@@ -86,7 +94,7 @@ public class ArgParseCommandInput implements CommandInput {
         defaultedArgs.add(applySpec.name());
         Collections.addAll(defaultedArgs, args);
         // TODO: warn to user here
-        return parser.parseArgs(defaultedArgs.stream().toArray(String[]::new));
+        return parser.parseKnownArgs(defaultedArgs.stream().toArray(String[]::new), unknownArgs);
       }
 
       throw e;
