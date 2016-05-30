@@ -240,7 +240,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .action(new AbortParsingAction(Arguments.storeTrue(), name()))
           .help("Show this message and exit.");
 
-      subparser.addArgument("--changes", "--changeset", "-c")
+      subparser.addArgument("--changes", "--changeset", "--change", "-c")
           .dest("changes")
           .required(true)
           .help("Path to a yaml file describing the desired end-state changes. For example: \n"
@@ -374,7 +374,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .help("Show this message and exit.")
           .action(new AbortParsingAction(Arguments.storeTrue(), name()));
 
-      subparser.addArgument("--changes", "--changeset", "-c")
+      subparser.addArgument("--changes", "--changeset", "--change", "-c")
           .dest("changes")
           .required(true)
           .help("Path to a file with changes to modify or create.");
