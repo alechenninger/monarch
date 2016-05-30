@@ -87,7 +87,8 @@ public class ArgParseCommandInput implements CommandInput {
 
   @Override
   public List<ApplyChangesInput> getApplyCommands() {
-    if (applySpec.name().equals(parsed.getString("subparser"))) {
+    if (applySpec.name().equals(parsed.getString("subparser")) ||
+        Boolean.TRUE.equals(parsed.getBoolean("apply_help"))) {
       return Collections.singletonList(applyChangesetFactory.getInput(parsed));
     }
 
@@ -96,7 +97,8 @@ public class ArgParseCommandInput implements CommandInput {
 
   @Override
   public List<UpdateSetInput> getUpdateSetCommands() {
-    if (updateSetSpec.name().equals(parsed.getString("subparser"))) {
+    if (updateSetSpec.name().equals(parsed.getString("subparser")) ||
+        Boolean.TRUE.equals(parsed.getBoolean("set_help"))) {
       return Collections.singletonList(updateSetFactory.getInput(parsed));
     }
 
@@ -146,7 +148,7 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("-?", "--help")
           .dest("apply_help")
-          .action(Arguments.storeTrue())
+          .action(new AbortParsingAction(Arguments.storeTrue()))
           .help("Show this message and exit.");
 
       subparser.addArgument("--hierarchy", "-h")
@@ -162,6 +164,7 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("--changeset", "--changes", "-c")
           .dest("changes")
+          .required(true)
           .help("Path to a yaml file describing the desired end-state changes. For example: \n"
               + "---\n"
               + "  source: teams/myteam.yaml\n"
@@ -175,6 +178,7 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("--target", "-t")
           .dest("target")
+          .required(true)
           .help("A target is the source in the source tree from where you want to change, "
               + "including itself and any sources beneath it in the hierarchy. Redundant keys will be "
               + "removed in sources beneath the target (that is, sources which inherit its values). "
@@ -270,14 +274,16 @@ public class ArgParseCommandInput implements CommandInput {
       subparser.addArgument("-?", "--help")
           .dest("set_help")
           .help("Show this message and exit.")
-          .action(Arguments.storeTrue());
+          .action(new AbortParsingAction(Arguments.storeTrue()));
 
       subparser.addArgument("--changes", "--changeset", "-c")
           .dest("changes")
-          .help("Path to a changeset to modify or create.");
+          .required(true)
+          .help("Path to a file with changes to modify or create.");
 
       subparser.addArgument("--source", "-s")
           .dest("source")
+          .required(true)
           .help("Identifies the change to operate on by its data source.");
 
       subparser.addArgument("--put", "-p")
