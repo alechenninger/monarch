@@ -259,8 +259,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .required(true)
           .help("A target is the source in the source tree from where you want to change, "
               + "including itself and any sources beneath it in the hierarchy. Redundant keys "
-              + "will be "
-              + "removed in sources beneath the target (that is, sources which inherit its "
+              + "will be removed in sources beneath the target (that is, sources which inherit its "
               + "values). "
               + "Ex: 'teams/myteam.yaml'");
 
@@ -276,8 +275,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .help("Path to a yaml file describing the source hierarchy, relative to the data "
               + "directory "
               + "(see data-dir option). If not provided, will look for a value in config files "
-              + "with "
-              + "key 'hierarchy'. Expected YAML structure looks like: \n"
+              + "with key 'hierarchy'. Expected YAML structure looks like: \n"
               + "global.yaml:\n"
               + "  teams/myteam.yaml:\n"
               + "    - teams/myteam/dev.yaml\n"
@@ -302,14 +300,11 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .metavar("MERGE_KEY")
           .nargs("+")
           .help("Space-delimited list of keys which should be inherited with merge semantics. "
-              + "That is, "
-              + "normally the value that is inherited for a given key is only the nearest "
-              + "ancestor's "
-              + "value. Keys that are in the merge key list however inherit values from all of "
-              + "their "
-              + "ancestor's and merge them together, provided they are like types of either "
-              + "collections or maps. If not provided, will look for an array value in config "
-              + "files with key 'outputDir'.");
+              + "That is, normally the value that is inherited for a given key is only the nearest "
+              + "ancestor's value. Keys that are in the merge key list however inherit values from "
+              + "all of their ancestor's and merge them together, provided they are like types of "
+              + "either collections or maps. If not provided, will look for an array value in "
+              + "config files with key 'outputDir'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
@@ -392,8 +387,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
       subparser.addArgument("--put", "-p")
           .dest("put")
           .nargs("+")
-          .help("Key value pairs to add or replace in the set block of the source's "
-              + "change.\n"
+          .help("Key value pairs to add or replace in the set block of the source's change.\n"
               + "The list may contain paths to yaml files or inline yaml heterogeneously.");
 
       subparser.addArgument("--remove", "-r")
@@ -526,33 +520,3 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     }
   }
 }
-
-/*
-    } catch (UnrecognizedCommandException e) {
-      throw new MonarchArgParserException(parser.formatHelp(), e);
-    } catch (UnrecognizedArgumentException e) {
-      List<String> helpArgs = new ArrayList<>();
-      Collections.addAll(helpArgs, args);
-      helpArgs.remove(e.getArgument());
-      helpArgs.add("--help");
-
-      run(helpArgs.stream().toArray(String[]::new));
-
-      return 2;
-    } catch (ArgumentParserException e) {
-      printError(e);
-      consoleOut.println();
-
-      List<String> helpArgs = new ArrayList<>();
-      Collections.addAll(helpArgs, args);
-
-      if (helpArgs.contains("--help") || helpArgs.contains("-?")) {
-        run("--help");
-      } else {
-        helpArgs.add("--help");
-        run(helpArgs.stream().toArray(String[]::new));
-      }
-
-      return 2;
-    }
- */
