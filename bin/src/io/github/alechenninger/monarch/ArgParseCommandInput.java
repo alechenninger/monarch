@@ -38,11 +38,12 @@ import java.util.Map;
 import java.util.Optional;
 
 public class ArgParseCommandInput implements CommandInput {
-  private static final String SUBPARSER_DEST = "subparser";
   private final ArgumentParser parser;
   private final Namespace parsed;
-  private final InputFactory<ApplyChangesInput> applyChangesetFactory;
+  private final InputFactory<ApplyChangesInput> applyChangesFactory;
   private final InputFactory<UpdateSetInput> updateSetFactory;
+
+  private static final String SUBPARSER_DEST = "subparser";
 
   public ArgParseCommandInput(AppInfo appInfo, String[] args) throws ArgumentParserException {
     parser = ArgumentParsers.newArgumentParser("monarch", false)
@@ -65,7 +66,7 @@ public class ArgParseCommandInput implements CommandInput {
         .description("If none chosen, defaults to '" + applySpec.name() + "'")
         .help("Pass --help to a command for more information.");
 
-    applyChangesetFactory = applySpec.addToSubparsers(subparsers);
+    applyChangesFactory = applySpec.addToSubparsers(subparsers);
     updateSetFactory = updateSetSpec.addToSubparsers(subparsers);
 
     parsed = parseArgsDefaultingToApply(args);
@@ -95,7 +96,7 @@ public class ArgParseCommandInput implements CommandInput {
   @Override
   public List<ApplyChangesInput> getApplyCommands() {
     if (applySpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
-      return Collections.singletonList(applyChangesetFactory.getInput(parsed));
+      return Collections.singletonList(applyChangesFactory.getInput(parsed));
     }
 
     return Collections.emptyList();
@@ -148,8 +149,8 @@ public class ArgParseCommandInput implements CommandInput {
     @Override
     public InputFactory<ApplyChangesInput> addToSubparsers(Subparsers subparsers) {
       Subparser subparser = subparsers.addParser(name(), false)
-          .description("Applies a changeset to a target data source and its descendants.")
-          .help("Applies a changeset to a target data source and its descendants.");
+          .description("Applies changes to a target data source and its descendants.")
+          .help("Applies changes to a target data source and its descendants.");
 
       subparser.addArgument("-?", "--help")
           .dest("apply_help")
@@ -167,7 +168,7 @@ public class ArgParseCommandInput implements CommandInput {
               + "    teams/myteam/prod.yaml\n"
               + "  teams/otherteam.yaml");
 
-      subparser.addArgument("--changeset", "--changes", "-c")
+      subparser.addArgument("--changes", "--changeset", "-c")
           .dest("changes")
           .required(true)
           .help("Path to a yaml file describing the desired end-state changes. For example: \n"
@@ -378,15 +379,32 @@ public class ArgParseCommandInput implements CommandInput {
     }
   }
 
+  /**
+   * Performs some argument action then aborts, throwing {@link AbortParsingException} to the
+   * parser.
+   */
   static class AbortParsingAction implements ArgumentAction {
     private final ArgumentAction delegate;
     private final Optional<String> subparser;
 
+    /**
+     * Aborts parsing such that no subparser is recorded being found. If you want to keep the
+     * current subparser, see {@link #AbortParsingAction(ArgumentAction, String)}
+     *
+     * @param delegate What to do before aborting.
+     */
     AbortParsingAction(ArgumentAction delegate) {
       this.delegate = delegate;
       this.subparser = Optional.empty();
     }
 
+    /**
+     * Aborts parsing, tracking the subparser which was parsing the argument.
+     *
+     * @param delegate What to do before aborting
+     * @param subparser The subparser to track when aborting. Available in the
+     * {@link AbortParsingException} thrown.
+     */
     AbortParsingAction(ArgumentAction delegate, String subparser) {
       this.delegate = delegate;
       this.subparser = Optional.of(subparser);
