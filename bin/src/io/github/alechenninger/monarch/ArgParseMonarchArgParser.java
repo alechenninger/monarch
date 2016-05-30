@@ -30,23 +30,32 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 import net.sourceforge.argparse4j.inf.Subparsers;
 import net.sourceforge.argparse4j.internal.UnrecognizedArgumentException;
+import net.sourceforge.argparse4j.internal.UnrecognizedCommandException;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class ArgParseCommandInput implements CommandInput {
-  private final ArgumentParser parser;
-  private final Namespace parsed;
-  private final InputFactory<ApplyChangesInput> applyChangesFactory;
-  private final InputFactory<UpdateSetInput> updateSetFactory;
+public class ArgParseMonarchArgParser implements MonarchArgParser {
+  private final AppInfo appInfo;
+  // TODO proper logger
+  private final PrintStream consoleOut;
 
   private static final String SUBPARSER_DEST = "subparser";
+  private static final String DEFAULT_COMMAND_WARNING = "WARNING: Defaulting to 'apply' command. "
+      + "In the future this default will be removed";
 
-  public ArgParseCommandInput(AppInfo appInfo, String[] args) throws ArgumentParserException {
-    parser = ArgumentParsers.newArgumentParser("monarch", false)
+  public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut) {
+    this.appInfo = appInfo;
+    this.consoleOut = consoleOut;
+  }
+
+  @Override
+  public CommandInput parse(String[] args) throws MonarchArgParserException {
+    ArgumentParser parser = ArgumentParsers.newArgumentParser("monarch", false)
         .version(appInfo.version())
         .description(appInfo.description())
         .epilog(appInfo.url());
@@ -66,81 +75,147 @@ public class ArgParseCommandInput implements CommandInput {
         .description("If none chosen, defaults to '" + applySpec.name() + "'")
         .help("Pass --help to a command for more information.");
 
-    applyChangesFactory = applySpec.addToSubparsers(subparsers);
-    updateSetFactory = updateSetSpec.addToSubparsers(subparsers);
+    InputFactory<ApplyChangesInput> applyChangesFactory = applySpec.addToSubparsers(subparsers);
+    InputFactory<UpdateSetInput> updateSetFactory = updateSetSpec.addToSubparsers(subparsers);
 
-    List<String> unknownArgs = new ArrayList<>();
+    try {
+      List<String> unknownArgs = new ArrayList<>();
+      Namespace parsed = parseArgsDefaultingToApply(parser, args, unknownArgs);
+      String subparser = parsed.getString(SUBPARSER_DEST);
 
-    parsed = parseArgsDefaultingToApply(args, unknownArgs);
+      if (!unknownArgs.isEmpty()) {
+        String unknownArg = unknownArgs.get(0);
+        UnrecognizedArgumentException cause = new UnrecognizedArgumentException(
+            "unrecognized arguments: " + unknownArg, parser, unknownArg);
+        String helpMessage = getHelpMessage(parser, applyChangesFactory, updateSetFactory, parsed);
 
-    if (!unknownArgs.isEmpty()) {
-      String unknownArg = unknownArgs.get(0);
-      throw new UnrecognizedArgumentException("unrecognized argument: " + unknownArg,
-          parser, unknownArg);
+        throw new MonarchArgParserException(helpMessage, cause);
+      }
+
+      return new CommandInput() {
+        @Override
+        public List<ApplyChangesInput> getApplyCommands() {
+          return applySpec.name().equals(subparser)
+              ? Collections.singletonList(applyChangesFactory.getInput(parsed))
+              : Collections.emptyList();
+        }
+
+        @Override
+        public List<UpdateSetInput> getUpdateSetCommands() {
+          return updateSetSpec.name().equals(subparser)
+              ? Collections.singletonList(updateSetFactory.getInput(parsed))
+              : Collections.emptyList();
+        }
+
+        @Override
+        public String getHelpMessage() {
+          return parser.formatHelp();
+        }
+
+        @Override
+        public boolean isHelpRequested() {
+          return parsed.getBoolean("help");
+        }
+
+        @Override
+        public boolean isVersionRequested() {
+          return parsed.getBoolean("show_version");
+        }
+
+        @Override
+        public String getVersionMessage() {
+          return parser.formatVersion() + '\n';
+        }
+      };
+    } catch (ArgumentParserException e) {
+      try {
+        // Try adding --help to arguments to see if we can get it to parse at all. Then we can know
+        // which command to use for help message.
+        List<String> helpArgs = new ArrayList<>(args.length + 1);
+        Collections.addAll(helpArgs, args);
+        helpArgs.add("--help");
+
+        Namespace parsed = parser.parseKnownArgs(helpArgs.stream().toArray(String[]::new), null);
+        String helpMessage = getHelpMessage(parser, applyChangesFactory, updateSetFactory, parsed);
+
+        throw new MonarchArgParserException(helpMessage, e);
+      } catch (AbortParsingException expected) {
+        Map<String, Object> attrs = expected.attrs;
+        expected.subparser.ifPresent(s -> attrs.put(SUBPARSER_DEST, s));
+        Namespace parsed = new Namespace(attrs);
+
+        String helpMessage = getHelpMessage(parser, applyChangesFactory, updateSetFactory, parsed);
+
+        throw new MonarchArgParserException(helpMessage, e);
+      } catch (ArgumentParserException ignored) {
+        // That didn't work, just send default help...
+      }
+
+      throw new MonarchArgParserException(parser.formatHelp(), e);
     }
   }
 
-  private Namespace parseArgsDefaultingToApply(String[] args, List<String> unknownArgs) throws ArgumentParserException {
+  private String getHelpMessage(ArgumentParser parser, InputFactory<ApplyChangesInput>
+      applyChangesFactory, InputFactory<UpdateSetInput> updateSetFactory, Namespace parsed) {
+    String subparser = parsed.getString(SUBPARSER_DEST);
+
+    if (applySpec.name().equals(subparser)) {
+      return applyChangesFactory.getInput(parsed).getHelpMessage();
+    } else if (updateSetSpec.name().equals(subparser)) {
+      return updateSetFactory.getInput(parsed).getHelpMessage();
+    } else {
+      return parser.formatHelp();
+    }
+  }
+
+  private Namespace parseArgsDefaultingToApply(ArgumentParser parser, String[] args,
+      List<String> unknownArgs) throws
+      ArgumentParserException {
     try {
-      return parser.parseKnownArgs(args, unknownArgs);
+      Namespace parsed = parser.parseKnownArgs(args, unknownArgs);
+
+      if (!unknownArgs.isEmpty()) {
+        List<String> defaultedArgs = new ArrayList<>(args.length + 1);
+        Collections.addAll(defaultedArgs, args);
+        defaultedArgs.add(0, applySpec.name());
+
+        List<String> secondTryUnknowns = new ArrayList<>(unknownArgs);
+        try {
+          Namespace secondTryParsed = parser.parseKnownArgs(
+              defaultedArgs.stream().toArray(String[]::new), secondTryUnknowns);
+
+          if (secondTryUnknowns.isEmpty()) {
+            consoleOut.println(DEFAULT_COMMAND_WARNING);
+
+            unknownArgs.clear();
+            unknownArgs.addAll(secondTryUnknowns);
+
+            return secondTryParsed;
+          }
+        } catch (ArgumentParserException ignored) {
+          // retry failed, ignore it...
+        }
+      }
+
+      return parsed;
     } catch (AbortParsingException e) {
       e.subparser.ifPresent(s -> e.attrs.put(SUBPARSER_DEST, s));
       return new Namespace(e.attrs);
-    } catch (UnrecognizedArgumentException e) {
-      // Is it because command omitted? If so default to apply command.
-      // Eventually remove this as it is deprecated behavior
-      if (args[0].startsWith("-")) {
-        List<String> defaultedArgs = new ArrayList<>(args.length + 1);
-        defaultedArgs.add(applySpec.name());
-        Collections.addAll(defaultedArgs, args);
-        // TODO: warn to user here
-        return parser.parseKnownArgs(defaultedArgs.stream().toArray(String[]::new), unknownArgs);
-      }
+    } catch (UnrecognizedCommandException e) {
+      List<String> defaultedArgs = new ArrayList<>(args.length + 1);
+      Collections.addAll(defaultedArgs, args);
+      defaultedArgs.add(0, applySpec.name());
+      unknownArgs.clear();
 
-      throw e;
+      consoleOut.println(DEFAULT_COMMAND_WARNING);
+
+      return parser.parseKnownArgs(defaultedArgs.stream().toArray(String[]::new), unknownArgs);
     }
-  }
-
-  @Override
-  public List<ApplyChangesInput> getApplyCommands() {
-    if (applySpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
-      return Collections.singletonList(applyChangesFactory.getInput(parsed));
-    }
-
-    return Collections.emptyList();
-  }
-
-  @Override
-  public List<UpdateSetInput> getUpdateSetCommands() {
-    if (updateSetSpec.name().equals(parsed.getString(SUBPARSER_DEST))) {
-      return Collections.singletonList(updateSetFactory.getInput(parsed));
-    }
-
-    return Collections.emptyList();
-  }
-
-  @Override
-  public String getHelpMessage() {
-    return parser.formatHelp();
-  }
-
-  @Override
-  public boolean isHelpRequested() {
-    return parsed.getBoolean("help");
-  }
-
-  @Override
-  public boolean isVersionRequested() {
-    return parsed.getBoolean("show_version");
-  }
-
-  @Override
-  public String getVersionMessage() {
-    return parser.formatVersion() + '\n';
   }
 
   interface CommandSpec<T> {
     String name();
+
     InputFactory<T> addToSubparsers(Subparsers subparsers);
   }
 
@@ -183,8 +258,10 @@ public class ArgParseCommandInput implements CommandInput {
           .dest("target")
           .required(true)
           .help("A target is the source in the source tree from where you want to change, "
-              + "including itself and any sources beneath it in the hierarchy. Redundant keys will be "
-              + "removed in sources beneath the target (that is, sources which inherit its values). "
+              + "including itself and any sources beneath it in the hierarchy. Redundant keys "
+              + "will be "
+              + "removed in sources beneath the target (that is, sources which inherit its "
+              + "values). "
               + "Ex: 'teams/myteam.yaml'");
 
       subparser.addArgument("--configs", "--config")
@@ -196,8 +273,10 @@ public class ArgParseCommandInput implements CommandInput {
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
-          .help("Path to a yaml file describing the source hierarchy, relative to the data directory "
-              + "(see data-dir option). If not provided, will look for a value in config files with "
+          .help("Path to a yaml file describing the source hierarchy, relative to the data "
+              + "directory "
+              + "(see data-dir option). If not provided, will look for a value in config files "
+              + "with "
               + "key 'hierarchy'. Expected YAML structure looks like: \n"
               + "global.yaml:\n"
               + "  teams/myteam.yaml:\n"
@@ -222,9 +301,12 @@ public class ArgParseCommandInput implements CommandInput {
           .dest("merge_keys")
           .metavar("MERGE_KEY")
           .nargs("+")
-          .help("Space-delimited list of keys which should be inherited with merge semantics. That is, "
-              + "normally the value that is inherited for a given key is only the nearest ancestor's "
-              + "value. Keys that are in the merge key list however inherit values from all of their "
+          .help("Space-delimited list of keys which should be inherited with merge semantics. "
+              + "That is, "
+              + "normally the value that is inherited for a given key is only the nearest "
+              + "ancestor's "
+              + "value. Keys that are in the merge key list however inherit values from all of "
+              + "their "
               + "ancestor's and merge them together, provided they are like types of either "
               + "collections or maps. If not provided, will look for an array value in config "
               + "files with key 'outputDir'.");
@@ -418,8 +500,8 @@ public class ArgParseCommandInput implements CommandInput {
      * Aborts parsing, tracking the subparser which was parsing the argument.
      *
      * @param delegate What to do before aborting
-     * @param subparser The subparser to track when aborting. Available in the
-     * {@link AbortParsingException} thrown.
+     * @param subparser The subparser to track when aborting. Available in the {@link
+     * AbortParsingException} thrown.
      */
     AbortParsingAction(ArgumentAction delegate, String subparser) {
       this.delegate = delegate;
@@ -444,3 +526,33 @@ public class ArgParseCommandInput implements CommandInput {
     }
   }
 }
+
+/*
+    } catch (UnrecognizedCommandException e) {
+      throw new MonarchArgParserException(parser.formatHelp(), e);
+    } catch (UnrecognizedArgumentException e) {
+      List<String> helpArgs = new ArrayList<>();
+      Collections.addAll(helpArgs, args);
+      helpArgs.remove(e.getArgument());
+      helpArgs.add("--help");
+
+      run(helpArgs.stream().toArray(String[]::new));
+
+      return 2;
+    } catch (ArgumentParserException e) {
+      printError(e);
+      consoleOut.println();
+
+      List<String> helpArgs = new ArrayList<>();
+      Collections.addAll(helpArgs, args);
+
+      if (helpArgs.contains("--help") || helpArgs.contains("-?")) {
+        run("--help");
+      } else {
+        helpArgs.add("--help");
+        run(helpArgs.stream().toArray(String[]::new));
+      }
+
+      return 2;
+    }
+ */

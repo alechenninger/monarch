@@ -202,13 +202,13 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
-    assert main.run("apply --wat") == 2
+    assert main.run("apply --target foo --changes bar --wat") == 2
     assert getConsole().contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
-    assert main.run("apply --wat") == 2
+    assert main.run("apply") == 2
     assert getConsole().contains("usage: monarch apply")
   }
 
@@ -226,7 +226,7 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
-    assert main.run("set --wat") == 2
+    assert main.run("set") == 2
     assert getConsole().contains("usage: monarch set")
   }
 

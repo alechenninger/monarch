@@ -23,8 +23,6 @@ import io.github.alechenninger.monarch.apply.ApplyChangesOptions;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
-import net.sourceforge.argparse4j.internal.UnrecognizedArgumentException;
-import net.sourceforge.argparse4j.internal.UnrecognizedCommandException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -37,7 +35,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,11 +43,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.StringJoiner;
 import java.util.TreeMap;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -64,6 +58,8 @@ public class Main {
   // TODO make this configurable; maybe use a 'real' logger
   private final boolean debugInfo = true;
 
+  private final MonarchArgParser parser;
+
   private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
@@ -76,6 +72,7 @@ public class Main {
         : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
+    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut);
   }
 
   public int run(String argsSpaceDelimited) {
@@ -85,43 +82,12 @@ public class Main {
   public int run(String... args) {
     final CommandInput commandInput;
 
-    // Catch failure and try to give as helpful error messages as possible.
-    // This involves catching more specific cases if possible.
     try {
-      commandInput = new ArgParseCommandInput(new DefaultAppInfo(), args);
-    } catch (UnrecognizedCommandException e) {
-      printError(e);
+      commandInput = parser.parse(args);
+    } catch (MonarchArgParserException e) {
+      printError(e.getCause());
       consoleOut.println();
-
-      run("--help");
-
-      return 2;
-    } catch (UnrecognizedArgumentException e) {
-      printError(e);
-      consoleOut.println();
-
-      List<String> helpArgs = new ArrayList<>();
-      Collections.addAll(helpArgs, args);
-      helpArgs.remove(e.getArgument());
-      helpArgs.add("--help");
-
-      run(helpArgs.stream().toArray(String[]::new));
-
-      return 2;
-    } catch (ArgumentParserException e) {
-      printError(e);
-      consoleOut.println();
-
-      List<String> helpArgs = new ArrayList<>();
-      Collections.addAll(helpArgs, args);
-
-      if (helpArgs.contains("--help") || helpArgs.contains("-?")) {
-        run("--help");
-      } else {
-        helpArgs.add("--help");
-        run(helpArgs.stream().toArray(String[]::new));
-      }
-
+      consoleOut.print(e.getHelpMessage());
       return 2;
     }
 
@@ -315,7 +281,7 @@ public class Main {
     return list;
   }
 
-  private void printError(Exception e) {
+  private void printError(Throwable e) {
     if (debugInfo) {
       e.printStackTrace(consoleOut);
     } else {
