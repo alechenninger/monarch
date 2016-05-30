@@ -45,8 +45,6 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
   private final PrintStream consoleOut;
 
   private static final String SUBPARSER_DEST = "subparser";
-  private static final String DEFAULT_COMMAND_WARNING = "WARNING: Defaulting to 'apply' command. "
-      + "In the future this default will be removed";
 
   public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut) {
     this.appInfo = appInfo;
@@ -185,8 +183,6 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               defaultedArgs.stream().toArray(String[]::new), secondTryUnknowns);
 
           if (secondTryUnknowns.isEmpty()) {
-            consoleOut.println(DEFAULT_COMMAND_WARNING);
-
             unknownArgs.clear();
             unknownArgs.addAll(secondTryUnknowns);
 
@@ -206,8 +202,6 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
       Collections.addAll(defaultedArgs, args);
       defaultedArgs.add(0, applySpec.name());
       unknownArgs.clear();
-
-      consoleOut.println(DEFAULT_COMMAND_WARNING);
 
       return parser.parseKnownArgs(defaultedArgs.stream().toArray(String[]::new), unknownArgs);
     }
