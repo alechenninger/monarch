@@ -23,7 +23,7 @@ petstore::version: '2'
 1. Download tar or zip @ https://github.com/alechenninger/monarch/releases/latest
 2. Extract somewhere you like to put things
 3. Have JRE8 installed
-4. Have JAVA_HOME defined (for ex: "/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.65-3.b17.fc22.x86_64")
+4. Have JAVA_HOME environment variable defined (for ex: "/etc/alternatives/java_sdk")
 5. Add a symlink 'monarch' to your path which points to ${where_you_extracted_zip}/bin/monarch-bin
 
 ## install from source
