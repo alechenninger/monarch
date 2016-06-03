@@ -20,16 +20,9 @@ package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
-import io.github.alechenninger.monarch.MonarchException;
-import io.github.alechenninger.monarch.MonarchParser;
 import io.github.alechenninger.monarch.MonarchParsers;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
@@ -50,15 +43,8 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return input.getHierarchyPathOrYaml().map(pathOrYaml -> {
-      try {
-        InputAndParser hierarchyInput = tryGetInputStreamForPathOrString(pathOrYaml);
-
-        return hierarchyInput.parser.parseHierarchy(hierarchyInput.stream);
-      } catch (IOException e) {
-        throw new MonarchException("Error reading hierarchy file.", e);
-      }
-    });
+    return input.getHierarchyPathOrYaml()
+        .map(pathOrYaml -> parsers.parseHierarchy(pathOrYaml, fileSystem));
   }
 
   @Override
@@ -68,15 +54,9 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
 
   @Override
   public Iterable<Change> changes() {
-    return input.getChangesPathOrYaml().map(pathOrYaml -> {
-      try {
-        InputAndParser changesInput = tryGetInputStreamForPathOrString(pathOrYaml);
-
-        return changesInput.parser.parseChanges(changesInput.stream);
-      } catch (IOException e) {
-        throw new MonarchException("Error reading hierarchy file.", e);
-      }
-    }).orElse(Collections.emptySet());
+    return input.getChangesPathOrYaml()
+        .map(pathOrYaml -> parsers.parseChanges(pathOrYaml, fileSystem))
+        .orElse(Collections.emptyList());
   }
 
   @Override
@@ -92,26 +72,5 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
   @Override
   public Optional<Path> outputDir() {
     return input.getOutputDir().map(fileSystem::getPath);
-  }
-
-  private InputAndParser tryGetInputStreamForPathOrString(String pathOrYaml) throws IOException {
-    try {
-      Path path = fileSystem.getPath(pathOrYaml);
-      return new InputAndParser(Files.newInputStream(path), parsers.forPath(path));
-    } catch (InvalidPathException e) {
-      return new InputAndParser(new ByteArrayInputStream(pathOrYaml.getBytes("UTF-8")),
-          /* Assume yaml */ parsers.yaml());
-    }
-  }
-
-  public static class InputAndParser {
-    public final InputStream stream;
-    /** Expressed as file extension. */
-    public final MonarchParser parser;
-
-    public InputAndParser(InputStream stream, MonarchParser parser) {
-      this.stream = stream;
-      this.parser = parser;
-    }
   }
 }

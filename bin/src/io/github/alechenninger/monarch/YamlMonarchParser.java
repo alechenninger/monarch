@@ -20,14 +20,8 @@ package io.github.alechenninger.monarch;
 
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,7 +40,7 @@ public class YamlMonarchParser implements MonarchParser {
   }
 
   @Override
-  public Iterable<Change> parseChanges(InputStream changesInput) {
+  public List<Change> parseChanges(InputStream changesInput) {
     try {
       Iterable<Object> parsedChanges = yaml.loadAll(changesInput);
       List<Change> changes = new ArrayList<>();
@@ -66,38 +60,11 @@ public class YamlMonarchParser implements MonarchParser {
   }
 
   @Override
-  public Map<String, Map<String, Object>> readData(Collection<String> sources, Path dataDir) {
-    Map<String, Map<String, Object>> data = new LinkedHashMap<>(sources.size());
-
-    try {
-      for (String source : sources) {
-        Path sourcePath = dataDir.resolve(source);
-        if (Files.exists(sourcePath)) {
-          Map<String, Object> dataForSource = (Map<String, Object>) yaml.load(
-              Files.newInputStream(sourcePath));
-
-          if (dataForSource == null) {
-            dataForSource = Collections.emptyMap();
-          }
-
-          data.put(source, dataForSource);
-        }
-      }
-    } catch (IOException e) {
-      throw new MonarchException("Error reading data source.", e);
-    } catch (ClassCastException e) {
-      throw new MonarchException("Expected data source to parse as map.", e);
-    }
-
-    return data;
-  }
-
-  @Override
-  public Map<String, Object> readAsMap(InputStream inputStream) {
+  public Map<String, Object> parseMap(InputStream inputStream) {
     try {
       return (Map<String, Object>) yaml.load(inputStream);
     } catch (ClassCastException e) {
-      throw new MonarchException("Expected path to parse as map.", e);
+      throw new MonarchException("Expected inputStream to parse as map.", e);
     }
   }
 }

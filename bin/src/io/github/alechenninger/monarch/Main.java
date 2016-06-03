@@ -167,7 +167,7 @@ public class Main {
             + target))
         .descendants();
 
-    Map<String, Map<String,Object>> currentData = parsers.readDataForHierarchy(dataDir, hierarchy);
+    Map<String, Map<String,Object>> currentData = parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
         hierarchy, changes, target, currentData, mergeKeys);

@@ -20,16 +20,9 @@ package io.github.alechenninger.monarch.set;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
-import io.github.alechenninger.monarch.MonarchException;
-import io.github.alechenninger.monarch.MonarchParser;
 import io.github.alechenninger.monarch.MonarchParsers;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,15 +45,8 @@ public class UpdateSetOptionsFromInput implements UpdateSetOptions {
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return input.getHierarchyPathOrYaml().map(pathOrYaml -> {
-      try {
-        InputAndParser hierarchyInput = tryGetInputStreamForPathOrString(pathOrYaml);
-
-        return hierarchyInput.parser.parseHierarchy(hierarchyInput.stream);
-      } catch (IOException e) {
-        throw new MonarchException("Error reading hierarchy file.", e);
-      }
-    });
+    return input.getHierarchyPathOrYaml()
+        .map(pathOrYaml -> parsers.parseHierarchy(pathOrYaml, fileSystem));
   }
 
   @Override
@@ -70,21 +56,9 @@ public class UpdateSetOptionsFromInput implements UpdateSetOptions {
 
   @Override
   public Iterable<Change> changes() {
-    return input.getChangesPath().map(pathString -> {
-      try {
-        Path path = fileSystem.getPath(pathString);
-
-        if (Files.notExists(path)) {
-          return Collections.<Change>emptyList();
-        }
-
-        MonarchParser parser = parsers.forPath(path);
-        InputStream stream = Files.newInputStream(path);
-        return parser.parseChanges(stream);
-      } catch (IOException e) {
-        throw new MonarchException("Error reading hierarchy file.", e);
-      }
-    }).orElse(Collections.emptyList());
+    return input.getChangesPath()
+        .map(pathString -> parsers.parseChanges(pathString, fileSystem))
+        .orElse(Collections.emptyList());
   }
 
   @Override
@@ -95,40 +69,12 @@ public class UpdateSetOptionsFromInput implements UpdateSetOptions {
   @Override
   public Map<String, Object> putInSet() {
     return input.getPutPathsOrYaml().stream()
-        .map(pathOrYaml -> {
-          try {
-            InputAndParser inputAndParser = tryGetInputStreamForPathOrString(pathOrYaml);
-            return inputAndParser.parser.readAsMap(inputAndParser.stream);
-          } catch (IOException e) {
-            throw new MonarchException("Error parsing " + pathOrYaml, e);
-          }
-        })
+        .map(pathOrYaml -> parsers.parseData(pathOrYaml, fileSystem))
         .reduce(new HashMap<>(), (m1, m2) -> { m1.putAll(m2); return m1; });
   }
 
   @Override
   public Optional<String> source() {
     return input.getSource();
-  }
-
-  private InputAndParser tryGetInputStreamForPathOrString(String pathOrYaml) throws IOException {
-    try {
-      Path path = fileSystem.getPath(pathOrYaml);
-      return new InputAndParser(Files.newInputStream(path), parsers.forPath(path));
-    } catch (IOException e) {
-      return new InputAndParser(new ByteArrayInputStream(pathOrYaml.getBytes("UTF-8")),
-          /* Assume yaml */ parsers.yaml());
-    }
-  }
-
-  public static class InputAndParser {
-    public final InputStream stream;
-    /** Expressed as file extension. */
-    public final MonarchParser parser;
-
-    public InputAndParser(InputStream stream, MonarchParser parser) {
-      this.stream = stream;
-      this.parser = parser;
-    }
   }
 }
