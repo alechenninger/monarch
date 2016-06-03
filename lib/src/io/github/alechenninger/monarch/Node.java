@@ -109,9 +109,18 @@ final class Node {
       return false;
     }
     Node node = (Node) o;
+    if (parent != null) {
+      if (node.parent == null) {
+        return false;
+      }
+
+      if (!parent.name.equals(node.parent.name)) {
+        return false;
+      }
+    }
+
     return Objects.equals(name, node.name) &&
-        Objects.equals(children, node.children) &&
-        Objects.equals(parent, node.parent);
+        Objects.equals(children, node.children);
   }
 
   @Override
@@ -124,7 +133,7 @@ final class Node {
     return "Node{" +
         "name='" + name + '\'' +
         ", children=" + children +
-        ", parent=" + parent +
+        ", parent=" + (parent == null ? null : parent.name) +
         '}';
   }
 }

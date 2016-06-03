@@ -62,13 +62,18 @@ public interface MonarchParsers {
   default Hierarchy parseHierarchy(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
+      MonarchParser parser = forPath(path);
 
       try {
-        return forPath(path).parseHierarchy(Files.newInputStream(path));
+        return parser.parseHierarchy(Files.newInputStream(path));
       } catch (Exception e) {
         throw new MonarchFileParseException("hierarchy", path, e);
       }
-    } catch (InvalidPathException e) {
+    } catch (InvalidPathException | MonarchException e) {
+      if (e instanceof MonarchFileParseException) {
+        throw e;
+      }
+
       // Must not be a path, try parsing directly...
       byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
       ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
@@ -86,13 +91,18 @@ public interface MonarchParsers {
   default List<Change> parseChanges(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
+      MonarchParser parser = forPath(path);
 
       try {
-        return forPath(path).parseChanges(Files.newInputStream(path));
+        return parser.parseChanges(Files.newInputStream(path));
       } catch (Exception e) {
         throw new MonarchFileParseException("changes", path, e);
       }
-    } catch (InvalidPathException e) {
+    } catch (InvalidPathException | MonarchException e) {
+      if (e instanceof MonarchFileParseException) {
+        throw e;
+      }
+
       byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
       ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
 
@@ -109,7 +119,7 @@ public interface MonarchParsers {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
       return parseData(path);
-    } catch (InvalidPathException e) {
+    } catch (InvalidPathException | MonarchFileParseException e) {
       byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
       ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
 
