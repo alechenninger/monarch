@@ -1,5 +1,19 @@
 # Change Log
 
+## [v0.5.3](https://github.com/alechenninger/monarch/tree/v0.5.3) (2016-06-03)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.2...v0.5.3)
+
+**Closed issues:**
+
+- When targeting a source lower in hierarchy where change has hash in this source and higher source for a merge key, only lower value is applied [\#41](https://github.com/alechenninger/monarch/issues/41)
+- Include more information when YAML parse exception occurs [\#34](https://github.com/alechenninger/monarch/issues/34)
+- Default outputDir to dataDir? [\#21](https://github.com/alechenninger/monarch/issues/21)
+- Document example usage as well as cli arguments [\#13](https://github.com/alechenninger/monarch/issues/13)
+
+**Merged pull requests:**
+
+- Include filename when parse error occurs; refactor out common parsing code [\#51](https://github.com/alechenninger/monarch/pull/51) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.5.2](https://github.com/alechenninger/monarch/tree/v0.5.2) (2016-05-30)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.1...v0.5.2)
 
