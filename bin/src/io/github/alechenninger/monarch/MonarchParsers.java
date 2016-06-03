@@ -20,8 +20,12 @@ package io.github.alechenninger.monarch;
 
 import org.yaml.snakeyaml.Yaml;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +39,14 @@ public interface MonarchParsers {
 
   default MonarchParser forPath(Path path) {
     String fileName = path.getFileName().toString();
-    String extension = getExtensionForFileName(fileName);
+
+    int extensionIndex = fileName.lastIndexOf('.');
+    if (extensionIndex < 0) {
+      throw new MonarchException("Please use a file extension. I don't know how to parse this "
+          + "file: " + fileName);
+    }
+    String extension = fileName.substring(extensionIndex + 1);
+
     return forExtension(extension);
   }
 
@@ -48,37 +59,87 @@ public interface MonarchParsers {
     }
   }
 
-  default Map<String, Map<String, Object>> readDataForHierarchy(Path dataDir, Hierarchy hierarchy) {
+  default Hierarchy parseHierarchy(String pathOrParseable, FileSystem fileSystem) {
+    try {
+      Path path = fileSystem.getPath(pathOrParseable);
+
+      try {
+        return forPath(path).parseHierarchy(Files.newInputStream(path));
+      } catch (Exception e) {
+        throw new MonarchFileParseException("hierarchy", path, e);
+      }
+    } catch (InvalidPathException e) {
+      // Must not be a path, try parsing directly...
+      byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
+      ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
+
+      try {
+        return yaml().parseHierarchy(parseableStream);
+      } catch (Exception parseException) {
+        // Failed to parse, then maybe it was a path after all...
+        e.addSuppressed(parseException);
+        throw new MonarchException("Failed to parse hierarchy from: " + pathOrParseable, e);
+      }
+    }
+  }
+
+  default List<Change> parseChanges(String pathOrParseable, FileSystem fileSystem) {
+    try {
+      Path path = fileSystem.getPath(pathOrParseable);
+
+      try {
+        return forPath(path).parseChanges(Files.newInputStream(path));
+      } catch (Exception e) {
+        throw new MonarchFileParseException("changes", path, e);
+      }
+    } catch (InvalidPathException e) {
+      byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
+      ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
+
+      try {
+        return yaml().parseChanges(parseableStream);
+      } catch (Exception parseException) {
+        e.addSuppressed(parseException);
+        throw new MonarchException("Failed to parse changes from: " + pathOrParseable, e);
+      }
+    }
+  }
+
+  default Map<String, Object> parseData(String pathOrParseable, FileSystem fileSystem) {
+    try {
+      Path path = fileSystem.getPath(pathOrParseable);
+      return parseData(path);
+    } catch (InvalidPathException e) {
+      byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
+      ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
+
+      try {
+        return yaml().parseMap(parseableStream);
+      } catch (Exception parseException) {
+        e.addSuppressed(parseException);
+        throw new MonarchException("Failed to parse data", e);
+      }
+    }
+  }
+
+  default Map<String, Object> parseData(Path path) {
+    try {
+      return forPath(path).parseMap(Files.newInputStream(path));
+    } catch (Exception e) {
+      throw new MonarchFileParseException("data", path, e);
+    }
+  }
+
+  default Map<String, Map<String, Object>> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
     Map<String, Map<String, Object>> data = new HashMap<>();
-    Map<String, List<String>> sourcesByExtension = new HashMap<>();
 
     for (String source : hierarchy.descendants()) {
-      List<String> sources = new ArrayList<>();
-      sources.add(source);
-      sourcesByExtension.merge(
-          getExtensionForFileName(source), sources, (l1, l2) -> { l1.addAll(l2); return l1; });
-    }
-
-    for (Map.Entry<String, List<String>> extensionSources : sourcesByExtension.entrySet()) {
-      String extension = extensionSources.getKey();
-      List<String> sources = extensionSources.getValue();
-      Map<String, Map<String, Object>> dataForExtension = forExtension(extension)
-          .readData(sources, dataDir);
-      data.putAll(dataForExtension);
+      Path sourcePath = dataDir.resolve(source);
+      Map<String, Object> sourceData = parseData(sourcePath);
+      data.put(source, sourceData);
     }
 
     return data;
-  }
-
-  static String getExtensionForFileName(String fileName) {
-    int extensionIndex = fileName.lastIndexOf('.');
-
-    if (extensionIndex < 0) {
-      throw new MonarchException("Please use a file extension. I don't know how to parse this "
-          + "file: " + fileName);
-    }
-
-    return fileName.substring(extensionIndex + 1);
   }
 
   class Default implements MonarchParsers {

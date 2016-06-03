@@ -235,4 +235,56 @@ outputDir: /output/
     assert main.run("--version") == 0
     assert getConsole() ==~ /[0-9].[0-9].[0-9]\n/
   }
+
+  @Test
+  void shouldIncludeFilenameIfChangeHasYamlParseError() {
+    writeFile('/etc/changes.yaml', '''
+---
+\tsource: teams/myteam.yaml
+  set:
+    myapp::version: 2
+    myapp::favorite_website: http://www.redhat.com
+---
+  source: teams/myteam/stage.yaml
+  set:
+    myapp::favorite_website: http://stage.redhat.com
+''')
+
+    writeDataSources([
+        'global.yaml'            : 'foo: "bar"',
+        'teams/myteam.yaml'      : 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ])
+
+    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
+
+    assert getConsole() =~ '/etc/changes.yaml'
+  }
+
+  @Test
+  void shouldIncludeFilenameIfHierarchyHasYamlParseError() {
+    writeFile('/etc/changes.yaml', '''
+---
+source: teams/myteam.yaml
+set:
+  myapp::version: 2
+  myapp::favorite_website: http://www.redhat.com
+---
+source: teams/myteam/stage.yaml
+set:
+  myapp::favorite_website: http://stage.redhat.com
+''')
+
+    writeFile(hierarchyFile, "/t$hierarchy")
+
+    writeDataSources([
+        'global.yaml'            : 'foo: "bar"',
+        'teams/myteam.yaml'      : 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ])
+
+    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
+
+    assert getConsole() =~ hierarchyFile
+  }
 }
