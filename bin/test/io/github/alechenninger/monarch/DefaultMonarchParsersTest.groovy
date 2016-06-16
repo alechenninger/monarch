@@ -75,4 +75,9 @@ foo:
     assert parsers.parseHierarchy('/etc/hierarchy.yaml', fs) ==
         Hierarchy.fromStringListOrMap(['foo': ['bar', ['baz': 'buzz']]])
   }
+
+  @Test
+  void shouldParsePathToMissingFileAsEmptyData() {
+    assert parsers.parseData("/etc/not_a_thing.yaml", fs) == [:]
+  }
 }

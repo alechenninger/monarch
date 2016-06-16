@@ -25,7 +25,9 @@ import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,6 +137,8 @@ public interface MonarchParsers {
   default Map<String, Object> parseData(Path path) {
     try {
       return forPath(path).parseMap(Files.newInputStream(path));
+    } catch (NoSuchFileException ignored) {
+      return Collections.emptyMap();
     } catch (Exception e) {
       throw new MonarchFileParseException("data", path, e);
     }
