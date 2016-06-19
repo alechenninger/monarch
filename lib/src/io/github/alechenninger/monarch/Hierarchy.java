@@ -9,9 +9,9 @@ public interface Hierarchy {
     return new StaticHierarchy(StaticHierarchy.Node.fromStringListOrMap(object));
   }
 
-  static Hierarchy fromInterpolatedList(List<String> sources,
-      Map<String, List<String>> variableValues) {
-    return null; // TODO
+  static Hierarchy fromDynamicSources(List<DynamicHierarchy.DynamicSource> sources,
+      Map<String, List<String>> potentials, Map<String, String> args) {
+    return new DynamicHierarchy(sources, potentials, args);
   }
 
   /**

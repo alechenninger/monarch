@@ -5,12 +5,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+// TODO consider supporting implied args or arg groups or something of the sort
+// Ex: we know qa.foo.com has "environment" of "qa", so if you target host=qa.foo.com you should see
+// environment=qa in ancestry.
 public class DynamicHierarchy implements Hierarchy {
   private final List<DynamicSource> sources;
   private final Map<String, String> args;
@@ -28,6 +29,13 @@ public class DynamicHierarchy implements Hierarchy {
     this.potentials = potentials;
   }
 
+  public DynamicHierarchy(List<DynamicSource> sources, Map<String, List<String>> potentials,
+      Map<String, String> args) {
+    this.sources = sources;
+    this.args = args;
+    this.potentials = potentials;
+  }
+
   @Override
   public List<String> descendants() {
     return sources.stream()
@@ -37,13 +45,7 @@ public class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<List<String>> ancestorsOf(String source) {
-    // TODO maybe we can figure out more args?
-    return sources.stream()
-        .map(s -> s.argsFor(source, potentials))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .findFirst()
-        .flatMap(this::ancestorsOf);
+    return argsFor(source).flatMap(this::ancestorsOf);
   }
 
   @Override
@@ -67,18 +69,50 @@ public class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Hierarchy> hierarchyOf(String source) {
-    return null;
+    return argsFor(source).flatMap(this::hierarchyOf);
   }
 
   @Override
   public Optional<Hierarchy> hierarchyOf(Map<String, String> variables) {
-    return null;
+    Map<String, String> merged = new HashMap<>(args);
+    merged.putAll(variables);
+
+    List<DynamicSource> limited = sources.stream()
+        .filter(s -> s.parameters().containsAll(variables.keySet()))
+        .collect(Collectors.toList());
+
+    return Optional.of(new DynamicHierarchy(limited, potentials, merged));
+  }
+
+  // TODO maybe we can figure out more args?
+  // FIXME in some cases this can be ambiguous, should fail, require user to provide more args
+  private Optional<Map<String, String>> argsFor(String source) {
+    return sources.stream()
+        .map(s -> s.argsFor(source, potentials, args))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(Collectors.collectingAndThen(
+            Collectors.toList(),
+            argsList -> {
+              if (argsList.isEmpty()) {
+                return Optional.empty();
+              }
+
+              if (argsList.size() == 1) {
+                return Optional.of(argsList.get(0));
+              }
+
+              throw new IllegalStateException("Multiple sets of arguments satisfy the source <" +
+                  source + ">. Please provide additional arguments to disambiguate. Possible " +
+                  "argument values to choose from: " + argsList);
+            }
+        ));
   }
 
   interface DynamicSource {
     List<String> parameters();
     List<String> toStaticSources(Map<String, String> args, Map<String, List<String>> potentials);
-    Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials);
+    Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials, Map<String, String> args);
   }
 
   public static class SimpleDynamicSource implements DynamicSource {
@@ -111,30 +145,6 @@ public class DynamicHierarchy implements Hierarchy {
       }
     }
 
-    static class RenderedSource {
-      final StringBuilder builder = new StringBuilder();
-      final Map<String, String> argsUsed = new HashMap<>();
-
-      RenderedSource() {}
-
-      RenderedSource(RenderedSource copy) {
-        append(copy.builder.toString());
-        argsUsed.putAll(copy.argsUsed);
-      }
-
-      void append(String string) {
-        builder.append(string);
-      }
-
-      void putArg(String arg, String value) {
-        argsUsed.put(arg, value);
-      }
-
-      RenderedSource copy() {
-        return new RenderedSource(this);
-      }
-    }
-
     @Override
     public List<String> parameters() {
       return parts.stream()
@@ -153,8 +163,8 @@ public class DynamicHierarchy implements Hierarchy {
 
     @Override
     public Optional<Map<String, String>> argsFor(String source,
-        Map<String, List<String>> potentials) {
-      return toRenderedSources(Collections.emptyMap(), potentials).stream()
+        Map<String, List<String>> potentials, Map<String, String> args) {
+      return toRenderedSources(args, potentials).stream()
           .filter(s -> s.builder.toString().equals(source))
           .map(s -> s.argsUsed)
           // TODO validate only one found?
@@ -206,7 +216,32 @@ public class DynamicHierarchy implements Hierarchy {
           }
         }
       }
+
       return sources;
+    }
+
+    static class RenderedSource {
+      final StringBuilder builder = new StringBuilder();
+      final Map<String, String> argsUsed = new HashMap<>();
+
+      RenderedSource() {}
+
+      RenderedSource(RenderedSource copy) {
+        append(copy.builder.toString());
+        argsUsed.putAll(copy.argsUsed);
+      }
+
+      void append(String string) {
+        builder.append(string);
+      }
+
+      void putArg(String arg, String value) {
+        argsUsed.put(arg, value);
+      }
+
+      RenderedSource copy() {
+        return new RenderedSource(this);
+      }
     }
   }
 }
