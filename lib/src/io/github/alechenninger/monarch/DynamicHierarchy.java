@@ -37,6 +37,7 @@ public class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<List<String>> ancestorsOf(String source) {
+    // TODO maybe we can figure out more args?
     return sources.stream()
         .map(s -> s.argsFor(source, potentials))
         .filter(Optional::isPresent)
@@ -50,23 +51,18 @@ public class DynamicHierarchy implements Hierarchy {
     Map<String, String> args = new HashMap<>(this.args);
     args.putAll(variables);
 
-    return sources.stream()
-        .filter(s -> s.parameters().containsAll(args.keySet()))
-        .findFirst()
-        .map(firstMatch -> ListReversed.stream(sources)
-            .filter(new SkipUntil<>(firstMatch))
-            .flatMap(s -> {
-              if (s.parameters().isEmpty()) {
-                return s.toStaticSources(args, potentials).stream();
-              }
+    return ListReversed.stream(sources)
+        .flatMap(s -> {
+          if (args.keySet().containsAll(s.parameters())) {
+            return s.toStaticSources(args, potentials).stream();
+          }
 
-              if (args.keySet().containsAll(s.parameters())) {
-                return s.toStaticSources(args, potentials).stream();
-              }
-
-              return Stream.empty();
-            })
-            .collect(Collectors.toList()));
+          return Stream.empty();
+        })
+        .collect(Collectors.collectingAndThen(
+            Collectors.toList(),
+            l -> l.isEmpty() ? Optional.empty() : Optional.of(l)
+        ));
   }
 
   @Override
@@ -211,27 +207,6 @@ public class DynamicHierarchy implements Hierarchy {
         }
       }
       return sources;
-    }
-  }
-
-  private static class SkipUntil<T> implements Predicate<T> {
-    private final T value;
-
-    boolean found = false;
-
-    SkipUntil(T value) {
-      this.value = value;
-    }
-
-    @Override
-    public boolean test(T t) {
-      if (found) return true;
-
-      if (Objects.equals(value, t)) {
-        return found = true;
-      }
-
-      return false;
     }
   }
 }

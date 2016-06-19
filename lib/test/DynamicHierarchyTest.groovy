@@ -48,9 +48,10 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldCalculateAncestorsByCompleteVariables() {
-    assert hierarchy.ancestorsOf(["team": "teamA", "environment": "qa"]).get() == [
+    assert hierarchy.ancestorsOf(["team": "teamA", "environment": "qa", "os": "rhel"]).get() == [
         "teams/teamA/qa",
         "environment/qa",
+        "rhel",
         "common",
     ]
   }
