@@ -54,7 +54,26 @@ public class DynamicHierarchy implements Hierarchy {
         .findFirst()
         .map(firstMatch -> ListReversed.stream(sources)
             .filter(new SkipUntil<>(firstMatch))
-            .flatMap(s -> s.toStaticSources(args, potentials).stream())
+            .map(source -> {
+              List<String> statics = source.toStaticSources(args, potentials);
+
+              if (statics.isEmpty()) {
+                throw new IllegalStateException("Expected dynamic source to render to at least " +
+                    "1 static source, but got 0 sources. This should never happen. " +
+                    "Source looks like: " + source);
+              }
+
+              if (statics.size() > 1) {
+                List<String> missing = new ArrayList<>(source.parameters());
+                missing.removeAll(variables.keySet());
+
+                throw new IllegalArgumentException("Tried to get ancestry but not all variables " +
+                    "defined, so it's impossible to pick which source will actually be " +
+                    "inherited. Missing " + missing + " at source " + source);
+              }
+
+              return statics.get(0);
+            })
             .collect(Collectors.toList()));
   }
 
@@ -97,9 +116,14 @@ public class DynamicHierarchy implements Hierarchy {
       public static Part variable(String variable) {
         return new Part(variable, true);
       }
+
+      @Override
+      public String toString() {
+        return "Part." + (isVariable ? "variable" : "string") + "('" + string + "')";
+      }
     }
 
-    public static class RenderedSource {
+    static class RenderedSource {
       final StringBuilder builder = new StringBuilder();
       final Map<String, String> argsUsed = new HashMap<>();
 
@@ -147,6 +171,11 @@ public class DynamicHierarchy implements Hierarchy {
           .map(s -> s.argsUsed)
           // TODO validate only one found?
           .findFirst();
+    }
+
+    @Override
+    public String toString() {
+      return parts.toString();
     }
 
     private List<RenderedSource> toRenderedSources(Map<String, String> args,
