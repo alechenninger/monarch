@@ -84,35 +84,25 @@ public class DynamicHierarchy implements Hierarchy {
     return Optional.of(new DynamicHierarchy(limited, potentials, merged));
   }
 
-  // TODO maybe we can figure out more args?
-  // FIXME in some cases this can be ambiguous, should fail, require user to provide more args
   private Optional<Map<String, String>> argsFor(String source) {
-    return sources.stream()
-        .map(s -> s.argsFor(source, potentials, args))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.collectingAndThen(
-            Collectors.toList(),
-            argsList -> {
-              if (argsList.isEmpty()) {
-                return Optional.empty();
-              }
+    List<Map<String, String>> satisfyingArgs = sources.stream()
+        .flatMap(s -> s.argsFor(source, potentials, args).map(Stream::of).orElse(Stream.empty()))
+        .collect(Collectors.toList());
 
-              if (argsList.size() == 1) {
-                return Optional.of(argsList.get(0));
-              }
+    if (satisfyingArgs.isEmpty()) {
+      return Optional.empty();
+    }
 
-              throw new IllegalStateException("Multiple sets of arguments satisfy the source <" +
-                  source + ">. Please provide additional arguments to disambiguate. Possible " +
-                  "argument values to choose from: " + argsList);
-            }
-        ));
+    Map<String, String> allArgs = new HashMap<>();
+    satisfyingArgs.forEach(allArgs::putAll);
+    return Optional.of(allArgs);
   }
 
   interface DynamicSource {
     List<String> parameters();
     List<String> toStaticSources(Map<String, String> args, Map<String, List<String>> potentials);
-    Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials, Map<String, String> args);
+    Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials,
+        Map<String, String> args);
   }
 
   public static class SimpleDynamicSource implements DynamicSource {

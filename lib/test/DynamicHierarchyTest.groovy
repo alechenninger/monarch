@@ -98,8 +98,12 @@ class DynamicHierarchyTest {
     ]
   }
 
-  @Test(expected = Exception.class)
-  void shouldFailIfExactSourceHasMultipleSatisfyingVariables() {
+  @Test
+  // This is a bit of a weird case right now and there may be better behavior than this.
+  // I think if someone really sets up their hierarchy this way, then 'foo' and 'bar' are probably
+  // synonyms and it would be safe to put at the highest level even though technically it would
+  // affect other 'bar' assignments than 'baz'.
+  void shouldProduceEmptyHierarchyForSourceWithCompetingVariablePossibilities() {
     def hierarchy = Hierarchy.fromDynamicSources([
         new SimpleDynamicSource([Part.variable("foo")]),
         new SimpleDynamicSource([Part.variable("bar")]),
@@ -110,11 +114,11 @@ class DynamicHierarchyTest {
         "bar": ["baz"],
     ], [:])
 
-    hierarchy.ancestorsOf("baz");
+    assert hierarchy.descendantsOf("baz").get() == []
   }
 
   @Test
-  void shouldNotFailIfExactSourceHasMultipleSatisfyingVariablesDisambiguatedByUser() {
+  void shouldTakeIntoAccountKnownArgumentsWhenWorkingWithAStaticSource() {
     def hierarchy = Hierarchy.fromDynamicSources([
         new SimpleDynamicSource([Part.variable("foo")]),
         new SimpleDynamicSource([Part.variable("bar")]),
@@ -124,7 +128,7 @@ class DynamicHierarchyTest {
         "foo": ["baz"],
         "bar": ["baz"],
     ], [
-        "bar":"baz"
+        "foo": ""
     ])
 
     assert hierarchy.descendantsOf("baz").get() == ["baz", "bar/baz"]
