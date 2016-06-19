@@ -54,16 +54,6 @@ class StaticHierarchy implements Hierarchy {
   }
 
   @Override
-  public Optional<List<String>> descendantsOf(String source) {
-    return hierarchyOf(source).map(Hierarchy::descendants);
-  }
-
-  @Override
-  public Optional<List<String>> descendantsOf(Map<String, String> variables) {
-    return Optional.empty();
-  }
-
-  @Override
   public Optional<List<String>> ancestorsOf(String source) {
     return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))

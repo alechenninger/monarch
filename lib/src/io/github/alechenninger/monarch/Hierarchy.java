@@ -43,9 +43,15 @@ public interface Hierarchy {
    * in the tree than this hierarchy's root. As with {@code descendants()}, the start of the tree is
    * included in the result list.
    */
-  Optional<List<String>> descendantsOf(String source);
+  // TODO maybe generalize source as common type whether static or variable based
+  // TODO maybe just return empty list instead of empty optional
+  default Optional<List<String>> descendantsOf(String source) {
+    return hierarchyOf(source).map(Hierarchy::descendants);
+  }
 
-  Optional<List<String>> descendantsOf(Map<String, String> variables);
+  default Optional<List<String>> descendantsOf(Map<String, String> variables) {
+    return hierarchyOf(variables).map(Hierarchy::descendants);
+  }
 
   /**
    * Includes the {@code source} passed in as the first element, furthest ancestors last.
