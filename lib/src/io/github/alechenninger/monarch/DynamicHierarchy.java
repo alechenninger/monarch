@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DynamicHierarchy implements Hierarchy {
   private final List<DynamicSource> sources;
@@ -54,25 +55,16 @@ public class DynamicHierarchy implements Hierarchy {
         .findFirst()
         .map(firstMatch -> ListReversed.stream(sources)
             .filter(new SkipUntil<>(firstMatch))
-            .map(source -> {
-              List<String> statics = source.toStaticSources(args, potentials);
-
-              if (statics.isEmpty()) {
-                throw new IllegalStateException("Expected dynamic source to render to at least " +
-                    "1 static source, but got 0 sources. This should never happen. " +
-                    "Source looks like: " + source);
+            .flatMap(s -> {
+              if (s.parameters().isEmpty()) {
+                return s.toStaticSources(args, potentials).stream();
               }
 
-              if (statics.size() > 1) {
-                List<String> missing = new ArrayList<>(source.parameters());
-                missing.removeAll(variables.keySet());
-
-                throw new IllegalArgumentException("Tried to get ancestry but not all variables " +
-                    "defined, so it's impossible to pick which source will actually be " +
-                    "inherited. Missing " + missing + " at source " + source);
+              if (args.keySet().containsAll(s.parameters())) {
+                return s.toStaticSources(args, potentials).stream();
               }
 
-              return statics.get(0);
+              return Stream.empty();
             })
             .collect(Collectors.toList()));
   }

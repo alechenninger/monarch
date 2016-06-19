@@ -7,6 +7,7 @@ class DynamicHierarchyTest {
   def hierarchy = new DynamicHierarchy(
       [
           new SimpleDynamicSource([Part.string("common")]),
+          new SimpleDynamicSource([Part.variable("os")]),
           new SimpleDynamicSource([Part.string("environment/"), Part.variable("environment")]),
           new SimpleDynamicSource([Part.string("teams/"), Part.variable("team"),
                                   Part.string("/"), Part.variable("environment")]),
@@ -16,6 +17,7 @@ class DynamicHierarchyTest {
           "hostname": ["foo.com", "bar.com"],
           "team": ["teamA", "teamB"],
           "environment": ["qa", "prod"],
+          "os": ["rhel"],
       ]
   )
 
@@ -23,6 +25,7 @@ class DynamicHierarchyTest {
   void shouldCalculateDescendantsFromPotentialValues() {
     assert hierarchy.descendants() == [
         "common",
+        "rhel",
         "environment/qa",
         "environment/prod",
         "teams/teamA/qa",
@@ -52,9 +55,12 @@ class DynamicHierarchyTest {
     ]
   }
 
-  @Test(expected = Exception.class)
-  // FIXME This should not work actually, the results cannot be correct
-  void shouldFailIfAttemptToGetAncestryWithIncompleteVariables() {
-    assert hierarchy.ancestorsOf(["team": "teamA"])
+  @Test
+  // TODO: Not sure if this should include dynamic source with only one potential value
+  // Question of: is potentials expected to be comprehensive when a potential value is that that
+  // variable is absent or that it is never absent? I'm thinking if it's not absent, then you should
+  // supply the variable.
+  void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
+    assert hierarchy.ancestorsOf(["hostname": "foo.com"]).get() == ["nodes/foo.com", "common"]
   }
 }
