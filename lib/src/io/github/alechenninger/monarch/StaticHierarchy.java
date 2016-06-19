@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
@@ -35,38 +36,16 @@ import java.util.stream.StreamSupport;
 class StaticHierarchy implements Hierarchy {
   private final List<Node> rootNodes;
 
-  public StaticHierarchy(List<Node> rootNodes) {
+  StaticHierarchy(List<Node> rootNodes) {
     Objects.requireNonNull(rootNodes, "rootNodes");
     this.rootNodes = new ArrayList<>(rootNodes);
   }
 
-  public StaticHierarchy(Node rootNodes) {
+  StaticHierarchy(Node rootNodes) {
     Objects.requireNonNull(rootNodes, "rootNode");
     this.rootNodes = Collections.singletonList(rootNodes);
   }
 
-  /**
-   * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
-   * node. The leaf nodes will be after the "branch" nodes, and later the deeper in the tree they
-   * are.
-   *
-   * <p>For example, given the following tree structure:
-   *
-   * <pre><code>
-   *            foo
-   *           /   \
-   *         bar   baz
-   *        /  \     \
-   *       1    2     3
-   *                 /  \
-   *               fizz buzz
-   *                       \
-   *                      blue
-   * </code></pre>
-   *
-   * The depth-order is foo, bar, baz, 1, 2, 3, fizz, buzz, blue. Foo is at the top of the tree so
-   * it is first. Blue is at the bottom so it is last.
-   */
   @Override
   public List<String> descendants() {
     return DescendantsIterator.asStream(rootNodes)
@@ -74,19 +53,16 @@ class StaticHierarchy implements Hierarchy {
         .collect(Collectors.toList());
   }
 
-  /**
-   * Following the semantics of {@link #descendants()}, but starting from a different {@code source}
-   * in the tree than this hierarchy's root. As with {@code descendants()}, the start of the tree is
-   * included in the result list.
-   */
   @Override
   public Optional<List<String>> descendantsOf(String source) {
     return hierarchyOf(source).map(Hierarchy::descendants);
   }
 
-  /**
-   * Includes the {@code source} passed in as the first element, furthest ancestors last.
-   */
+  @Override
+  public Optional<List<String>> descendantsOf(Map<String, String> variables) {
+    return Optional.empty();
+  }
+
   @Override
   public Optional<List<String>> ancestorsOf(String source) {
     return DescendantsIterator.asStream(rootNodes)
@@ -95,15 +71,22 @@ class StaticHierarchy implements Hierarchy {
         .map(n -> AncestorsIterator.asStream(n).map(Node::name).collect(Collectors.toList()));
   }
 
-  /**
-   * Finds a descendant source node and returns it as the root of a new {@link StaticHierarchy}.
-   */
+  @Override
+  public Optional<List<String>> ancestorsOf(Map<String, String> variables) {
+    return Optional.empty();
+  }
+
   @Override
   public Optional<Hierarchy> hierarchyOf(String source) {
     return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .collect(Collect.<Node>maxOneResultOrThrow(IllegalStateException::new))
         .map(StaticHierarchy::new);
+  }
+
+  @Override
+  public Optional<Hierarchy> hierarchyOf(Map<String, String> variables) {
+    return Optional.empty();
   }
 
   @Override
