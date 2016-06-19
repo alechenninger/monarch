@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public interface Hierarchy {
   static Hierarchy fromStringListOrMap(Object object) {
-    return new StaticHierarchy(Node.fromStringListOrMap(object));
+    return new StaticHierarchy(StaticHierarchy.Node.fromStringListOrMap(object));
   }
 
   static Hierarchy fromInterpolatedList(List<String> sources,
