@@ -20,7 +20,7 @@ import io.github.alechenninger.monarch.Hierarchy
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
-class HierarchyTest {
+class StaticHierarchyTest {
   def yaml = new Yaml()
 
   @Test
