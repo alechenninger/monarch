@@ -47,27 +47,19 @@ class StaticHierarchy implements Hierarchy {
   }
 
   @Override
-  public Optional<String> target() {
-    if (rootNodes.size() != 1) {
-      return Optional.empty();
-    }
-
-    return Optional.of(rootNodes.get(0).name());
-  }
-
-  @Override
-  public List<Hierarchy> currentLevel() {
-    return rootNodes.stream().map(StaticHierarchy::new).collect(Collectors.toList());
-  }
-
-  @Override
-  public List<Hierarchy> descendants() {
+  public Optional<Source> getSource(String source) {
     return DescendantsIterator.asStream(rootNodes)
-        .map(StaticHierarchy::new)
+        .filter(n -> Objects.equals(source, n.name()))
+        .map(StaticSource::new)
+        .collect(Collect.maxOneResultOrThrow(IllegalStateException::new));
+  }
+
+  public List<Source> descendants() {
+    return DescendantsIterator.asStream(rootNodes)
+        .map(StaticSource::new)
         .collect(Collectors.toList());
   }
 
-  @Override
   public Optional<List<String>> ancestorsOf(String source) {
     return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
@@ -75,7 +67,6 @@ class StaticHierarchy implements Hierarchy {
         .map(n -> AncestorsIterator.asStream(n).map(Node::name).collect(Collectors.toList()));
   }
 
-  @Override
   public Optional<Hierarchy> hierarchyOf(String source) {
     return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
@@ -130,6 +121,33 @@ class StaticHierarchy implements Hierarchy {
     return lines
         .map(s -> prefix + s)
         .collect(Collectors.joining("\n")) + '\n';
+  }
+
+  private static class StaticSource implements Source {
+    private final Node source;
+
+    private StaticSource(Node source) {
+      this.source = source;
+    }
+
+    @Override
+    public String path() {
+      return source.name();
+    }
+
+    @Override
+    public List<Source> lineage() {
+      return AncestorsIterator.asStream(source)
+          .map(StaticSource::new)
+          .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Source> descendants() {
+      return DescendantsIterator.asStream(Collections.singleton(source))
+          .map(StaticSource::new)
+          .collect(Collectors.toList());
+    }
   }
 
   private static class DescendantsIterator implements Iterator<Node> {

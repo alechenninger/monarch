@@ -33,7 +33,9 @@ public class Monarch {
    * changes you want applied, the existing state of the data, and a "target" source which you want
    * to change alongside all of its children.
    *
-   * @param hierarchy A tree-structure describing which sources inherit from which parent sources.
+   * @param target A source in a hierarchy that represents a level that we can start to change
+   *               values. Sources above this source will be untouched. This source and any below it
+   *               will be updated to achieve the desired {@code changes}.
    * @param changes The "end-state" changes to be applied assuming you could update the entire tree.
    *                Even if you are not targeting the root of the tree (which would generate an
    *                entirely new tree), the {@code target} and its children will be updated
@@ -47,21 +49,15 @@ public class Monarch {
    * @return A map of sources to key:value pairs representing the new state of the data with changes
    *         applied to the given {@code target} and its children.
    */
-  public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
-      Iterable<Change> changes, Map<String, Map<String, Object>> data,
-      Set<String> mergeKeys) {
+  public Map<String, Map<String, Object>> generateSources(Source target, Iterable<Change> changes,
+      Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
-    for (Hierarchy target : hierarchy.currentLevel()) {
-      // From top-most to inner-most, generate results, taking into account the results from ancestors
-      // as we go along.
-      for (Hierarchy descendant : target.descendants()) {
-        // TODO: Having to check this optional / throw so often is a smell
-        // Might need two types of Hierarchies
-        String source = descendant.target().orElseThrow(() ->
-            new IllegalStateException("Expected descendant to have single target."));
-        result.put(source, generateSingleSource(descendant, changes, data, mergeKeys));
-      }
+    // From top-most to inner-most, generate results, taking into account the results from ancestors
+    // as we go along.
+    for (Source descendant : target.descendants()) {
+      String source = descendant.path();
+      result.put(source, generateSingleSource(descendant, changes, data, mergeKeys));
     }
 
     return result;
@@ -79,22 +75,21 @@ public class Monarch {
    * Generates new data for the given source only, taking into account the desired changes, the
    * existing hierarchy, and the existing data in the hierarchy.
    */
-  private Map<String, Object> generateSingleSource(Hierarchy hierarchy, Iterable<Change> changes,
+  private Map<String, Object> generateSingleSource(Source target, Iterable<Change> changes,
       Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-    List<String> ancestors = hierarchy.ancestors();
+    List<Source> lineage = target.lineage();
 
-    DataLookup sourceLookup = new DataLookupFromMap(data, hierarchy, mergeKeys);
+    DataLookup sourceLookup = new DataLookupFromMap(data, target, mergeKeys);
 
     // TODO: Might be able to deal with this: if multiple targets, loop?
-    String target = hierarchy.target().orElseThrow(() ->
-        new IllegalArgumentException("Expected hierarchy to have a single target."));
-    Map<String, Object> sourceData = data.get(target);
+    String targetPath = target.path();
+    Map<String, Object> sourceData = data.get(targetPath);
     Map<String, Object> resultSourceData = sourceData == null
         ? new HashMap<>()
         : new HashMap<>(sourceData);
 
-    for (String ancestor : new ListReversed<>(ancestors)) {
-      Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
+    for (Source ancestor : new ListReversed<>(lineage)) {
+      Optional<Change> maybeChange = findChangeForSource(ancestor.path(), changes);
 
       if (!maybeChange.isPresent()) {
         continue;
@@ -106,7 +101,7 @@ public class Monarch {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
-        if (!Objects.equals(change.source(), target)) {
+        if (!Objects.equals(change.source(), targetPath)) {
           if (sourceLookup.isValueInherited(setKey, setValue)) {
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {

@@ -26,19 +26,19 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DataLookupFromMap implements DataLookup {
   private final Map<String, Map<String, Object>> data;
-  private final String source;
-  private final Hierarchy hierarchy;
+  private final String path;
+  private final Source source;
   private final Set<String> mergeKeys;
 
-  public DataLookupFromMap(Map<String, Map<String, Object>> data, Hierarchy hierarchy,
+  public DataLookupFromMap(Map<String, Map<String, Object>> data, Source source,
       Set<String> mergeKeys) {
     this.data = data;
-    this.source = hierarchy.target().orElseThrow(() ->
-        new IllegalArgumentException("Expected hierarchy to refer to a single target."));
-    this.hierarchy = hierarchy;
+    this.path = source.path();
+    this.source = source;
     this.mergeKeys = mergeKeys;
   }
 
@@ -116,7 +116,7 @@ public class DataLookupFromMap implements DataLookup {
     List<SourceToValue> sources = sourcesOf(key, value);
     int sourcesCount = sources.size();
 
-    if (sourcesCount == 1 && sources.get(0).source().equals(source)) {
+    if (sourcesCount == 1 && sources.get(0).source().equals(path)) {
       return false;
     }
 
@@ -124,7 +124,7 @@ public class DataLookupFromMap implements DataLookup {
   }
 
   private List<String> sourceAncestry() {
-    return hierarchy.ancestors();
+    return source.lineage().stream().map(Source::path).collect(Collectors.toList());
   }
 
   private Map<String, Object> getDataBySource(String source) {

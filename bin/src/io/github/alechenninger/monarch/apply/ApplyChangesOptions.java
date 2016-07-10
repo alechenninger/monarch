@@ -43,6 +43,7 @@ public interface ApplyChangesOptions {
   Optional<Hierarchy> hierarchy();
   Set<String> mergeKeys();
   Iterable<Change> changes();
+  // TODO: Change to Source maybe?
   Optional<String> target();
   Optional<Path> dataDir();
   Optional<Path> outputDir();

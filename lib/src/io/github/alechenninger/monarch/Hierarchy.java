@@ -9,57 +9,12 @@ public interface Hierarchy {
     return new StaticHierarchy(StaticHierarchy.Node.fromStringListOrMap(object));
   }
 
-  static Hierarchy fromDynamicSources(List<DynamicHierarchy.DynamicSource> sources,
-      Map<String, List<String>> potentials, Map<String, String> args) {
-    return new DynamicHierarchy(sources, potentials, args);
+  static DynamicHierarchy fromDynamicSources(List<DynamicHierarchy.DynamicSource> sources,
+      Map<String, List<String>> potentials) {
+    return new DynamicHierarchy(sources, potentials);
   }
 
-  Optional<String> target();
+  Optional<Source> getSource(String source);
 
-  List<Hierarchy> currentLevel();
-
-  /**
-   * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
-   * node. The leaf nodes will be after the "branch" nodes, and later the deeper in the tree they
-   * are.
-   *
-   * <p>For example, given the following tree structure:
-   *
-   * <pre><code>
-   *            foo
-   *           /   \
-   *         bar   baz
-   *        /  \     \
-   *       1    2     3
-   *                 /  \
-   *               fizz buzz
-   *                       \
-   *                      blue
-   * </code></pre>
-   *
-   * The depth-order is foo, bar, baz, 1, 2, 3, fizz, buzz, blue. Foo is at the top of the tree so
-   * it is first. Blue is at the bottom so it is last.
-   */
-  List<Hierarchy> descendants();
-
-  /**
-   * Following the semantics of {@link #descendants()}, but starting from a different {@code source}
-   * in the tree than this hierarchy's root. As with {@code descendants()}, the start of the tree is
-   * included in the result list.
-   */
-  // TODO maybe generalize source as common type whether static or variable based
-  // TODO maybe just return empty list instead of empty optional
-  default Optional<List<Hierarchy>> descendantsOf(String source) {
-    return hierarchyOf(source).map(Hierarchy::descendants);
-  }
-
-  /**
-   * Includes the {@code source} passed in as the first element, furthest ancestors last.
-   */
-  Optional<List<String>> ancestorsOf(String source);
-
-  /**
-   * Finds a descendant source node and returns it as the root of a new {@link Hierarchy}.
-   */
-  Optional<Hierarchy> hierarchyOf(String source);
+  List<Source> descendants();
 }

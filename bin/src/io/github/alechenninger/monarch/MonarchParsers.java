@@ -151,11 +151,13 @@ public interface MonarchParsers {
   default Map<String, Map<String, Object>> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
     Map<String, Map<String, Object>> data = new HashMap<>();
 
-    for (String source : hierarchy.descendants()) {
-      Path sourcePath = dataDir.resolve(source);
-      Map<String, Object> sourceData = parseData(sourcePath);
-      data.put(source, sourceData);
-    }
+    hierarchy.descendants().stream()
+        .map(Source::path)
+        .forEach(source -> {
+          Path sourcePath = dataDir.resolve(source);
+          Map<String, Object> sourceData = parseData(sourcePath);
+          data.put(source, sourceData);
+        });
 
     return data;
   }

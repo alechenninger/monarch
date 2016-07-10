@@ -1,11 +1,15 @@
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource.RenderedSource;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -14,7 +18,6 @@ import java.util.stream.Stream;
 // environment=qa in ancestry.
 public class DynamicHierarchy implements Hierarchy {
   private final List<DynamicSource> sources;
-  private final Map<String, String> args;
   private final Map<String, List<String>> potentials;
 
   /**
@@ -25,97 +28,67 @@ public class DynamicHierarchy implements Hierarchy {
    */
   public DynamicHierarchy(List<DynamicSource> sources, Map<String, List<String>> potentials) {
     this.sources = sources;
-    this.args = Collections.emptyMap();
-    this.potentials = potentials;
-  }
-
-  public DynamicHierarchy(List<DynamicSource> sources, Map<String, List<String>> potentials,
-      Map<String, String> args) {
-    this.sources = sources;
-    this.args = args;
     this.potentials = potentials;
   }
 
   @Override
-  public Optional<String> target() {
-    // TODO: this is not quite right
-    List<String> targets = sources.get(0).toStaticSources(args, potentials);
+  public Optional<Source> getSource(String source) {
+    return argsFor(source).flatMap(this::getSource);
+  }
 
-    if (targets.size() != 1) {
-      return Optional.empty();
+  @Override
+  public List<Source> descendants() {
+    List<Source> descendants = new ArrayList<>();
+
+    for (int i = 0; i < sources.size(); i++) {
+      DynamicSource dynamicSource = sources.get(i);
+      for (RenderedSource rendered : dynamicSource.toRenderedSources(Collections.emptyMap(), potentials)) {
+        descendants.add(new SingleDynamicSource(rendered.argsUsed, sources, potentials, i));
+      }
     }
 
-    return Optional.of(targets.get(0));
+    return descendants;
   }
 
-  @Override
-  public List<Hierarchy> currentLevel() {
-    // TODO: this is not quite right
-    return sources.get(0).toRenderedSources(args, potentials)
-        .stream()
-        .map(source -> {
-          Map<String, String> mergedArgs = new HashMap<>(args);
-          mergedArgs.putAll(source.argsUsed);
-          return new DynamicHierarchy(sources, potentials, mergedArgs);
-        })
-        .collect(Collectors.toList());
-  }
+  public Optional<Source> getSource(Map<String, String> variables) {
+    Set<String> variableKeys = variables.keySet();
 
-  @Override
-  public List<Hierarchy> descendants() {
-    return sources.stream()
-        .flatMap(source -> source.toRenderedSources(args, potentials)
-            .stream()
-            .map(rendered -> {
-              Map<String, String> mergedArgs = new HashMap<>(args);
-              mergedArgs.putAll(rendered.argsUsed);
-              return new DynamicHierarchy(sources, potentials, mergedArgs);
-            })
-        ).collect(Collectors.toList());
-  }
+    for (int i = sources.size() - 1; i >= 0; i--) {
+      DynamicSource source = sources.get(i);
 
-  @Override
-  public Optional<List<String>> ancestorsOf(String source) {
-    return argsFor(source).flatMap(this::ancestorsOf);
-  }
+      if (variables.keySet().containsAll(source.parameters())) {
+        SingleDynamicSource deepest = new SingleDynamicSource(variables, sources, potentials, i);
 
-  public Optional<List<String>> ancestorsOf(Map<String, String> variables) {
-    Map<String, String> args = new HashMap<>(this.args);
-    args.putAll(variables);
+        Set<String> deepestArgsUsed = deepest.rendered.argsUsed.keySet();
+        int result = i;
 
-    return ListReversed.stream(sources)
-        .flatMap(s -> {
-          if (args.keySet().containsAll(s.parameters())) {
-            return s.toStaticSources(args, potentials).stream();
+        for (i = i - 1; i >= 0; i--) {
+          source = sources.get(i);
+          Set<String> sourceParameters = new HashSet<>(source.parameters());
+
+          if (!sourceParameters.isEmpty() && variableKeys.containsAll(sourceParameters)) {
+            if (sourceParameters.equals(deepestArgsUsed)) {
+              result = i;
+            } else {
+              break;
+            }
           }
+        }
 
-          return Stream.empty();
-        })
-        .collect(Collectors.collectingAndThen(
-            Collectors.toList(),
-            l -> l.isEmpty() ? Optional.empty() : Optional.of(l)
-        ));
-  }
+        if (result == deepest.index) {
+          return Optional.of(deepest);
+        }
 
-  @Override
-  public Optional<Hierarchy> hierarchyOf(String source) {
-    return argsFor(source).flatMap(this::hierarchyOf);
-  }
+        return Optional.of(new SingleDynamicSource(variables, sources, potentials, result));
+      }
+    }
 
-  public Optional<Hierarchy> hierarchyOf(Map<String, String> variables) {
-    Map<String, String> merged = new HashMap<>(args);
-    merged.putAll(variables);
-
-    List<DynamicSource> limited = sources.stream()
-        .filter(s -> s.parameters().containsAll(variables.keySet()))
-        .collect(Collectors.toList());
-
-    return Optional.of(new DynamicHierarchy(limited, potentials, merged));
+    return Optional.empty();
   }
 
   private Optional<Map<String, String>> argsFor(String source) {
     List<Map<String, String>> satisfyingArgs = sources.stream()
-        .flatMap(s -> s.argsFor(source, potentials, args).map(Stream::of).orElse(Stream.empty()))
+        .flatMap(s -> s.argsFor(source, potentials, Collections.emptyMap()).map(Stream::of).orElse(Stream.empty()))
         .collect(Collectors.toList());
 
     if (satisfyingArgs.isEmpty()) {
@@ -130,7 +103,7 @@ public class DynamicHierarchy implements Hierarchy {
   interface DynamicSource {
     List<String> parameters();
     List<String> toStaticSources(Map<String, String> args, Map<String, List<String>> potentials);
-    List<SimpleDynamicSource.RenderedSource> toRenderedSources(Map<String, String> args, Map<String, List<String>> potentials);
+    List<RenderedSource> toRenderedSources(Map<String, String> args, Map<String, List<String>> potentials);
     Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials,
         Map<String, String> args);
   }
@@ -241,6 +214,7 @@ public class DynamicHierarchy implements Hierarchy {
       return parts.toString();
     }
 
+    // TODO: Might be better if RenderingSource (mutable) + Rendered (immutable)
     static class RenderedSource {
       final StringBuilder builder = new StringBuilder();
       final Map<String, String> argsUsed = new HashMap<>();
@@ -263,6 +237,81 @@ public class DynamicHierarchy implements Hierarchy {
       RenderedSource copy() {
         return new RenderedSource(this);
       }
+    }
+  }
+
+  private static class SingleDynamicSource implements Source {
+    private final Map<String, String> variables;
+    private final List<DynamicSource> sources;
+    private final Map<String, List<String>> potentials;
+    private final int index;
+    private final RenderedSource rendered;
+
+    private SingleDynamicSource(Map<String, String> variables, List<DynamicSource> sources,
+        Map<String, List<String>> potentials, int index) {
+      this.variables = variables;
+      this.sources = sources;
+      this.potentials = potentials;
+      this.index = index;
+
+      DynamicSource dynamicSource = sources.get(index);
+      List<RenderedSource> renders = dynamicSource.toRenderedSources(variables, potentials);
+
+      if (renders.size() != 1) {
+        throw new IllegalStateException("Expected source with all parameters provided to " +
+            "produce a single source.");
+      }
+
+      this.rendered = renders.get(0);
+    }
+
+    @Override
+    public String path() {
+      return rendered.builder.toString();
+    }
+
+    @Override
+    public List<Source> lineage() {
+      List<Source> lineage = new ArrayList<>(index);
+
+      for (int i = index; i >= 0; i--) {
+        if (variables.keySet().containsAll(sources.get(i).parameters())) {
+          lineage.add(new SingleDynamicSource(variables, sources, potentials, i));
+        }
+      }
+
+      return lineage;
+    }
+
+    @Override
+    public List<Source> descendants() {
+      List<Source> descendants = new ArrayList<>();
+
+      for (int i = index; i < sources.size(); i++) {
+        DynamicSource dynamicSource = sources.get(i);
+
+        if (dynamicSource.parameters().containsAll(variables.keySet())) {
+          List<RenderedSource> rendered = dynamicSource.toRenderedSources(variables, potentials);
+
+          for (RenderedSource source : rendered) {
+            Map<String, String> variables = new HashMap<>(this.variables);
+            variables.putAll(source.argsUsed);
+            descendants.add(new SingleDynamicSource(variables, sources, potentials, i));
+          }
+        }
+      }
+
+      return descendants;
+    }
+
+    @Override
+    public String toString() {
+      return "SingleDynamicSource{" +
+          "variables=" + variables +
+          ", sources=" + sources +
+          ", potentials=" + potentials +
+          ", index=" + index +
+          '}';
     }
   }
 }

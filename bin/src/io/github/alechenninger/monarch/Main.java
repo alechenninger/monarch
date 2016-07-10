@@ -143,8 +143,12 @@ public class Main {
         String target = options.target()
             .orElseThrow(missingOptionException("target"));
 
-        applyChanges(outputDir, dataDir, hierarchy, target, options.changes(),
-            options.mergeKeys());
+        Map<String, Map<String, Object>> currentData =
+            parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
+        Source source = hierarchy.getSource(target).orElseThrow(
+            () -> new IllegalArgumentException("Target source not found in hierarchy: " + target));
+
+        applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, source);
       } catch (Exception e) {
         printError(e);
         consoleOut.println();
@@ -156,33 +160,30 @@ public class Main {
     return 0;
   }
 
-  private void applyChanges(Path outputDir, Path dataDir, Hierarchy hierarchy, String target,
-      Iterable<Change> changes, Set<String> mergeKeys) throws IOException {
+  private void applyChanges(Path outputDir,
+      Iterable<Change> changes, Set<String> mergeKeys, Map<String, Map<String, Object>> currentData, Source source) throws IOException {
     if (!changes.iterator().hasNext()) {
       consoleOut.println("No changes provided; formatting target.");
     }
 
-    List<String> affectedSources = hierarchy.hierarchyOf(target)
-        .orElseThrow(() -> new IllegalArgumentException("Target source not found in hierarchy: "
-            + target))
-        .descendants();
-
-    Map<String, Map<String,Object>> currentData = parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
+    List<String> affectedSources = source.descendants().stream()
+        .map(Source::path)
+        .collect(Collectors.toList());
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
-        hierarchy, changes, currentData, mergeKeys);
+        source, changes, currentData, mergeKeys);
 
-    for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
-      String source = sourceToData.getKey();
+    for (Map.Entry<String, Map<String, Object>> pathToData : result.entrySet()) {
+      String path = pathToData.getKey();
 
-      if (!affectedSources.contains(source)) {
+      if (!affectedSources.contains(path)) {
         continue;
       }
 
-      Path sourcePath = outputDir.resolve(source);
+      Path sourcePath = outputDir.resolve(path);
       ensureParentDirectories(sourcePath);
 
-      SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
+      SortedMap<String, Object> sorted = new TreeMap<>(pathToData.getValue());
 
       if (sorted.isEmpty()) {
         Files.write(sourcePath, new byte[]{});
@@ -219,7 +220,9 @@ public class Main {
 
     // Sort by hierarchy depth if provided, else sort alphabetically
     Comparator<Change> changeComparator = hierarchy.map(h -> {
-      List<String> descendants = h.descendants();
+      List<String> descendants = h.descendants().stream()
+          .map(Source::path)
+          .collect(Collectors.toList());
 
       return (Comparator<Change>) (c1, c2) -> {
         int c1Index = descendants.indexOf(c1.source());
