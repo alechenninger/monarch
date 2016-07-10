@@ -25,7 +25,7 @@ class StaticHierarchyTest {
 
   @Test
   public void shouldCalculateDescendantsInOrderFromNearestToFurthest() {
-    def descendants = Hierarchy.fromStringListOrMap(yaml.load('''
+    def descendants = Hierarchy.fromStringOrSingleKeyMap(yaml.load('''
 foo:
   -
     a:
@@ -49,7 +49,7 @@ foo:
 
   @Test
   public void shouldParseMapWithMultipleTopLevelNodes() {
-    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
+    def hierarchy = Hierarchy.fromStringOrSingleKeyMap(yaml.load('''
 a:
   - a1
   - a2

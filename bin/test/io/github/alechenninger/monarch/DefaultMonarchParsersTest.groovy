@@ -60,7 +60,7 @@ foo:
   - bar
   - baz:
     - buzz
-''', fs) == Hierarchy.fromStringListOrMap(['foo': ['bar', ['baz': 'buzz']]])
+''', fs) == Hierarchy.fromStringOrSingleKeyMap(['foo': ['bar', ['baz': 'buzz']]])
   }
 
   @Test
@@ -73,7 +73,7 @@ foo:
 ''')
 
     assert parsers.parseHierarchy('/etc/hierarchy.yaml', fs) ==
-        Hierarchy.fromStringListOrMap(['foo': ['bar', ['baz': 'buzz']]])
+        Hierarchy.fromStringOrSingleKeyMap(['foo': ['bar', ['baz': 'buzz']]])
   }
 
   @Test

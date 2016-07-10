@@ -36,7 +36,7 @@ public class SerializableConfig {
 
   /**
    * @return May be List, String, or Map
-   * @see Hierarchy#fromStringListOrMap(Object)
+   * @see Hierarchy#fromStringOrSingleKeyMap(Object)
    */
   public Object getHierarchy() {
     return hierarchy;
@@ -44,7 +44,7 @@ public class SerializableConfig {
 
   /**
    * @param hierarchy May be List, String, or Map
-   * @see Hierarchy#fromStringListOrMap(Object)
+   * @see Hierarchy#fromStringOrSingleKeyMap(Object)
    */
   public void setHierarchy(Object hierarchy) {
     this.hierarchy = hierarchy;

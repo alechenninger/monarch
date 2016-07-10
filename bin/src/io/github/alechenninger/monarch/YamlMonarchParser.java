@@ -38,7 +38,7 @@ public class YamlMonarchParser implements MonarchParser {
   @Override
   public Hierarchy parseHierarchy(InputStream hierarchyInput) {
     Object parsedHierarchy = yaml.load(hierarchyInput);
-    return Hierarchy.fromStringListOrMap(parsedHierarchy);
+    return Hierarchy.fromStringOrSingleKeyMap(parsedHierarchy);
   }
 
   @Override

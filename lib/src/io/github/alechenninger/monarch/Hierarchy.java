@@ -3,16 +3,33 @@ package io.github.alechenninger.monarch;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public interface Hierarchy {
-  static Hierarchy fromStringListOrMap(Object object) {
-    return new StaticHierarchy(StaticHierarchy.Node.fromStringListOrMap(object));
+  static Hierarchy fromStringOrSingleKeyMap(Object object) {
+    List<Hierarchy> hierarchies = fromStringListOrMap(object);
+
+    if (hierarchies.size() != 1) {
+      throw new IllegalArgumentException("Expected exactly one root in parsed hierarcy but got " +
+          hierarchies.size());
+    }
+
+    return hierarchies.get(0);
+  }
+
+  static List<Hierarchy> fromStringListOrMap(Object object) {
+    return StaticHierarchy.Node.fromStringListOrMap(object)
+        .stream()
+        .map(StaticHierarchy::new)
+        .collect(Collectors.toList());
   }
 
   static Hierarchy fromDynamicSources(List<DynamicHierarchy.DynamicSource> sources,
       Map<String, List<String>> potentials, Map<String, String> args) {
     return new DynamicHierarchy(sources, potentials, args);
   }
+
+  String target();
 
   /**
    * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
