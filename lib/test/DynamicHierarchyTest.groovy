@@ -88,6 +88,8 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldCreateNewHierarchiesByIncompleteVariables() {
+    // Note: what's interesting about this case is that there are two peer, top-most targets
+    // Both would be affected by changes.
     assert hierarchy.hierarchyOf(["team": "teamA"]).get().descendants() == [
         "teams/teamA/qa",
         "teams/teamA/prod",
@@ -95,6 +97,19 @@ class DynamicHierarchyTest {
         "teams/teamA/prod/store",
         "teams/teamA/qa/blog",
         "teams/teamA/prod/blog",
+    ]
+  }
+
+  @Test
+  void shouldCreateNewHierarchiesByCompleteVariables() {
+    assert hierarchy.descendantsOf(["environment": "qa"]).get() == [
+        "environment/qa",
+        "teams/teamA/qa",
+        "teams/teamB/qa",
+        "teams/teamA/qa/store",
+        "teams/teamB/qa/store",
+        "teams/teamA/qa/blog",
+        "teams/teamB/qa/blog",
     ]
   }
 
