@@ -33,10 +33,11 @@ public class DataLookupFromMap implements DataLookup {
   private final Hierarchy hierarchy;
   private final Set<String> mergeKeys;
 
-  public DataLookupFromMap(Map<String, Map<String, Object>> data, String source,
-      Hierarchy hierarchy, Set<String> mergeKeys) {
+  public DataLookupFromMap(Map<String, Map<String, Object>> data, Hierarchy hierarchy,
+      Set<String> mergeKeys) {
     this.data = data;
-    this.source = source;
+    this.source = hierarchy.target().orElseThrow(() ->
+        new IllegalArgumentException("Expected hierarchy to refer to a single target."));
     this.hierarchy = hierarchy;
     this.mergeKeys = mergeKeys;
   }
@@ -57,6 +58,7 @@ public class DataLookupFromMap implements DataLookup {
           }
         }
       }
+
       return Optional.ofNullable(merger).map(Merger::getMerged);
     }
 
@@ -122,9 +124,7 @@ public class DataLookupFromMap implements DataLookup {
   }
 
   private List<String> sourceAncestry() {
-    return hierarchy.ancestorsOf(source)
-        .orElseThrow(() -> new NoSuchElementException("Could not find target source in hierarchy. "
-            + "Target: " + source + ". Hierarchy: \n" + hierarchy));
+    return hierarchy.ancestors();
   }
 
   private Map<String, Object> getDataBySource(String source) {

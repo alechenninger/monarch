@@ -47,14 +47,23 @@ class StaticHierarchy implements Hierarchy {
   }
 
   @Override
-  public List<String> targets() {
-    return rootNodes.stream().map(Node::name).collect(Collectors.toList());
+  public Optional<String> target() {
+    if (rootNodes.size() != 1) {
+      return Optional.empty();
+    }
+
+    return Optional.of(rootNodes.get(0).name());
   }
 
   @Override
-  public List<String> descendants() {
+  public List<Hierarchy> currentLevel() {
+    return rootNodes.stream().map(StaticHierarchy::new).collect(Collectors.toList());
+  }
+
+  @Override
+  public List<Hierarchy> descendants() {
     return DescendantsIterator.asStream(rootNodes)
-        .map(Node::name)
+        .map(StaticHierarchy::new)
         .collect(Collectors.toList());
   }
 
@@ -67,21 +76,11 @@ class StaticHierarchy implements Hierarchy {
   }
 
   @Override
-  public Optional<List<String>> ancestorsOf(Map<String, String> variables) {
-    return Optional.empty();
-  }
-
-  @Override
   public Optional<Hierarchy> hierarchyOf(String source) {
     return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .collect(Collect.<Node>maxOneResultOrThrow(IllegalStateException::new))
         .map(StaticHierarchy::new);
-  }
-
-  @Override
-  public Optional<Hierarchy> hierarchyOf(Map<String, String> variables) {
-    return Optional.empty();
   }
 
   @Override

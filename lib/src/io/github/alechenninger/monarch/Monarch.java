@@ -39,9 +39,6 @@ public class Monarch {
    *                entirely new tree), the {@code target} and its children will be updated
    *                such that each source's inherited values are what you want your end state to be,
    *                as described by the changes.
-   * @param target A source in the hierarchy that represents a level that we can start to
-   *                    change values. Sources above this source will be untouched. This source and
-   *                    any below it will be updated to achieve the desired {@code changes}.
    * @param data A map of sources to key:value pairs representing the existing state of the data.
    * @param mergeKeys A list of keys whose flattened value is a <em>merge</em> of all of the values
    *                  in the hierarchy for that key, provided the values are all either
@@ -55,16 +52,15 @@ public class Monarch {
       Set<String> mergeKeys) {
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
-    for (String target : hierarchy.targets()) {
-      List<String> descendants = hierarchy.descendantsOf(target)
-          .orElseThrow(() -> new IllegalArgumentException("Could not find target in " +
-              "hierarchy. Target: " + target + ". Hierarchy: \n" + hierarchy));
-
+    for (Hierarchy target : hierarchy.currentLevel()) {
       // From top-most to inner-most, generate results, taking into account the results from ancestors
       // as we go along.
-      for (String descendant : descendants) {
-        result.put(descendant, generateSingleSource(hierarchy, changes, descendant, result,
-            mergeKeys));
+      for (Hierarchy descendant : target.descendants()) {
+        // TODO: Having to check this optional / throw so often is a smell
+        // Might need two types of Hierarchies
+        String source = descendant.target().orElseThrow(() ->
+            new IllegalStateException("Expected descendant to have single target."));
+        result.put(source, generateSingleSource(descendant, changes, data, mergeKeys));
       }
     }
 
@@ -84,14 +80,14 @@ public class Monarch {
    * existing hierarchy, and the existing data in the hierarchy.
    */
   private Map<String, Object> generateSingleSource(Hierarchy hierarchy, Iterable<Change> changes,
-      String target, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-    List<String> ancestors = hierarchy.ancestorsOf(target)
-        .orElseThrow(() -> new IllegalArgumentException(
-            "Could not find target in hierarchy. Target: " + target + ". " +
-                "Hierarchy: \n" + hierarchy));
+      Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    List<String> ancestors = hierarchy.ancestors();
 
-    DataLookup sourceLookup = new DataLookupFromMap(data, target, hierarchy, mergeKeys);
+    DataLookup sourceLookup = new DataLookupFromMap(data, hierarchy, mergeKeys);
 
+    // TODO: Might be able to deal with this: if multiple targets, loop?
+    String target = hierarchy.target().orElseThrow(() ->
+        new IllegalArgumentException("Expected hierarchy to have a single target."));
     Map<String, Object> sourceData = data.get(target);
     Map<String, Object> resultSourceData = sourceData == null
         ? new HashMap<>()

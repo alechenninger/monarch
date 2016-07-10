@@ -28,7 +28,7 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldCalculateDescendantsFromPotentialValues() {
-    assert hierarchy.descendants() == [
+    assert hierarchy.descendants().collect { it.target().get() } == [
         "common",
         "rhel",
         "environment/qa",
@@ -79,7 +79,8 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldCreateNewHierarchiesByExactSource() {
-    assert hierarchy.hierarchyOf("teams/teamB/prod").get().descendants() == [
+    assert hierarchy.hierarchyOf("teams/teamB/prod").get()
+        .descendants().collect { it.target().get() } == [
         "teams/teamB/prod",
         "teams/teamB/prod/store",
         "teams/teamB/prod/blog",
@@ -90,7 +91,8 @@ class DynamicHierarchyTest {
   void shouldCreateNewHierarchiesByIncompleteVariables() {
     // Note: what's interesting about this case is that there are two peer, top-most targets
     // Both would be affected by changes.
-    assert hierarchy.hierarchyOf(["team": "teamA"]).get().descendants() == [
+    assert hierarchy.hierarchyOf(["team": "teamA"]).get()
+        .descendants().collect { it.target().get() } == [
         "teams/teamA/qa",
         "teams/teamA/prod",
         "teams/teamA/qa/store",
@@ -102,7 +104,7 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldCreateNewHierarchiesByCompleteVariables() {
-    assert hierarchy.descendantsOf(["environment": "qa"]).get() == [
+    assert hierarchy.descendantsOf(["environment": "qa"]).get().collect { it.target().get() } == [
         "environment/qa",
         "teams/teamA/qa",
         "teams/teamB/qa",

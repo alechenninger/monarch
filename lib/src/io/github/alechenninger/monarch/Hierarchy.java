@@ -14,7 +14,9 @@ public interface Hierarchy {
     return new DynamicHierarchy(sources, potentials, args);
   }
 
-  List<String> targets();
+  Optional<String> target();
+
+  List<Hierarchy> currentLevel();
 
   /**
    * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
@@ -38,7 +40,7 @@ public interface Hierarchy {
    * The depth-order is foo, bar, baz, 1, 2, 3, fizz, buzz, blue. Foo is at the top of the tree so
    * it is first. Blue is at the bottom so it is last.
    */
-  List<String> descendants();
+  List<Hierarchy> descendants();
 
   /**
    * Following the semantics of {@link #descendants()}, but starting from a different {@code source}
@@ -47,12 +49,8 @@ public interface Hierarchy {
    */
   // TODO maybe generalize source as common type whether static or variable based
   // TODO maybe just return empty list instead of empty optional
-  default Optional<List<String>> descendantsOf(String source) {
+  default Optional<List<Hierarchy>> descendantsOf(String source) {
     return hierarchyOf(source).map(Hierarchy::descendants);
-  }
-
-  default Optional<List<String>> descendantsOf(Map<String, String> variables) {
-    return hierarchyOf(variables).map(Hierarchy::descendants);
   }
 
   /**
@@ -60,12 +58,8 @@ public interface Hierarchy {
    */
   Optional<List<String>> ancestorsOf(String source);
 
-  Optional<List<String>> ancestorsOf(Map<String, String> variables);
-
   /**
    * Finds a descendant source node and returns it as the root of a new {@link Hierarchy}.
    */
   Optional<Hierarchy> hierarchyOf(String source);
-
-  Optional<Hierarchy> hierarchyOf(Map<String, String> variables);
 }

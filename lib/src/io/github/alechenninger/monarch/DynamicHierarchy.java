@@ -37,19 +37,41 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
-  public List<String> targets() {
-    if (sources.isEmpty()) {
-      return Collections.emptyList();
+  public Optional<String> target() {
+    // TODO: this is not quite right
+    List<String> targets = sources.get(0).toStaticSources(args, potentials);
+
+    if (targets.size() != 1) {
+      return Optional.empty();
     }
 
-    return sources.get(0).toStaticSources(args, potentials);
+    return Optional.of(targets.get(0));
   }
 
   @Override
-  public List<String> descendants() {
-    return sources.stream()
-        .flatMap(s -> s.toStaticSources(args, potentials).stream())
+  public List<Hierarchy> currentLevel() {
+    // TODO: this is not quite right
+    return sources.get(0).toRenderedSources(args, potentials)
+        .stream()
+        .map(source -> {
+          Map<String, String> mergedArgs = new HashMap<>(args);
+          mergedArgs.putAll(source.argsUsed);
+          return new DynamicHierarchy(sources, potentials, mergedArgs);
+        })
         .collect(Collectors.toList());
+  }
+
+  @Override
+  public List<Hierarchy> descendants() {
+    return sources.stream()
+        .flatMap(source -> source.toRenderedSources(args, potentials)
+            .stream()
+            .map(rendered -> {
+              Map<String, String> mergedArgs = new HashMap<>(args);
+              mergedArgs.putAll(rendered.argsUsed);
+              return new DynamicHierarchy(sources, potentials, mergedArgs);
+            })
+        ).collect(Collectors.toList());
   }
 
   @Override
@@ -57,7 +79,6 @@ public class DynamicHierarchy implements Hierarchy {
     return argsFor(source).flatMap(this::ancestorsOf);
   }
 
-  @Override
   public Optional<List<String>> ancestorsOf(Map<String, String> variables) {
     Map<String, String> args = new HashMap<>(this.args);
     args.putAll(variables);
@@ -81,7 +102,6 @@ public class DynamicHierarchy implements Hierarchy {
     return argsFor(source).flatMap(this::hierarchyOf);
   }
 
-  @Override
   public Optional<Hierarchy> hierarchyOf(Map<String, String> variables) {
     Map<String, String> merged = new HashMap<>(args);
     merged.putAll(variables);
@@ -110,6 +130,7 @@ public class DynamicHierarchy implements Hierarchy {
   interface DynamicSource {
     List<String> parameters();
     List<String> toStaticSources(Map<String, String> args, Map<String, List<String>> potentials);
+    List<SimpleDynamicSource.RenderedSource> toRenderedSources(Map<String, String> args, Map<String, List<String>> potentials);
     Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials,
         Map<String, String> args);
   }
@@ -161,21 +182,7 @@ public class DynamicHierarchy implements Hierarchy {
     }
 
     @Override
-    public Optional<Map<String, String>> argsFor(String source,
-        Map<String, List<String>> potentials, Map<String, String> args) {
-      return toRenderedSources(args, potentials).stream()
-          .filter(s -> s.builder.toString().equals(source))
-          .map(s -> s.argsUsed)
-          // TODO validate only one found?
-          .findFirst();
-    }
-
-    @Override
-    public String toString() {
-      return parts.toString();
-    }
-
-    private List<RenderedSource> toRenderedSources(Map<String, String> args,
+    public List<RenderedSource> toRenderedSources(Map<String, String> args,
         Map<String, List<String>> potentials) {
       List<RenderedSource> sources = new ArrayList<>();
       sources.add(new RenderedSource());
@@ -217,6 +224,21 @@ public class DynamicHierarchy implements Hierarchy {
       }
 
       return sources;
+    }
+
+    @Override
+    public Optional<Map<String, String>> argsFor(String source,
+        Map<String, List<String>> potentials, Map<String, String> args) {
+      return toRenderedSources(args, potentials).stream()
+          .filter(s -> s.builder.toString().equals(source))
+          .map(s -> s.argsUsed)
+          // TODO validate only one found?
+          .findFirst();
+    }
+
+    @Override
+    public String toString() {
+      return parts.toString();
     }
 
     static class RenderedSource {
