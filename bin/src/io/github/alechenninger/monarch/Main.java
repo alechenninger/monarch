@@ -170,7 +170,7 @@ public class Main {
     Map<String, Map<String,Object>> currentData = parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
-        hierarchy, changes, target, currentData, mergeKeys);
+        hierarchy, changes, currentData, mergeKeys);
 
     for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
       String source = sourceToData.getKey();

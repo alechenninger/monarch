@@ -51,18 +51,21 @@ public class Monarch {
    *         applied to the given {@code target} and its children.
    */
   public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
-      Iterable<Change> changes, String target, Map<String, Map<String, Object>> data,
+      Iterable<Change> changes, Map<String, Map<String, Object>> data,
       Set<String> mergeKeys) {
-    List<String> descendants = hierarchy.descendantsOf(target)
-        .orElseThrow(() -> new IllegalArgumentException("Could not find target in " +
-            "hierarchy. Target: " + target + ". Hierarchy: \n" + hierarchy));
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
-    // From top-most to inner-most, generate results, taking into account the results from ancestors
-    // as we go along.
-    for (String descendant : descendants) {
-      result.put(descendant, generateSingleSource(hierarchy, changes, descendant, result,
-          mergeKeys));
+    for (String target : hierarchy.targets()) {
+      List<String> descendants = hierarchy.descendantsOf(target)
+          .orElseThrow(() -> new IllegalArgumentException("Could not find target in " +
+              "hierarchy. Target: " + target + ". Hierarchy: \n" + hierarchy));
+
+      // From top-most to inner-most, generate results, taking into account the results from ancestors
+      // as we go along.
+      for (String descendant : descendants) {
+        result.put(descendant, generateSingleSource(hierarchy, changes, descendant, result,
+            mergeKeys));
+      }
     }
 
     return result;

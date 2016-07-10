@@ -47,6 +47,11 @@ class StaticHierarchy implements Hierarchy {
   }
 
   @Override
+  public List<String> targets() {
+    return rootNodes.stream().map(Node::name).collect(Collectors.toList());
+  }
+
+  @Override
   public List<String> descendants() {
     return DescendantsIterator.asStream(rootNodes)
         .map(Node::name)

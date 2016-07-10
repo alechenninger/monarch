@@ -14,6 +14,8 @@ public interface Hierarchy {
     return new DynamicHierarchy(sources, potentials, args);
   }
 
+  List<String> targets();
+
   /**
    * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
    * node. The leaf nodes will be after the "branch" nodes, and later the deeper in the tree they

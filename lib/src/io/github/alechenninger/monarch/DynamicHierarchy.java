@@ -37,6 +37,15 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
+  public List<String> targets() {
+    if (sources.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    return sources.get(0).toStaticSources(args, potentials);
+  }
+
+  @Override
   public List<String> descendants() {
     return sources.stream()
         .flatMap(s -> s.toStaticSources(args, potentials).stream())
