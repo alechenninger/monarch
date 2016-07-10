@@ -34,27 +34,28 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 class StaticHierarchy implements Hierarchy {
-  private final Node target;
+  private final List<Node> rootNodes;
 
-  StaticHierarchy(Node target) {
-    this.target = Objects.requireNonNull(target, "target");
+  StaticHierarchy(List<Node> rootNodes) {
+    Objects.requireNonNull(rootNodes, "rootNodes");
+    this.rootNodes = new ArrayList<>(rootNodes);
   }
 
-  @Override
-  public String target() {
-    return target.name();
+  StaticHierarchy(Node rootNodes) {
+    Objects.requireNonNull(rootNodes, "rootNode");
+    this.rootNodes = Collections.singletonList(rootNodes);
   }
 
   @Override
   public List<String> descendants() {
-    return DescendantsIterator.asStream(target)
+    return DescendantsIterator.asStream(rootNodes)
         .map(Node::name)
         .collect(Collectors.toList());
   }
 
   @Override
   public Optional<List<String>> ancestorsOf(String source) {
-    return DescendantsIterator.asStream(target)
+    return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .collect(Collect.<Node>maxOneResultOrThrow(IllegalStateException::new))
         .map(n -> AncestorsIterator.asStream(n).map(Node::name).collect(Collectors.toList()));
@@ -67,7 +68,7 @@ class StaticHierarchy implements Hierarchy {
 
   @Override
   public Optional<Hierarchy> hierarchyOf(String source) {
-    return DescendantsIterator.asStream(target)
+    return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .collect(Collect.<Node>maxOneResultOrThrow(IllegalStateException::new))
         .map(StaticHierarchy::new);
@@ -87,18 +88,22 @@ class StaticHierarchy implements Hierarchy {
       return false;
     }
     StaticHierarchy hierarchy = (StaticHierarchy) o;
-    return Objects.equals(target, hierarchy.target);
+    return Objects.equals(rootNodes, hierarchy.rootNodes);
   }
 
   @Override
   public int hashCode() {
-    return target.hashCode();
+    return rootNodes.hashCode();
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("[\n");
-    sb.append(prefixLines(nodeToString(target), "  "));
+
+    for (Node rootNode : rootNodes) {
+      sb.append(prefixLines(nodeToString(rootNode), "  "));
+    }
+
     return sb.append("]").toString();
   }
 
@@ -126,17 +131,8 @@ class StaticHierarchy implements Hierarchy {
   private static class DescendantsIterator implements Iterator<Node> {
     private Queue<Node> currentLevel = new LinkedList<>();
 
-    DescendantsIterator(Node node) {
-      currentLevel.add(node);
-    }
-
     DescendantsIterator(Collection<Node> nodes) {
       currentLevel.addAll(nodes);
-    }
-
-    static Stream<Node> asStream(Node node) {
-      Iterable<Node> descendantsIterable = () -> new DescendantsIterator(node);
-      return StreamSupport.stream(descendantsIterable.spliterator(), false);
     }
 
     static Stream<Node> asStream(Collection<Node> nodes) {

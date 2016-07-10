@@ -56,7 +56,6 @@ public class Change {
     return new Change((String) map.get("source"), set, remove);
   }
 
-  // TODO: Reconsider this API WRT hierarchies
   public String source() {
     return source;
   }

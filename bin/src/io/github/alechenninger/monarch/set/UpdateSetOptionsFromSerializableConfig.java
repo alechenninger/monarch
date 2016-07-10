@@ -37,7 +37,7 @@ public class UpdateSetOptionsFromSerializableConfig implements UpdateSetOptions 
 
   @Override
   public Optional<Hierarchy> hierarchy() {
-    return Optional.ofNullable(config.getHierarchy()).map(Hierarchy::fromStringOrSingleKeyMap);
+    return Optional.ofNullable(config.getHierarchy()).map(Hierarchy::fromStringListOrMap);
   }
 
   @Override

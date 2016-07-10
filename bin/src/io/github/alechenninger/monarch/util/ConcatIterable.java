@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch.util;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;

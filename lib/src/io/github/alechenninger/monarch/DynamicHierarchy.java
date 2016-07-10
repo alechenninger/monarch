@@ -12,15 +12,6 @@ import java.util.stream.Stream;
 // TODO consider supporting implied args or arg groups or something of the sort
 // Ex: we know qa.foo.com has "environment" of "qa", so if you target host=qa.foo.com you should see
 // environment=qa in ancestry.
-// That is, host=qa.foo.com implies environment=qa
-// Therefore it environment=qa should include qa.foo.com in its descendants also
-/*
-implied:
-  - when:
-      host: qa.foo.com
-    then:
-      environment: qa
- */
 public class DynamicHierarchy implements Hierarchy {
   private final List<DynamicSource> sources;
   private final Map<String, String> args;
@@ -46,14 +37,8 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
-  public String target() {
-    return sources.get(0).toStaticSources(args, potentials);
-  }
-
-  @Override
   public List<String> descendants() {
     return sources.stream()
-        // TODO: Consider limiting potentials by what actually exists on the file system
         .flatMap(s -> s.toStaticSources(args, potentials).stream())
         .collect(Collectors.toList());
   }

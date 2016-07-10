@@ -34,7 +34,7 @@ global.yaml:
 
   Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data, Set mergeKeys) {
     return m.generateSources(
-        Hierarchy.fromStringOrSingleKeyMap(yaml.load(hierarchy)),
+        Hierarchy.fromStringListOrMap(yaml.load(hierarchy)),
         yaml.loadAll(changes).collect { Change.fromMap(it as Map) },
         sourceToChange,
         data.with {
