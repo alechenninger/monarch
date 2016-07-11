@@ -128,6 +128,6 @@ public class DataLookupFromMap implements DataLookup {
   }
 
   private Map<String, Object> getDataBySource(String source) {
-    return data.getOrDefault(source, Collections.emptyMap());
+    return Optional.ofNullable(data.get(source)).orElse(Collections.emptyMap());
   }
 }

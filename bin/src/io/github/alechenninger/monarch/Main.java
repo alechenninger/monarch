@@ -145,7 +145,7 @@ public class Main {
 
         Map<String, Map<String, Object>> currentData =
             parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
-        Source source = hierarchy.getSource(target).orElseThrow(
+        Source source = hierarchy.sourceFor(target).orElseThrow(
             () -> new IllegalArgumentException("Target source not found in hierarchy: " + target));
 
         applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, source);

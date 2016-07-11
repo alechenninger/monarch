@@ -14,7 +14,7 @@ public interface Hierarchy {
     return new DynamicHierarchy(sources, potentials);
   }
 
-  Optional<Source> getSource(String source);
+  Optional<Source> sourceFor(String source);
 
   List<Source> descendants();
 }

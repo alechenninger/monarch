@@ -5,7 +5,6 @@ import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource.Rend
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,8 +31,8 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
-  public Optional<Source> getSource(String source) {
-    return argsFor(source).flatMap(this::getSource);
+  public Optional<Source> sourceFor(String source) {
+    return argsFor(source).flatMap(this::sourceFor);
   }
 
   @Override
@@ -50,36 +49,16 @@ public class DynamicHierarchy implements Hierarchy {
     return descendants;
   }
 
-  public Optional<Source> getSource(Map<String, String> variables) {
+  public Optional<Source> sourceFor(Map<String, String> variables) {
     Set<String> variableKeys = variables.keySet();
 
-    for (int i = sources.size() - 1; i >= 0; i--) {
+    for (int i = 0; i < sources.size(); i++) {
       DynamicSource source = sources.get(i);
+      List<String> sourceParameters = source.parameters();
 
-      if (variables.keySet().containsAll(source.parameters())) {
-        SingleDynamicSource deepest = new SingleDynamicSource(variables, sources, potentials, i);
-
-        Set<String> deepestArgsUsed = deepest.rendered.argsUsed.keySet();
-        int result = i;
-
-        for (i = i - 1; i >= 0; i--) {
-          source = sources.get(i);
-          Set<String> sourceParameters = new HashSet<>(source.parameters());
-
-          if (!sourceParameters.isEmpty() && variableKeys.containsAll(sourceParameters)) {
-            if (sourceParameters.equals(deepestArgsUsed)) {
-              result = i;
-            } else {
-              break;
-            }
-          }
-        }
-
-        if (result == deepest.index) {
-          return Optional.of(deepest);
-        }
-
-        return Optional.of(new SingleDynamicSource(variables, sources, potentials, result));
+      if (sourceParameters.containsAll(variableKeys) &&
+          variableKeys.containsAll(sourceParameters)) {
+        return Optional.of(new SingleDynamicSource(variables, sources, potentials, i));
       }
     }
 
@@ -258,7 +237,7 @@ public class DynamicHierarchy implements Hierarchy {
       List<RenderedSource> renders = dynamicSource.toRenderedSources(variables, potentials);
 
       if (renders.size() != 1) {
-        throw new IllegalStateException("Expected source with all parameters provided to " +
+        throw new IllegalArgumentException("Expected source with all parameters provided to " +
             "produce a single source.");
       }
 

@@ -2,7 +2,6 @@ import io.github.alechenninger.monarch.DynamicHierarchy
 import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource
 import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource.Part
 import io.github.alechenninger.monarch.Hierarchy
-import io.github.alechenninger.monarch.Source
 import org.junit.Test
 
 class DynamicHierarchyTest {
@@ -53,7 +52,7 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldCalculateAncestorsByExactSource() {
-    assert hierarchy.getSource("teams/teamA/qa").get().lineage().collect { it.path() } == [
+    assert hierarchy.sourceFor("teams/teamA/qa").get().lineage().collect { it.path() } == [
         "teams/teamA/qa",
         "environment/qa",
         "common",
@@ -61,12 +60,17 @@ class DynamicHierarchyTest {
   }
 
   @Test
+  void shouldNotReturnASourceForUnsatisfiableVariableCombination() {
+    assert hierarchy.sourceFor(["team": "teamA", "environment": "qa", "os": "rhel"]) ==
+        Optional.empty()
+  }
+
+  @Test
   void shouldCalculateAncestorsByCompleteVariables() {
-    assert hierarchy.getSource(["team": "teamA", "environment": "qa", "os": "rhel"]).get()
+    assert hierarchy.sourceFor(["team": "teamA", "environment": "qa"]).get()
         .lineage().collect { it.path() } == [
         "teams/teamA/qa",
         "environment/qa",
-        "rhel",
         "common",
     ]
   }
@@ -76,13 +80,13 @@ class DynamicHierarchyTest {
   // Question of: is potentials expected to be comprehensive WRT when a variable may be potentially
   // absent or not? I'm thinking if it's not absent, then you should supply the variable.
   void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
-    assert hierarchy.getSource(["hostname": "foo.com"]).get()
+    assert hierarchy.sourceFor(["hostname": "foo.com"]).get()
         .lineage().collect { it.path() } == ["nodes/foo.com", "common"]
   }
 
   @Test
   void shouldCreateNewHierarchiesByExactSource() {
-    assert hierarchy.getSource("teams/teamB/prod").get()
+    assert hierarchy.sourceFor("teams/teamB/prod").get()
         .descendants().collect { it.path() } == [
         "teams/teamB/prod",
         "teams/teamB/prod/store",
@@ -91,23 +95,15 @@ class DynamicHierarchyTest {
   }
 
   @Test
-  void shouldCreateNewHierarchiesByIncompleteVariables() {
-    // Note: what's interesting about this case is that there are two peer, top-most targets
-    // Both would be affected by changes.
-    assert hierarchy.getSource(["team": "teamA"]).get()
-        .descendants().collect { it.path() } == [
-        "teams/teamA/qa",
-        "teams/teamA/prod",
-        "teams/teamA/qa/store",
-        "teams/teamA/prod/store",
-        "teams/teamA/qa/blog",
-        "teams/teamA/prod/blog",
-    ]
+  // We could consider instead returning two Sources, one for each environment variable.
+  // But this gets complicated actually (weird edge cases), so for now the algorithm is simple.
+  void shouldNotReturnSourceIfNoOneSourceHasMatchingVariables() {
+    assert hierarchy.sourceFor(["team": "teamA"]) == Optional.empty()
   }
 
   @Test
   void shouldCreateNewHierarchiesByCompleteVariables() {
-    assert hierarchy.getSource(["environment": "qa"]).get().descendants().collect { it.path() } == [
+    assert hierarchy.sourceFor(["environment": "qa"]).get().descendants().collect { it.path() } == [
         "environment/qa",
         "teams/teamA/qa",
         "teams/teamB/qa",
@@ -123,7 +119,7 @@ class DynamicHierarchyTest {
   // I think if someone really sets up their hierarchy this way, then 'foo' and 'bar' are probably
   // synonyms and it would be safe to put at the highest level even though technically it would
   // affect other 'bar' assignments than 'baz'.
-  void shouldProduceEmptyHierarchyForSourceWithCompetingVariablePossibilities() {
+  void shouldNotReturnSourceForPathWithCompetingVariablePossibilities() {
     def hierarchy = Hierarchy.fromDynamicSources([
         new SimpleDynamicSource([Part.variable("foo")]),
         new SimpleDynamicSource([Part.variable("bar")]),
@@ -134,7 +130,7 @@ class DynamicHierarchyTest {
         "bar": ["baz"],
     ])
 
-    assert hierarchy.getSource("baz").get().descendants() == []
+    assert hierarchy.sourceFor("baz") == Optional.empty()
   }
 
   @Test
@@ -150,7 +146,7 @@ class DynamicHierarchyTest {
         "bar": ["baz"],
     ])
 
-    assert hierarchy.getSource(["bar": "baz"]).get()
+    assert hierarchy.sourceFor(["bar": "baz"]).get()
         .descendants().collect { it.path() } == ["baz", "bar/baz"]
   }
 }

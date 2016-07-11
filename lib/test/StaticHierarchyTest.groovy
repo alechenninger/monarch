@@ -41,7 +41,7 @@ foo:
     '2':
       - y
       - z
-''')).descendants()
+''')).sourceFor("foo").get().descendants().collect { it.path() }
 
     assert ['foo', 'a', 'b', '1', '2', 'bob', 'jannet', 'bar',
             'baz', 'biz', 'y', 'z', 'true', 'blue', 'red'] == descendants
@@ -58,6 +58,6 @@ b:
   - b2
 '''))
 
-    assert ['a', 'b', 'a1', 'a2', 'b1', 'b2'] == hierarchy.descendants()
+    assert ['a', 'b', 'a1', 'a2', 'b1', 'b2'] == hierarchy.descendants().collect { it.path() }
   }
 }

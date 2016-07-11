@@ -47,7 +47,7 @@ class StaticHierarchy implements Hierarchy {
   }
 
   @Override
-  public Optional<Source> getSource(String source) {
+  public Optional<Source> sourceFor(String source) {
     return DescendantsIterator.asStream(rootNodes)
         .filter(n -> Objects.equals(source, n.name()))
         .map(StaticSource::new)

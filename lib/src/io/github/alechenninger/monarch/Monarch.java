@@ -57,7 +57,7 @@ public class Monarch {
     // as we go along.
     for (Source descendant : target.descendants()) {
       String source = descendant.path();
-      result.put(source, generateSingleSource(descendant, changes, data, mergeKeys));
+      result.put(source, generateSingleSource(descendant, changes, result, mergeKeys));
     }
 
     return result;
