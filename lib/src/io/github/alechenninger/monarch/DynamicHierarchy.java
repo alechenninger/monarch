@@ -41,7 +41,7 @@ public class DynamicHierarchy implements Hierarchy {
 
     for (int i = 0; i < sources.size(); i++) {
       DynamicSource dynamicSource = sources.get(i);
-      for (RenderedSource rendered : dynamicSource.toRenderedSources(Collections.emptyMap(), potentials)) {
+      for (RenderedSource rendered : dynamicSource.render(Collections.emptyMap(), potentials)) {
         descendants.add(new SingleDynamicSource(rendered.argsUsed, sources, potentials, i));
       }
     }
@@ -81,8 +81,7 @@ public class DynamicHierarchy implements Hierarchy {
 
   interface DynamicSource {
     List<String> parameters();
-    List<String> toStaticSources(Map<String, String> args, Map<String, List<String>> potentials);
-    List<RenderedSource> toRenderedSources(Map<String, String> args, Map<String, List<String>> potentials);
+    List<RenderedSource> render(Map<String, String> args, Map<String, List<String>> potentials);
     Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials,
         Map<String, String> args);
   }
@@ -126,15 +125,7 @@ public class DynamicHierarchy implements Hierarchy {
     }
 
     @Override
-    public List<String> toStaticSources(Map<String, String> args,
-        Map<String, List<String>> potentials) {
-      return toRenderedSources(args, potentials).stream()
-          .map(s -> s.builder.toString())
-          .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<RenderedSource> toRenderedSources(Map<String, String> args,
+    public List<RenderedSource> render(Map<String, String> args,
         Map<String, List<String>> potentials) {
       List<RenderedSource> sources = new ArrayList<>();
       sources.add(new RenderedSource());
@@ -181,7 +172,7 @@ public class DynamicHierarchy implements Hierarchy {
     @Override
     public Optional<Map<String, String>> argsFor(String source,
         Map<String, List<String>> potentials, Map<String, String> args) {
-      return toRenderedSources(args, potentials).stream()
+      return render(args, potentials).stream()
           .filter(s -> s.builder.toString().equals(source))
           .map(s -> s.argsUsed)
           // TODO validate only one found?
@@ -234,7 +225,7 @@ public class DynamicHierarchy implements Hierarchy {
       this.index = index;
 
       DynamicSource dynamicSource = sources.get(index);
-      List<RenderedSource> renders = dynamicSource.toRenderedSources(variables, potentials);
+      List<RenderedSource> renders = dynamicSource.render(variables, potentials);
 
       if (renders.size() != 1) {
         throw new IllegalArgumentException("Expected source with all parameters provided to " +
@@ -270,7 +261,7 @@ public class DynamicHierarchy implements Hierarchy {
         DynamicSource dynamicSource = sources.get(i);
 
         if (dynamicSource.parameters().containsAll(variables.keySet())) {
-          List<RenderedSource> rendered = dynamicSource.toRenderedSources(variables, potentials);
+          List<RenderedSource> rendered = dynamicSource.render(variables, potentials);
 
           for (RenderedSource source : rendered) {
             Map<String, String> variables = new HashMap<>(this.variables);
