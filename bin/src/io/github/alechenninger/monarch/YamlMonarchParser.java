@@ -22,9 +22,11 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 public class YamlMonarchParser implements MonarchParser {
   private final Yaml yaml;
@@ -62,7 +64,8 @@ public class YamlMonarchParser implements MonarchParser {
   @Override
   public Map<String, Object> parseMap(InputStream inputStream) {
     try {
-      return (Map<String, Object>) yaml.load(inputStream);
+      return Optional.ofNullable((Map<String, Object>) yaml.load(inputStream))
+          .orElse(Collections.emptyMap());
     } catch (ClassCastException e) {
       throw new MonarchException("Expected inputStream to parse as map.", e);
     }

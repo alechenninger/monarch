@@ -300,4 +300,24 @@ set:
 
     assert expected == changes
   }
+
+  @Test
+  void shouldDoNothingIfEmptyStringPassedToPut() {
+    writeFile('/etc/changes.yaml', '''
+---
+source: teams/myteam.yaml
+set:
+  myapp::version: 2
+''')
+
+    main.run("set", "--changes", "/etc/changes.yaml", "--source", "teams/myteam.yaml", "--put", "");
+
+    def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
+        .collect { Change.fromMap(it as Map<String, Object>) }
+        .toList()
+
+    def expected = [new Change("teams/myteam.yaml", ["myapp::version": 2], [])]
+
+    assert expected == changes
+  }
 }
