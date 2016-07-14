@@ -18,7 +18,6 @@
 
 package io.github.alechenninger.monarch
 
-import com.google.common.collect.Lists
 import com.google.common.jimfs.Jimfs
 import org.junit.After
 import org.junit.Before
