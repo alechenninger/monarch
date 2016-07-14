@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch
 
+import com.google.common.collect.Lists
 import com.google.common.jimfs.Jimfs
 import org.junit.After
 import org.junit.Before
@@ -286,5 +287,18 @@ set:
     main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
     assert getConsole() =~ hierarchyFile
+  }
+
+  @Test
+  void shouldCreateNewChangesetIfNoneExists() {
+    main.run("set", "--changes", "/etc/new.yaml", "--source", "teams/myteam.yaml", "--put", "foo: bar");
+
+    def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/new.yaml")))
+        .collect { Change.fromMap(it as Map<String, Object>) }
+        .toList()
+
+    def expected = [new Change("teams/myteam.yaml", ["foo": "bar"], [])]
+
+    assert expected == changes
   }
 }

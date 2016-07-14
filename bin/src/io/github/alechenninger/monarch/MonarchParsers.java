@@ -95,6 +95,10 @@ public interface MonarchParsers {
       Path path = fileSystem.getPath(pathOrParseable);
       MonarchParser parser = forPath(path);
 
+      if (Files.notExists(path)) {
+        return Collections.emptyList();
+      }
+
       try {
         return parser.parseChanges(Files.newInputStream(path));
       } catch (Exception e) {
