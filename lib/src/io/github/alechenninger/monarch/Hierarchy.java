@@ -15,7 +15,7 @@ public interface Hierarchy {
   }
 
   Optional<Source> sourceFor(String source);
-  
+
   Optional<Source> sourceFor(Map<String, String> variables);
 
   List<Source> descendants();

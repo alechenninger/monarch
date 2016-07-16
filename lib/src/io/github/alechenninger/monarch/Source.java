@@ -33,4 +33,16 @@ public interface Source {
    * it is first. Blue is at the bottom so it is last.
    */
   List<Source> descendants();
+
+  /**
+   * A Source should be equal to another Source if they share the same path and hierarchy.
+   */
+  @Override
+  boolean equals(Object other);
+
+  /**
+   * In the format, Source(${path()}).
+   */
+  @Override
+  String toString();
 }

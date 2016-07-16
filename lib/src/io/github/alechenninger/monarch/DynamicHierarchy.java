@@ -211,7 +211,7 @@ public class DynamicHierarchy implements Hierarchy {
     }
   }
 
-  private static class SingleDynamicSource implements Source {
+  private static class SingleDynamicSource extends AbstractSource {
     private final Map<String, String> variables;
     private final List<DynamicSource> sources;
     private final Map<String, List<String>> potentials;
@@ -275,14 +275,5 @@ public class DynamicHierarchy implements Hierarchy {
       return descendants;
     }
 
-    @Override
-    public String toString() {
-      return "SingleDynamicSource{" +
-          "variables=" + variables +
-          ", sources=" + sources +
-          ", potentials=" + potentials +
-          ", index=" + index +
-          '}';
-    }
   }
 }

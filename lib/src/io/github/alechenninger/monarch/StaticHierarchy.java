@@ -129,7 +129,7 @@ class StaticHierarchy implements Hierarchy {
         .collect(Collectors.joining("\n")) + '\n';
   }
 
-  private static class StaticSource implements Source {
+  private static class StaticSource extends AbstractSource {
     private final Node source;
 
     private StaticSource(Node source) {
@@ -154,6 +154,7 @@ class StaticHierarchy implements Hierarchy {
           .map(StaticSource::new)
           .collect(Collectors.toList());
     }
+
   }
 
   private static class DescendantsIterator implements Iterator<Node> {
