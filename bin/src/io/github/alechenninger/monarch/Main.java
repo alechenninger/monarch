@@ -160,8 +160,8 @@ public class Main {
     return 0;
   }
 
-  private void applyChanges(Path outputDir,
-      Iterable<Change> changes, Set<String> mergeKeys, Map<String, Map<String, Object>> currentData, Source source) throws IOException {
+  private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
+      Map<String, Map<String, Object>> currentData, Source source) throws IOException {
     if (!changes.iterator().hasNext()) {
       consoleOut.println("No changes provided; formatting target.");
     }

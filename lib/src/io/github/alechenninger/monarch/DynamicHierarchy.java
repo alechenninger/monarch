@@ -36,19 +36,6 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
-  public List<Source> descendants() {
-    List<Source> descendants = new ArrayList<>();
-
-    for (int i = 0; i < sources.size(); i++) {
-      DynamicSource dynamicSource = sources.get(i);
-      for (RenderedSource rendered : dynamicSource.render(Collections.emptyMap(), potentials)) {
-        descendants.add(new SingleDynamicSource(rendered.argsUsed, sources, potentials, i));
-      }
-    }
-
-    return descendants;
-  }
-
   public Optional<Source> sourceFor(Map<String, String> variables) {
     Set<String> variableKeys = variables.keySet();
 
@@ -63,6 +50,20 @@ public class DynamicHierarchy implements Hierarchy {
     }
 
     return Optional.empty();
+  }
+
+  @Override
+  public List<Source> descendants() {
+    List<Source> descendants = new ArrayList<>();
+
+    for (int i = 0; i < sources.size(); i++) {
+      DynamicSource dynamicSource = sources.get(i);
+      for (RenderedSource rendered : dynamicSource.render(Collections.emptyMap(), potentials)) {
+        descendants.add(new SingleDynamicSource(rendered.argsUsed, sources, potentials, i));
+      }
+    }
+
+    return descendants;
   }
 
   private Optional<Map<String, String>> argsFor(String source) {

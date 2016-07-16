@@ -54,6 +54,12 @@ class StaticHierarchy implements Hierarchy {
         .collect(Collect.maxOneResultOrThrow(IllegalStateException::new));
   }
 
+  @Override
+  public Optional<Source> sourceFor(Map<String, String> variables) {
+    throw new UnsupportedOperationException("Statically defined hierarchies do not support " +
+        "identifying a source via variables.");
+  }
+
   public List<Source> descendants() {
     return DescendantsIterator.asStream(rootNodes)
         .map(StaticSource::new)
