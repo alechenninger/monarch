@@ -34,6 +34,12 @@ public interface Source {
    */
   List<Source> descendants();
 
+  boolean isTargetedBy(Change change);
+
+  default boolean isNotTargetedBy(Change change) {
+    return !isTargetedBy(change);
+  }
+
   /**
    * A Source should be equal to another Source if they share the same path and hierarchy.
    */

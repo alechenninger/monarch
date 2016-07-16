@@ -275,5 +275,9 @@ public class DynamicHierarchy implements Hierarchy {
       return descendants;
     }
 
+    @Override
+    public boolean isTargetedBy(Change change) {
+      return equals(change.sourceIn(new DynamicHierarchy(sources, potentials)));
+    }
   }
 }

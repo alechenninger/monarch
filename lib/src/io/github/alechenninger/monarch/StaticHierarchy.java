@@ -155,6 +155,11 @@ class StaticHierarchy implements Hierarchy {
           .collect(Collectors.toList());
     }
 
+    @Override
+    public boolean isTargetedBy(Change change) {
+      return change.isFor(source.name());
+    }
+
   }
 
   private static class DescendantsIterator implements Iterator<Node> {

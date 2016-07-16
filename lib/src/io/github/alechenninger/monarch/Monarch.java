@@ -56,8 +56,7 @@ public class Monarch {
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
     for (Source descendant : target.descendants()) {
-      String source = descendant.path();
-      result.put(source, generateSingleSource(descendant, changes, result, mergeKeys));
+      result.put(descendant.path(), generateSingleSource(descendant, changes, result, mergeKeys));
     }
 
     return result;
@@ -65,7 +64,7 @@ public class Monarch {
 
   public Optional<Change> findChangeForSource(String source, Iterable<Change> changes) {
     return StreamSupport.stream(changes.spliterator(), false)
-        .filter(c -> Objects.equals(c.source(), source))
+        .filter(c -> c.isFor(source))
         .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
             "Expected at most one change with matching source in list of changes, but got: " +
                 changes)));
@@ -81,9 +80,7 @@ public class Monarch {
 
     DataLookup sourceLookup = new DataLookupFromMap(data, target, mergeKeys);
 
-    // TODO: Might be able to deal with this: if multiple targets, loop?
-    String targetPath = target.path();
-    Map<String, Object> sourceData = data.get(targetPath);
+    Map<String, Object> sourceData = data.get(target.path());
     Map<String, Object> resultSourceData = sourceData == null
         ? new HashMap<>()
         : new HashMap<>(sourceData);
@@ -101,7 +98,7 @@ public class Monarch {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
-        if (!Objects.equals(change.source(), targetPath)) {
+        if (target.isNotTargetedBy(change)) {
           if (sourceLookup.isValueInherited(setKey, setValue)) {
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {

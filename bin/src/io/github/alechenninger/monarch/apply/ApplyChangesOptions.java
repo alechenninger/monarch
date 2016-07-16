@@ -23,6 +23,7 @@ import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.MonarchParsers;
 import io.github.alechenninger.monarch.SerializableConfig;
+import io.github.alechenninger.monarch.SourceSpec;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -44,7 +45,7 @@ public interface ApplyChangesOptions {
   Set<String> mergeKeys();
   Iterable<Change> changes();
   // TODO: Change to Source maybe?
-  Optional<String> target();
+  Optional<SourceSpec> target();
   Optional<Path> dataDir();
   Optional<Path> outputDir();
 

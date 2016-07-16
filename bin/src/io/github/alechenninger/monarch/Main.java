@@ -109,7 +109,7 @@ public class Main {
         UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
             fileSystem, parsers, defaultConfigPath);
 
-        String source = options.source()
+        SourceSpec source = options.source()
             .orElseThrow(missingOptionException("source"));
         Path outputPath = options.outputPath()
             .orElseThrow(missingOptionException("output path"));
@@ -193,28 +193,28 @@ public class Main {
     }
   }
 
-  private void updateSetInChange(String source, Path outputPath, Iterable<Change> changes,
+  private void updateSetInChange(SourceSpec source, Path outputPath, Iterable<Change> changes,
       Map<String, Object> toPut, Set<String> toRemove, Optional<Hierarchy> hierarchy)
       throws IOException {
     List<Change> outputChanges = StreamSupport.stream(changes.spliterator(), false)
         // Exclude change we're replacing
-        .filter(c -> !c.source().equals(source))
+        .filter(source::isNotFor)
         .collect(Collectors.toCollection(ArrayList::new));
 
     // Change we will replace if present
-    Optional<Change> sourceChange = monarch.findChangeForSource(source, changes);
+    Optional<Change> sourceChange = source.findChange(changes);
 
     Map<String, Object> updatedSet = sourceChange.map(c -> new HashMap<>(c.set()))
         .orElse(new HashMap<>());
     updatedSet.putAll(toPut);
     updatedSet.keySet().removeAll(toRemove);
 
-    List<String> remove = sourceChange.map(Change::remove)
-        .orElse(Collections.emptyList());
+    Set<String> remove = sourceChange.map(Change::remove)
+        .orElse(Collections.emptySet());
 
     // Add replacement change to output if it has any remaining content
     if (!updatedSet.isEmpty() || !remove.isEmpty()) {
-      Change updatedSourceChange = new Change(source, updatedSet, remove);
+      Change updatedSourceChange = source.toChange(updatedSet, remove);
       outputChanges.add(updatedSourceChange);
     }
 
@@ -225,16 +225,21 @@ public class Main {
           .collect(Collectors.toList());
 
       return (Comparator<Change>) (c1, c2) -> {
-        int c1Index = descendants.indexOf(c1.source());
-        int c2Index = descendants.indexOf(c2.source());
+        // TODO make Source Comparable
+        String c1Source = c1.sourceIn(h).path();
+        String c2Source = c2.sourceIn(h).path();
+
+        int c1Index = descendants.indexOf(c1Source);
+        int c2Index = descendants.indexOf(c2Source);
 
         if (c1Index < 0 || c2Index < 0) {
-          return c1.source().compareTo(c2.source());
+          return c1Source.compareTo(c2Source);
         }
 
         return c1Index - c2Index;
       };
-    }).orElse((c1, c2) -> c1.source().compareTo(c2.source()));
+      // TODO maybe make change comparable too?
+    }).orElse((c1, c2) -> c1.toString().compareTo(c2.toString()));
 
     List<Map<String, Object>> serializableChanges = outputChanges.stream()
         .sorted(changeComparator)
