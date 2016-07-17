@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch.apply;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.SourceSpec;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -60,7 +61,7 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
   }
 
   @Override
-  public Optional<String> target() {
+  public Optional<SourceSpec> target() {
     return input.getTarget();
   }
 

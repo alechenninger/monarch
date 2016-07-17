@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch.set;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.SourceSpec;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -74,7 +75,7 @@ public class UpdateSetOptionsFromInput implements UpdateSetOptions {
   }
 
   @Override
-  public Optional<String> source() {
+  public Optional<SourceSpec> source() {
     return input.getSource();
   }
 }

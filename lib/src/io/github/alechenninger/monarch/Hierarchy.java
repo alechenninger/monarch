@@ -14,6 +14,10 @@ public interface Hierarchy {
     return new DynamicHierarchy(sources, potentials);
   }
 
+  default Optional<Source> sourceFor(SourceSpec spec) {
+    return spec.findSource(this);
+  }
+
   Optional<Source> sourceFor(String source);
 
   Optional<Source> sourceFor(Map<String, String> variables);

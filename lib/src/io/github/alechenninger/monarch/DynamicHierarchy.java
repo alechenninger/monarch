@@ -276,8 +276,10 @@ public class DynamicHierarchy implements Hierarchy {
     }
 
     @Override
-    public boolean isTargetedBy(Change change) {
-      return equals(change.sourceIn(new DynamicHierarchy(sources, potentials)));
+    public boolean isTargetedBy(SourceSpec spec) {
+      return spec.findSource(new DynamicHierarchy(sources, potentials))
+          .map(this::equals)
+          .orElse(false);
     }
   }
 }

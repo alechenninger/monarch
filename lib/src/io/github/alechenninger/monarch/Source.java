@@ -34,10 +34,16 @@ public interface Source {
    */
   List<Source> descendants();
 
-  boolean isTargetedBy(Change change);
+  /**
+   * Determines if a spec applied to this source's hierarchy would refer to this same source.
+   */
+  boolean isTargetedBy(SourceSpec spec);
 
-  default boolean isNotTargetedBy(Change change) {
-    return !isTargetedBy(change);
+  /**
+   * @see #isTargetedBy(SourceSpec)
+   */
+  default boolean isNotTargetedBy(SourceSpec spec) {
+    return !isTargetedBy(spec);
   }
 
   /**

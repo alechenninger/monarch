@@ -320,4 +320,9 @@ set:
 
     assert expected == changes
   }
+
+  @Test
+  void shouldUpdateChangeByVariables() {
+    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops", "--put", "app_version: 2");
+  }
 }

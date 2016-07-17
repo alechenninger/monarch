@@ -140,7 +140,7 @@ public class Main {
             .orElseThrow(missingOptionException("data directory"));
         Hierarchy hierarchy = options.hierarchy()
             .orElseThrow(missingOptionException("hierarchy"));
-        String target = options.target()
+        SourceSpec target = options.target()
             .orElseThrow(missingOptionException("target"));
 
         Map<String, Map<String, Object>> currentData =
@@ -198,11 +198,13 @@ public class Main {
       throws IOException {
     List<Change> outputChanges = StreamSupport.stream(changes.spliterator(), false)
         // Exclude change we're replacing
-        .filter(source::isNotFor)
+        .filter(c -> !c.sourceSpec().equals(source))
         .collect(Collectors.toCollection(ArrayList::new));
 
     // Change we will replace if present
-    Optional<Change> sourceChange = source.findChange(changes);
+    Optional<Change> sourceChange = StreamSupport.stream(changes.spliterator(), false)
+        .filter(c -> source.equals(c.sourceSpec()))
+        .findFirst();
 
     Map<String, Object> updatedSet = sourceChange.map(c -> new HashMap<>(c.set()))
         .orElse(new HashMap<>());
@@ -226,8 +228,8 @@ public class Main {
 
       return (Comparator<Change>) (c1, c2) -> {
         // TODO make Source Comparable
-        String c1Source = c1.sourceIn(h).path();
-        String c2Source = c2.sourceIn(h).path();
+        String c1Source = c1.sourceSpec().findSource(h).get().path();
+        String c2Source = c2.sourceSpec().findSource(h).get().path();
 
         int c1Index = descendants.indexOf(c1Source);
         int c2Index = descendants.indexOf(c2Source);

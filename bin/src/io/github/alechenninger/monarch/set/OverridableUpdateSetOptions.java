@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch.set;
 
 import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.SourceSpec;
 import io.github.alechenninger.monarch.util.ConcatIterable;
 import io.github.alechenninger.monarch.Hierarchy;
 
@@ -71,7 +72,7 @@ public class OverridableUpdateSetOptions implements UpdateSetOptions {
   }
 
   @Override
-  public Optional<String> source() {
+  public Optional<SourceSpec> source() {
     return overridden(UpdateSetOptions::source);
   }
 

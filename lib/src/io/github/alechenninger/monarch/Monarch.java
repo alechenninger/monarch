@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
@@ -62,9 +61,9 @@ public class Monarch {
     return result;
   }
 
-  public Optional<Change> findChangeForSource(String source, Iterable<Change> changes) {
+  private Optional<Change> findChangeForSource(Source source, Iterable<Change> changes) {
     return StreamSupport.stream(changes.spliterator(), false)
-        .filter(c -> c.isFor(source))
+        .filter(c -> source.isTargetedBy(c.sourceSpec()))
         .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
             "Expected at most one change with matching source in list of changes, but got: " +
                 changes)));
@@ -86,7 +85,7 @@ public class Monarch {
         : new HashMap<>(sourceData);
 
     for (Source ancestor : new ListReversed<>(lineage)) {
-      Optional<Change> maybeChange = findChangeForSource(ancestor.path(), changes);
+      Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
 
       if (!maybeChange.isPresent()) {
         continue;
@@ -98,7 +97,7 @@ public class Monarch {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
-        if (target.isNotTargetedBy(change)) {
+        if (target.isNotTargetedBy(change.sourceSpec())) {
           if (sourceLookup.isValueInherited(setKey, setValue)) {
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {

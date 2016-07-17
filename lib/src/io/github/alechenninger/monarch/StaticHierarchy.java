@@ -156,10 +156,13 @@ class StaticHierarchy implements Hierarchy {
     }
 
     @Override
-    public boolean isTargetedBy(Change change) {
-      return change.isFor(source.name());
+    public boolean isTargetedBy(SourceSpec spec) {
+      LinkedList<Node> lineage = AncestorsIterator.asStream(source)
+          .collect(Collectors.toCollection(LinkedList::new));
+      return spec.findSource(new StaticHierarchy(lineage.getLast()))
+          .map(this::equals)
+          .orElse(false);
     }
-
   }
 
   private static class DescendantsIterator implements Iterator<Node> {

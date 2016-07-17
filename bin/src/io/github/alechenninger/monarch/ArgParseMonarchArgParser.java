@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class ArgParseMonarchArgParser implements MonarchArgParser {
   private final AppInfo appInfo;
@@ -257,18 +258,23 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
       subparser.addArgument("--target", "-t")
           .dest("target")
           .required(true)
+          .nargs("+")
           .help("A target is the source in the source tree from where you want to change, "
               + "including itself and any sources beneath it in the hierarchy. Redundant keys "
               + "will be removed in sources beneath the target (that is, sources which inherit its "
-              + "values). "
-              + "Ex: 'teams/myteam.yaml'");
+              + "values). A target may be defined as a single data source path, or as a set of " +
+              "key=value pairs which evaluate to a single source in a dynamic hierarchy. "
+              + "For example:\n" +
+              "teams/myteam.yaml\n" +
+              "environment=qa team=ops");
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")
           .metavar("CONFIG")
           .nargs("+")
           .help("Space delimited paths to files which configures default values for command line "
-              + "options. The default config path of ~/.monarch/config.yaml is always checked.");
+              + "options. The default config path of ~/.monarch/config.yaml is always checked. " +
+              "Config values read are 'dataDir', 'outputDir', and 'hierarchy'.");
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
@@ -318,8 +324,15 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         }
 
         @Override
-        public Optional<String> getTarget() {
-          return Optional.ofNullable(parsed.getString("target"));
+        public Optional<SourceSpec> getTarget() {
+          List<String> target = Optional.ofNullable(parsed.<String>getList("target"))
+              .orElse(Collections.emptyList());
+
+          if (target.isEmpty()) {
+            return Optional.empty();
+          }
+
+          return Optional.of(SourceSpec.fromExpressions(target));
         }
 
         @Override
@@ -382,7 +395,12 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
       subparser.addArgument("--source", "-s")
           .dest("source")
           .required(true)
-          .help("Identifies the change to operate on by its data source.");
+          .nargs("+")
+          .help("Identifies the change to operate on by its data source. May be defined as a " +
+              "single data source path, or as a set of key=value pairs which evaluate to a " +
+              "single source in a dynamic hierarchy. For example:\n" +
+              "teams/myteam.yaml\n" +
+              "environment=qa team=ops");
 
       subparser.addArgument("--put", "-p")
           .dest("put")
@@ -413,8 +431,15 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         }
 
         @Override
-        public Optional<String> getSource() {
-          return Optional.ofNullable(parsed.getString("source"));
+        public Optional<SourceSpec> getSource() {
+          List<String> source = Optional.ofNullable(parsed.<String>getList("source"))
+              .orElse(Collections.emptyList());
+
+          if (source.isEmpty()) {
+            return Optional.empty();
+          }
+
+          return Optional.of(SourceSpec.fromExpressions(source));
         }
 
         @Override

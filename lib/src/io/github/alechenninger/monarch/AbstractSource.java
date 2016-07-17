@@ -19,6 +19,7 @@ abstract class AbstractSource implements Source {
     Source other = (Source) obj;
 
     return path().equals(other.path()) &&
+        // TODO: This will get super recursive crazy
         lineage().equals(other.lineage()) &&
         descendants().equals(other.descendants());
   }

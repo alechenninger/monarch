@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch.apply;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.SerializableConfig;
+import io.github.alechenninger.monarch.SourceSpec;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -50,14 +51,12 @@ public class ApplyChangesOptionsFromSerializableConfig implements ApplyChangesOp
 
   @Override
   public Iterable<Change> changes() {
-    return Optional.ofNullable(config.getChanges())
-        .map(c -> c.stream().map(Change::fromMap).collect(Collectors.toList()))
-        .orElse(Collections.emptyList());
+    return Collections.emptyList();
   }
 
   @Override
-  public Optional<String> target() {
-    return Optional.ofNullable(config.getTarget());
+  public Optional<SourceSpec> target() {
+    return Optional.empty();
   }
 
   @Override

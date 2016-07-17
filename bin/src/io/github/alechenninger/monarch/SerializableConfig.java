@@ -28,9 +28,7 @@ import java.util.Set;
  */
 public class SerializableConfig {
   private Object hierarchy;
-  private List<Map<String, Object>> changes;
   private Set<String> mergeKeys;
-  private String target;
   private String dataDir;
   private String outputDir;
 
@@ -50,30 +48,12 @@ public class SerializableConfig {
     this.hierarchy = hierarchy;
   }
 
-  // TODO: Remove changes or change to path
-  public List<Map<String, Object>> getChanges() {
-    return changes;
-  }
-
-  public void setChanges(List<Map<String, Object>> changes) {
-    this.changes = changes;
-  }
-
   public Set<String> getMergeKeys() {
     return mergeKeys;
   }
 
   public void setMergeKeys(Set<String> mergeKeys) {
     this.mergeKeys = mergeKeys;
-  }
-
-  // TODO remove target
-  public String getTarget() {
-    return target;
-  }
-
-  public void setTarget(String target) {
-    this.target = target;
   }
 
   public String getDataDir() {
