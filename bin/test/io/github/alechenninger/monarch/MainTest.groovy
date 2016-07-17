@@ -323,6 +323,16 @@ set:
 
   @Test
   void shouldUpdateChangeByVariables() {
-    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops", "--put", "app_version: 2");
+    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops",
+        "--put", "app_version: 2");
+
+    def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
+        .collect { Change.fromMap(it as Map<String, Object>) }
+        .toList()
+
+    def expected = [Change.forVariables(
+        ["environment": "qa", "team": "ops"], ["app_version": 2], [])]
+
+    assert expected == changes
   }
 }
