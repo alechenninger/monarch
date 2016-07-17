@@ -322,7 +322,7 @@ set:
   }
 
   @Test
-  void shouldUpdateChangeByVariables() {
+  void shouldCreateChangeByVariables() {
     main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops",
         "--put", "app_version: 2");
 
@@ -332,6 +332,38 @@ set:
 
     def expected = [Change.forVariables(
         ["environment": "qa", "team": "ops"], ["app_version": 2], [])]
+
+    assert expected == changes
+  }
+
+  @Test
+  void shouldUpdateExistingChangeByVariables() {
+    writeFile('/etc/changes.yaml', '''
+---
+source:
+  environment: qa
+  team: ops
+set:
+  app_url: qa.app.com
+---
+source:
+  environment: stage
+  team: ops
+set:
+  app_url: old.stage.app.com
+''')
+
+    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=stage", "team=ops",
+        "--put", "app_url: stage.app.com");
+
+    def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
+        .collect { Change.fromMap(it as Map<String, Object>) }
+        .toList()
+
+    def expected = [
+        Change.forVariables(["environment": "qa", "team": "ops"], ["app_url": "qa.app.com"], []),
+        Change.forVariables(["environment": "stage", "team": "ops"], ["app_url": "stage.app.com"], [])
+    ]
 
     assert expected == changes
   }
