@@ -296,7 +296,7 @@ set:
         .collect { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
-    def expected = [new Change("teams/myteam.yaml", ["foo": "bar"], [])]
+    def expected = [Change.forPath("teams/myteam.yaml", ["foo": "bar"], [])]
 
     assert expected == changes
   }
@@ -316,7 +316,7 @@ set:
         .collect { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
-    def expected = [new Change("teams/myteam.yaml", ["myapp::version": 2], [])]
+    def expected = [Change.forPath("teams/myteam.yaml", ["myapp::version": 2], [])]
 
     assert expected == changes
   }
