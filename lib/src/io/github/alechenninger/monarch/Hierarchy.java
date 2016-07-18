@@ -2,6 +2,7 @@ package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.DynamicHierarchy.DynamicSource;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -9,8 +10,15 @@ import java.util.Optional;
 public interface Hierarchy {
   static Hierarchy fromStringListOrMap(Object object) {
     if (object instanceof Map) {
-      if (((Map) object).containsKey("sources")) {
+      Map map = (Map) object;
+      if (map.containsKey("sources")) {
         // Could also make sure there is nothing else besides "sources" and "potentials".
+        List<String> sources = (List<String>) map.get("sources");
+        Map<String, List<String>> potentials = Optional
+            .ofNullable((Map<String, List<String>>) map.get("potentials"))
+            .orElse(Collections.emptyMap());
+
+        return fromDynamicSourceExpressions(sources, potentials);
       }
     }
 
