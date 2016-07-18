@@ -1,22 +1,18 @@
 import io.github.alechenninger.monarch.DynamicHierarchy
-import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource
-import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource.Part
+import io.github.alechenninger.monarch.DynamicHierarchy.DynamicSource
 import io.github.alechenninger.monarch.Hierarchy
 import org.junit.Test
 
 class DynamicHierarchyTest {
   def hierarchy = new DynamicHierarchy(
-      [
-          new SimpleDynamicSource([Part.string("common")]),
-          new SimpleDynamicSource([Part.variable("os")]),
-          new SimpleDynamicSource([Part.string("environment/"), Part.variable("environment")]),
-          new SimpleDynamicSource([Part.string("teams/"), Part.variable("team"),
-                                   Part.string("/"), Part.variable("environment")]),
-          new SimpleDynamicSource([Part.string("teams/"), Part.variable("team"),
-                                   Part.string("/"), Part.variable("environment"), Part.string("/"),
-                                   Part.variable("app")]),
-          new SimpleDynamicSource([Part.string("nodes/"), Part.variable("hostname")]),
-      ],
+      DynamicSource.fromExpressions([
+          "common",
+          "%{os}",
+          "environment/%{environment}",
+          "teams/%{team}/%{environment}",
+          "teams/%{team}/%{environment}/%{app}",
+          "nodes/%{hostname}",
+      ]),
       [
           "hostname": ["foo.com", "bar.com"],
           "team": ["teamA", "teamB"],
@@ -120,11 +116,11 @@ class DynamicHierarchyTest {
   // synonyms and it would be safe to put at the highest level even though technically it would
   // affect other 'bar' assignments than 'baz'.
   void shouldNotReturnSourceForPathWithCompetingVariablePossibilities() {
-    def hierarchy = Hierarchy.fromDynamicSources([
-        new SimpleDynamicSource([Part.variable("foo")]),
-        new SimpleDynamicSource([Part.variable("bar")]),
-        new SimpleDynamicSource([Part.string("foo/"), Part.variable("foo")]),
-        new SimpleDynamicSource([Part.string("bar/"), Part.variable("bar")]),
+    def hierarchy = Hierarchy.fromDynamicSourceExpressions([
+        "%{foo}",
+        "%{bar}",
+        "foo/%{foo}",
+        "bar/%{bar}",
     ], [
         "foo": ["baz"],
         "bar": ["baz"],
@@ -135,12 +131,12 @@ class DynamicHierarchyTest {
 
   @Test
   void shouldGetHighestPossibleSourceWithLowestPossibleSourcesVariableValues() {
-    def hierarchy = Hierarchy.fromDynamicSources([
-        new SimpleDynamicSource([Part.variable("foo")]),
-        new SimpleDynamicSource([Part.variable("bar")]),
-        new SimpleDynamicSource([Part.string("foo/"), Part.variable("foo")]),
-        new SimpleDynamicSource([Part.string("constant")]),
-        new SimpleDynamicSource([Part.string("bar/"), Part.variable("bar")]),
+    def hierarchy = Hierarchy.fromDynamicSourceExpressions([
+        "%{foo}",
+        "%{bar}",
+        "foo/%{foo}",
+        "constant",
+        "bar/%{bar}",
     ], [
         "foo": ["baz"],
         "bar": ["baz"],

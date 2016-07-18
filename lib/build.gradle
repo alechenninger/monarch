@@ -24,6 +24,7 @@ version = '0.4.0'
 sourceCompatibility = 1.8
 
 dependencies {
+  compile 'org.bigtesting:interpolatd:1.0.0'
   testCompile 'org.codehaus.groovy:groovy:2.4.5'
   testCompile 'junit:junit:4.12'
   testCompile 'org.yaml:snakeyaml:1.16'

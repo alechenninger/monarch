@@ -1,6 +1,8 @@
 package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.DynamicHierarchy.SimpleDynamicSource.RenderedSource;
+import org.bigtesting.interpolatd.Interpolator;
+import org.bigtesting.interpolatd.Substitutor;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -80,11 +82,116 @@ public class DynamicHierarchy implements Hierarchy {
     return Optional.of(allArgs);
   }
 
-  interface DynamicSource {
+  public interface DynamicSource {
+    static List<DynamicSource> fromExpressions(List<String> expressions) {
+      return expressions.stream()
+          .map(InterpolatedSource::new)
+          .collect(Collectors.toList());
+    }
+
     List<String> parameters();
     List<RenderedSource> render(Map<String, String> args, Map<String, List<String>> potentials);
-    Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials,
-        Map<String, String> args);
+    default Optional<Map<String, String>> argsFor(String source, Map<String, List<String>> potentials,
+        Map<String, String> args) {
+      return render(args, potentials).stream()
+          .filter(s -> s.builder.toString().equals(source))
+          .map(s -> s.argsUsed)
+          // TODO validate only one found?
+          .findFirst();
+    }
+  }
+
+  public static class InterpolatedSource implements DynamicSource {
+    private final String expression;
+    private final String variableOpening;
+    private final String variableClosing;
+    private final Optional<String> escapeCharacter;
+
+    private final List<String> parameters;
+
+    public InterpolatedSource(String expression) {
+      this(expression, "%{", "}", Optional.of("\\"));
+    }
+
+    public InterpolatedSource(String expression, String variableOpening, String variableClosing,
+        Optional<String> escapeCharacter) {
+      this.expression = expression;
+      this.variableOpening = variableOpening;
+      this.variableClosing = variableClosing;
+      this.escapeCharacter = escapeCharacter;
+
+      List<String> parameters = new ArrayList<>();
+      Interpolator<Void> paramCapture = new Interpolator<>();
+      handleInterpolator(paramCapture, (captured, arg) -> {
+        parameters.add(captured);
+        return null;
+      });
+      paramCapture.interpolate(expression, null);
+
+      this.parameters = Collections.unmodifiableList(parameters);
+    }
+
+    @Override
+    public List<String> parameters() {
+      return parameters;
+    }
+
+    @Override
+    public List<RenderedSource> render(Map<String, String> args,
+        Map<String, List<String>> potentials) {
+      Set<String> providedParams = args.keySet();
+      List<String> missingParams = parameters().stream()
+          .filter(p -> !providedParams.contains(p))
+          .collect(Collectors.toList());
+
+      ArgCombo combos = new ArgCombo(args);
+      for (String missing : missingParams) {
+        for (String potential : potentials.get(missing)) {
+          combos.put(missing, potential);
+        }
+      }
+
+      return combos.combos.stream()
+          .map(c -> {
+            Interpolator<Map<String, String>> interpolator = new Interpolator<>();
+            RenderedSource rendered = new RenderedSource();
+            handleInterpolator(interpolator, (captured, arg) -> {
+              String value = c.get(captured);
+              rendered.putArg(captured, value);
+              return value;
+            });
+            rendered.append(interpolator.interpolate(expression, c));
+            return rendered;
+          })
+          .collect(Collectors.toList());
+    }
+
+    private <T> void handleInterpolator(Interpolator<T> interpolator, Substitutor<T> substitutor) {
+      interpolator.when().enclosedBy(variableOpening).and(variableClosing).handleWith(substitutor);
+      escapeCharacter.ifPresent(interpolator::escapeWith);
+    }
+
+    static class ArgCombo {
+      List<Map<String, String>> combos = new ArrayList<>();
+
+      ArgCombo(Map<String, String> args) {
+        combos.add(new HashMap<>(args));
+      }
+
+      void put(String arg, String value) {
+        List<Map<String, String>> newCombos = new ArrayList<>();
+        for (Map<String, String> combo : combos) {
+          if (combo.containsKey(arg)) {
+            Map<String, String> newCombo = new HashMap<>(combo);
+            newCombo.put(arg, value);
+            newCombos.add(newCombo);
+          } else {
+            combo.put(arg, value);
+          }
+        }
+        combos.addAll(newCombos);
+      }
+    }
   }
 
   public static class SimpleDynamicSource implements DynamicSource {
@@ -168,16 +275,6 @@ public class DynamicHierarchy implements Hierarchy {
       }
 
       return sources;
-    }
-
-    @Override
-    public Optional<Map<String, String>> argsFor(String source,
-        Map<String, List<String>> potentials, Map<String, String> args) {
-      return render(args, potentials).stream()
-          .filter(s -> s.builder.toString().equals(source))
-          .map(s -> s.argsUsed)
-          // TODO validate only one found?
-          .findFirst();
     }
 
     @Override
