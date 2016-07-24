@@ -1,5 +1,7 @@
 package io.github.alechenninger.monarch;
 
+import java.util.stream.Collectors;
+
 abstract class AbstractSource implements Source {
   @Override
   public int hashCode() {
@@ -19,9 +21,10 @@ abstract class AbstractSource implements Source {
     Source other = (Source) obj;
 
     return path().equals(other.path()) &&
-        // TODO: This will get super recursive crazy
-        lineage().equals(other.lineage()) &&
-        descendants().equals(other.descendants());
+        lineage().stream().map(Source::path).collect(Collectors.toList()).equals(
+            other.lineage().stream().map(Source::path).collect(Collectors.toList())) &&
+        descendants().stream().map(Source::path).collect(Collectors.toList()).equals(
+            other.descendants().stream().map(Source::path).collect(Collectors.toList()));
   }
 
   @Override

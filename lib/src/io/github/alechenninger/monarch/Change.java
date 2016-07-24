@@ -20,12 +20,8 @@ package io.github.alechenninger.monarch;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 
 public interface Change {
   static Change forVariables(Map<String, String> variables, Map<String, Object> set,
@@ -64,70 +60,3 @@ public interface Change {
   Map<String, Object> toMap();
 }
 
-class DefaultChange implements Change {
-  private final SourceSpec source;
-  private final Map<String, Object> set;
-  private final Set<String> remove;
-
-  DefaultChange(SourceSpec source, Map<String, Object> set, Collection<String> remove) {
-    this.source = source;
-    this.set = Collections.unmodifiableMap(new TreeMap<>(set));
-    this.remove = Collections.unmodifiableSet(new HashSet<>(remove));
-  }
-
-  @Override
-  public SourceSpec sourceSpec() {
-    return source;
-  }
-
-  @Override
-  public Map<String, Object> set() {
-    return set;
-  }
-
-  @Override
-  public Set<String> remove() {
-    return remove;
-  }
-
-  @Override
-  public Map<String, Object> toMap() {
-    Map<String, Object> map = new LinkedHashMap<>();
-    map.put("source", source.toStringOrMap());
-    if (set != null && !set.isEmpty()) {
-      map.put("set", set);
-    }
-    if (remove != null && !remove.isEmpty()) {
-      map.put("remove", remove);
-    }
-    return Collections.unmodifiableMap(map);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DefaultChange change = (DefaultChange) o;
-    return Objects.equals(source, change.source) &&
-        Objects.equals(set, change.set) &&
-        Objects.equals(remove, change.remove);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(source, set, remove);
-  }
-
-  @Override
-  public String toString() {
-    return "DefaultChange{" +
-        "source='" + source + '\'' +
-        ", set=" + set +
-        ", remove=" + remove +
-        '}';
-  }
-}

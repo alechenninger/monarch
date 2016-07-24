@@ -1,11 +1,11 @@
 import io.github.alechenninger.monarch.DynamicHierarchy
-import io.github.alechenninger.monarch.DynamicHierarchy.DynamicSource
+import io.github.alechenninger.monarch.DynamicNode
 import io.github.alechenninger.monarch.Hierarchy
 import org.junit.Test
 
 class DynamicHierarchyTest {
   def hierarchy = new DynamicHierarchy(
-      DynamicSource.fromExpressions([
+      DynamicNode.fromInterpolated([
           "common",
           "%{os}",
           "environment/%{environment}",

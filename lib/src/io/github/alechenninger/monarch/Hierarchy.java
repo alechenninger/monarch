@@ -1,7 +1,5 @@
 package io.github.alechenninger.monarch;
 
-import io.github.alechenninger.monarch.DynamicHierarchy.DynamicSource;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -25,14 +23,14 @@ public interface Hierarchy {
     return new StaticHierarchy(StaticHierarchy.Node.fromStringListOrMap(object));
   }
 
-  static DynamicHierarchy fromDynamicSources(List<DynamicSource> sources,
+  static DynamicHierarchy fromDynamicSources(List<DynamicNode> sources,
       Map<String, List<String>> potentials) {
     return new DynamicHierarchy(sources, potentials);
   }
 
   static DynamicHierarchy fromDynamicSourceExpressions(List<String> sourceExpressions,
       Map<String, List<String>> potentials) {
-    return fromDynamicSources(DynamicSource.fromExpressions(sourceExpressions), potentials);
+    return fromDynamicSources(DynamicNode.fromInterpolated(sourceExpressions), potentials);
   }
 
   default Optional<Source> sourceFor(SourceSpec spec) {
