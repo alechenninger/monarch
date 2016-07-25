@@ -6,17 +6,22 @@ import java.util.Map;
 import java.util.Optional;
 
 public interface Hierarchy {
+  /**
+   * Tries to return the most appropriate hierarchy for the object.
+   */
   static Hierarchy fromStringListOrMap(Object object) {
     if (object instanceof Map) {
       Map map = (Map) object;
-      if (map.containsKey("sources")) {
-        // Could also make sure there is nothing else besides "sources" and "potentials".
-        List<String> sources = (List<String>) map.get("sources");
-        Map<String, List<String>> potentials = Optional
-            .ofNullable((Map<String, List<String>>) map.get("potentials"))
-            .orElse(Collections.emptyMap());
 
-        return fromDynamicSourceExpressions(sources, potentials);
+      if (map.containsKey("sources")) {
+        if ((map.size() == 2 && map.containsKey("potentials")) || map.size() == 1) {
+          List<String> sources = (List<String>) map.get("sources");
+          Map<String, List<String>> potentials = Optional
+              .ofNullable((Map<String, List<String>>) map.get("potentials"))
+              .orElse(Collections.emptyMap());
+
+          return fromDynamicSourceExpressions(sources, potentials);
+        }
       }
     }
 
