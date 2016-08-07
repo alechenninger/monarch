@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch.set;
 
+import io.github.alechenninger.monarch.SourceSpec;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +32,7 @@ public interface UpdateSetInput {
   /**
    * Source for the change we wish to modify or create.
    */
-  Optional<String> getSource();
+  Optional<SourceSpec> getSource();
 
   /**
    * A list of key value pairs to add or replace in the set block of the source's change.

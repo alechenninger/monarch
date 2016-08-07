@@ -140,8 +140,16 @@ global.yaml:
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
     def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
 
-    print myteamYaml
-    print stageYaml
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
+    assert [
+        'fizz': 'buzz',
+        'myapp::favorite_website': 'http://stage.redhat.com',
+    ] == yaml.load(stageYaml)
+    assert [
+        'bar': 'baz',
+        'myapp::version': 2,
+        'myapp::favorite_website': 'http://www.redhat.com'
+    ] == yaml.load(myteamYaml)
   }
 
   @Test
@@ -296,7 +304,7 @@ set:
         .collect { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
-    def expected = [new Change("teams/myteam.yaml", ["foo": "bar"], [])]
+    def expected = [Change.forPath("teams/myteam.yaml", ["foo": "bar"], [])]
 
     assert expected == changes
   }
@@ -316,8 +324,108 @@ set:
         .collect { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
-    def expected = [new Change("teams/myteam.yaml", ["myapp::version": 2], [])]
+    def expected = [Change.forPath("teams/myteam.yaml", ["myapp::version": 2], [])]
 
     assert expected == changes
+  }
+
+  @Test
+  void shouldCreateChangeByVariables() {
+    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops",
+        "--put", "app_version: 2");
+
+    def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
+        .collect { Change.fromMap(it as Map<String, Object>) }
+        .toList()
+
+    def expected = [Change.forVariables(
+        ["environment": "qa", "team": "ops"], ["app_version": 2], [])]
+
+    assert expected == changes
+  }
+
+  @Test
+  void shouldUpdateExistingChangeByVariables() {
+    writeFile('/etc/changes.yaml', '''
+---
+source:
+  environment: qa
+  team: ops
+set:
+  app_url: qa.app.com
+---
+source:
+  environment: stage
+  team: ops
+set:
+  app_url: old.stage.app.com
+''')
+
+    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=stage", "team=ops",
+        "--put", "app_url: stage.app.com");
+
+    def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
+        .collect { Change.fromMap(it as Map<String, Object>) }
+        .toList()
+
+    def expected = [
+        Change.forVariables(["environment": "qa", "team": "ops"], ["app_url": "qa.app.com"], []),
+        Change.forVariables(["environment": "stage", "team": "ops"], ["app_url": "stage.app.com"], [])
+    ]
+
+    assert expected == changes
+  }
+
+  @Test
+  void "should apply change by variables"() {
+    writeFile('/etc/changes.yaml', '''
+---
+  source: teams/myteam.yaml
+  set:
+    myapp::version: 2
+    myapp::favorite_website: http://www.redhat.com
+---
+  source: teams/myteam/stage.yaml
+  set:
+    myapp::favorite_website: http://stage.redhat.com
+''')
+
+    writeDataSources([
+        'global.yaml': 'foo: "bar"',
+        'teams/myteam.yaml': 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ])
+
+    writeFile('/etc/hierarchy.yaml', '''
+sources:
+  - global.yaml
+  - teams/%{team}.yaml
+  - teams/%{team}/%{environment}.yaml
+potentials:
+  team:
+    - myteam
+    - otherteam
+  environment:
+    - dev
+    - qa
+    - stage
+    - prod
+''')
+
+    main.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -t team=myteam -d $dataDir -o /output/")
+
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
+
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
+    assert [
+        'fizz': 'buzz',
+        'myapp::favorite_website': 'http://stage.redhat.com',
+    ] == yaml.load(stageYaml)
+    assert [
+        'bar': 'baz',
+        'myapp::version': 2,
+        'myapp::favorite_website': 'http://www.redhat.com'
+    ] == yaml.load(myteamYaml)
   }
 }

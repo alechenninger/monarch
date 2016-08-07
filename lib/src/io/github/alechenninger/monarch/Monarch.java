@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
@@ -33,15 +32,14 @@ public class Monarch {
    * changes you want applied, the existing state of the data, and a "target" source which you want
    * to change alongside all of its children.
    *
-   * @param hierarchy A tree-structure describing which sources inherit from which parent sources.
+   * @param target A source in a hierarchy that represents a level that we can start to change
+   *               values. Sources above this source will be untouched. This source and any below it
+   *               will be updated to achieve the desired {@code changes}.
    * @param changes The "end-state" changes to be applied assuming you could update the entire tree.
    *                Even if you are not targeting the root of the tree (which would generate an
    *                entirely new tree), the {@code target} and its children will be updated
    *                such that each source's inherited values are what you want your end state to be,
    *                as described by the changes.
-   * @param target A source in the hierarchy that represents a level that we can start to
-   *                    change values. Sources above this source will be untouched. This source and
-   *                    any below it will be updated to achieve the desired {@code changes}.
    * @param data A map of sources to key:value pairs representing the existing state of the data.
    * @param mergeKeys A list of keys whose flattened value is a <em>merge</em> of all of the values
    *                  in the hierarchy for that key, provided the values are all either
@@ -50,27 +48,22 @@ public class Monarch {
    * @return A map of sources to key:value pairs representing the new state of the data with changes
    *         applied to the given {@code target} and its children.
    */
-  public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
-      Iterable<Change> changes, String target, Map<String, Map<String, Object>> data,
-      Set<String> mergeKeys) {
-    List<String> descendants = hierarchy.descendantsOf(target)
-        .orElseThrow(() -> new IllegalArgumentException("Could not find target in " +
-            "hierarchy. Target: " + target + ". Hierarchy: \n" + hierarchy));
+  public Map<String, Map<String, Object>> generateSources(Source target, Iterable<Change> changes,
+      Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
-    for (String descendant : descendants) {
-      result.put(descendant, generateSingleSource(hierarchy, changes, descendant, result,
-          mergeKeys));
+    for (Source descendant : target.descendants()) {
+      result.put(descendant.path(), generateSingleSource(descendant, changes, result, mergeKeys));
     }
 
     return result;
   }
 
-  public Optional<Change> findChangeForSource(String source, Iterable<Change> changes) {
+  private Optional<Change> findChangeForSource(Source source, Iterable<Change> changes) {
     return StreamSupport.stream(changes.spliterator(), false)
-        .filter(c -> Objects.equals(c.source(), source))
+        .filter(c -> source.isTargetedBy(c.sourceSpec()))
         .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
             "Expected at most one change with matching source in list of changes, but got: " +
                 changes)));
@@ -80,21 +73,18 @@ public class Monarch {
    * Generates new data for the given source only, taking into account the desired changes, the
    * existing hierarchy, and the existing data in the hierarchy.
    */
-  private Map<String, Object> generateSingleSource(Hierarchy hierarchy, Iterable<Change> changes,
-      String target, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-    List<String> ancestors = hierarchy.ancestorsOf(target)
-        .orElseThrow(() -> new IllegalArgumentException(
-            "Could not find target in hierarchy. Target: " + target + ". " +
-                "Hierarchy: \n" + hierarchy));
+  private Map<String, Object> generateSingleSource(Source target, Iterable<Change> changes,
+      Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    List<Source> lineage = target.lineage();
 
-    DataLookup sourceLookup = new DataLookupFromMap(data, target, hierarchy, mergeKeys);
+    DataLookup sourceLookup = new DataLookupFromMap(data, target, mergeKeys);
 
-    Map<String, Object> sourceData = data.get(target);
+    Map<String, Object> sourceData = data.get(target.path());
     Map<String, Object> resultSourceData = sourceData == null
         ? new HashMap<>()
         : new HashMap<>(sourceData);
 
-    for (String ancestor : new ListReversed<>(ancestors)) {
+    for (Source ancestor : new ListReversed<>(lineage)) {
       Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
 
       if (!maybeChange.isPresent()) {
@@ -107,7 +97,7 @@ public class Monarch {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
-        if (!Objects.equals(change.source(), target)) {
+        if (target.isNotTargetedBy(change.sourceSpec())) {
           if (sourceLookup.isValueInherited(setKey, setValue)) {
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {

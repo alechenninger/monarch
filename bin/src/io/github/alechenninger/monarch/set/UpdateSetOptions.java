@@ -23,6 +23,7 @@ import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.MonarchParsers;
 import io.github.alechenninger.monarch.SerializableConfig;
+import io.github.alechenninger.monarch.SourceSpec;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -43,7 +44,7 @@ public interface UpdateSetOptions {
   Iterable<Change> changes();
   Set<String> removeFromSet();
   Map<String, Object> putInSet();
-  Optional<String> source();
+  Optional<SourceSpec> source();
 
   default UpdateSetOptions fallingBackTo(UpdateSetOptions fallback) {
     return new OverridableUpdateSetOptions(this, fallback);

@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch.set;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.SerializableConfig;
+import io.github.alechenninger.monarch.SourceSpec;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -61,7 +62,7 @@ public class UpdateSetOptionsFromSerializableConfig implements UpdateSetOptions 
   }
 
   @Override
-  public Optional<String> source() {
+  public Optional<SourceSpec> source() {
     return Optional.empty();
   }
 

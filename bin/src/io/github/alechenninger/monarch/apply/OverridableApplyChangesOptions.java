@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.SourceSpec;
 import io.github.alechenninger.monarch.util.ConcatIterable;
 import io.github.alechenninger.monarch.Hierarchy;
 
@@ -57,7 +58,7 @@ public class OverridableApplyChangesOptions implements ApplyChangesOptions {
   }
 
   @Override
-  public Optional<String> target() {
+  public Optional<SourceSpec> target() {
     return overridden(ApplyChangesOptions::target);
   }
 

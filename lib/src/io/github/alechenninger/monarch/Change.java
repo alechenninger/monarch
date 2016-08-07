@@ -18,34 +18,28 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.Set;
 
-public class Change {
-  private final String source;
-  private final Map<String, Object> set;
-  private final List<String> remove;
+public interface Change {
+  static Change forVariables(Map<String, String> variables, Map<String, Object> set,
+      Collection<String> remove) {
+    return new DefaultChange(SourceSpec.byVariables(variables), set, remove);
+  }
 
-  public Change(String source, Map<String, Object> set, List<String> remove) {
-    this.source = source;
-    this.set = Collections.unmodifiableMap(new TreeMap<>(set));
-    this.remove = Collections.unmodifiableList(new ArrayList<>(remove));
+  static Change forPath(String path, Map<String, Object> set, Collection<String> remove) {
+    return new DefaultChange(SourceSpec.byPath(path), set, remove);
   }
 
   /** @see #toMap */
-  public static Change fromMap(Map<String, Object> map) {
+  static Change fromMap(Map<String, Object> map) {
     if (map == null) {
       throw new IllegalArgumentException("Cannot create a change from 'null'.");
     }
     Map<String, Object> set = (Map<String, Object>) map.get("set");
-    List<String> remove = (List<String>) map.get("remove");
+    Collection<String> remove = (Collection<String>) map.get("remove");
     if (set == null) {
       set = Collections.emptyMap();
     }
@@ -53,59 +47,16 @@ public class Change {
       remove = Collections.emptyList();
     }
 
-    return new Change((String) map.get("source"), set, remove);
+    SourceSpec source = SourceSpec.fromStringOrMap(map.get("source"));
+
+    return new DefaultChange(source, set, remove);
   }
 
-  public String source() {
-    return source;
-  }
-
-  public Map<String, Object> set() {
-    return set;
-  }
-
-  public List<String> remove() {
-    return remove;
-  }
+  SourceSpec sourceSpec();
+  Map<String, Object> set();
+  Set<String> remove();
 
   /** @see #fromMap(Map) */
-  public Map<String, Object> toMap() {
-    Map<String, Object> map = new LinkedHashMap<>();
-    map.put("source", source);
-    if (set != null && !set.isEmpty()) {
-      map.put("set", set);
-    }
-    if (remove != null && !remove.isEmpty()) {
-      map.put("remove", remove);
-    }
-    return Collections.unmodifiableMap(map);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    Change change = (Change) o;
-    return Objects.equals(source, change.source) &&
-        Objects.equals(set, change.set) &&
-        Objects.equals(remove, change.remove);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(source, set, remove);
-  }
-
-  @Override
-  public String toString() {
-    return "Change{" +
-        "source='" + source + '\'' +
-        ", set=" + set +
-        ", remove=" + remove +
-        '}';
-  }
+  Map<String, Object> toMap();
 }
+

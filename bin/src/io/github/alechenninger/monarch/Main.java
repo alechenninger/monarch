@@ -109,7 +109,7 @@ public class Main {
         UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
             fileSystem, parsers, defaultConfigPath);
 
-        String source = options.source()
+        SourceSpec source = options.source()
             .orElseThrow(missingOptionException("source"));
         Path outputPath = options.outputPath()
             .orElseThrow(missingOptionException("output path"));
@@ -140,11 +140,15 @@ public class Main {
             .orElseThrow(missingOptionException("data directory"));
         Hierarchy hierarchy = options.hierarchy()
             .orElseThrow(missingOptionException("hierarchy"));
-        String target = options.target()
+        SourceSpec target = options.target()
             .orElseThrow(missingOptionException("target"));
 
-        applyChanges(outputDir, dataDir, hierarchy, target, options.changes(),
-            options.mergeKeys());
+        Map<String, Map<String, Object>> currentData =
+            parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
+        Source source = hierarchy.sourceFor(target).orElseThrow(
+            () -> new IllegalArgumentException("Target source not found in hierarchy: " + target));
+
+        applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, source);
       } catch (Exception e) {
         printError(e);
         consoleOut.println();
@@ -156,33 +160,30 @@ public class Main {
     return 0;
   }
 
-  private void applyChanges(Path outputDir, Path dataDir, Hierarchy hierarchy, String target,
-      Iterable<Change> changes, Set<String> mergeKeys) throws IOException {
+  private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
+      Map<String, Map<String, Object>> currentData, Source source) throws IOException {
     if (!changes.iterator().hasNext()) {
       consoleOut.println("No changes provided; formatting target.");
     }
 
-    List<String> affectedSources = hierarchy.hierarchyOf(target)
-        .orElseThrow(() -> new IllegalArgumentException("Target source not found in hierarchy: "
-            + target))
-        .descendants();
-
-    Map<String, Map<String,Object>> currentData = parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
+    List<String> affectedSources = source.descendants().stream()
+        .map(Source::path)
+        .collect(Collectors.toList());
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
-        hierarchy, changes, target, currentData, mergeKeys);
+        source, changes, currentData, mergeKeys);
 
-    for (Map.Entry<String, Map<String, Object>> sourceToData : result.entrySet()) {
-      String source = sourceToData.getKey();
+    for (Map.Entry<String, Map<String, Object>> pathToData : result.entrySet()) {
+      String path = pathToData.getKey();
 
-      if (!affectedSources.contains(source)) {
+      if (!affectedSources.contains(path)) {
         continue;
       }
 
-      Path sourcePath = outputDir.resolve(source);
+      Path sourcePath = outputDir.resolve(path);
       ensureParentDirectories(sourcePath);
 
-      SortedMap<String, Object> sorted = new TreeMap<>(sourceToData.getValue());
+      SortedMap<String, Object> sorted = new TreeMap<>(pathToData.getValue());
 
       if (sorted.isEmpty()) {
         Files.write(sourcePath, new byte[]{});
@@ -192,46 +193,55 @@ public class Main {
     }
   }
 
-  private void updateSetInChange(String source, Path outputPath, Iterable<Change> changes,
+  private void updateSetInChange(SourceSpec source, Path outputPath, Iterable<Change> changes,
       Map<String, Object> toPut, Set<String> toRemove, Optional<Hierarchy> hierarchy)
       throws IOException {
     List<Change> outputChanges = StreamSupport.stream(changes.spliterator(), false)
         // Exclude change we're replacing
-        .filter(c -> !c.source().equals(source))
+        .filter(c -> !c.sourceSpec().equals(source))
         .collect(Collectors.toCollection(ArrayList::new));
 
     // Change we will replace if present
-    Optional<Change> sourceChange = monarch.findChangeForSource(source, changes);
+    Optional<Change> sourceChange = StreamSupport.stream(changes.spliterator(), false)
+        .filter(c -> source.equals(c.sourceSpec()))
+        .findFirst();
 
     Map<String, Object> updatedSet = sourceChange.map(c -> new HashMap<>(c.set()))
         .orElse(new HashMap<>());
     updatedSet.putAll(toPut);
     updatedSet.keySet().removeAll(toRemove);
 
-    List<String> remove = sourceChange.map(Change::remove)
-        .orElse(Collections.emptyList());
+    Set<String> remove = sourceChange.map(Change::remove)
+        .orElse(Collections.emptySet());
 
     // Add replacement change to output if it has any remaining content
     if (!updatedSet.isEmpty() || !remove.isEmpty()) {
-      Change updatedSourceChange = new Change(source, updatedSet, remove);
+      Change updatedSourceChange = source.toChange(updatedSet, remove);
       outputChanges.add(updatedSourceChange);
     }
 
     // Sort by hierarchy depth if provided, else sort alphabetically
     Comparator<Change> changeComparator = hierarchy.map(h -> {
-      List<String> descendants = h.descendants();
+      List<String> descendants = h.descendants().stream()
+          .map(Source::path)
+          .collect(Collectors.toList());
 
       return (Comparator<Change>) (c1, c2) -> {
-        int c1Index = descendants.indexOf(c1.source());
-        int c2Index = descendants.indexOf(c2.source());
+        // TODO make Source Comparable
+        String c1Source = c1.sourceSpec().findSource(h).get().path();
+        String c2Source = c2.sourceSpec().findSource(h).get().path();
+
+        int c1Index = descendants.indexOf(c1Source);
+        int c2Index = descendants.indexOf(c2Source);
 
         if (c1Index < 0 || c2Index < 0) {
-          return c1.source().compareTo(c2.source());
+          return c1Source.compareTo(c2Source);
         }
 
         return c1Index - c2Index;
       };
-    }).orElse((c1, c2) -> c1.source().compareTo(c2.source()));
+      // TODO maybe make change comparable too?
+    }).orElse((c1, c2) -> c1.toString().compareTo(c2.toString()));
 
     List<Map<String, Object>> serializableChanges = outputChanges.stream()
         .sorted(changeComparator)

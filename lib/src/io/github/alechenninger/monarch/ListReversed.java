@@ -20,12 +20,18 @@ package io.github.alechenninger.monarch;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 final class ListReversed<T> implements Iterable<T> {
   private final List<T> list;
 
   ListReversed(List<T> list) {
     this.list = list;
+  }
+
+  static <T> Stream<T> stream(List<T> list) {
+    return StreamSupport.stream(new ListReversed<>(list).spliterator(), false);
   }
 
   @Override

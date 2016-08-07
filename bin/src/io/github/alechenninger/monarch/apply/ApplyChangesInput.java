@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch.apply;
 
+import io.github.alechenninger.monarch.SourceSpec;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -27,7 +29,7 @@ public interface ApplyChangesInput {
 
   Optional<String> getChangesPathOrYaml();
 
-  Optional<String> getTarget();
+  Optional<SourceSpec> getTarget();
 
   Optional<String> getDataDir();
 
@@ -40,4 +42,5 @@ public interface ApplyChangesInput {
   boolean isHelpRequested();
 
   String getHelpMessage();
+
 }
