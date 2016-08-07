@@ -244,16 +244,32 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
       subparser.addArgument("--changes", "--changeset", "--change", "-c")
           .dest("changes")
           .required(true)
-          .help("Path to a yaml file describing the desired end-state changes. For example: \n"
-              + "---\n"
-              + "  source: teams/myteam.yaml\n"
-              + "  set:\n"
-              + "    myapp::version: 2\n"
-              + "    myapp::favorite_website: http://www.redhat.com\n"
-              + "---\n"
-              + "  source: teams/myteam/stage.yaml\n"
-              + "  set:\n"
-              + "    myapp::favorite_website: http://stage.redhat.com");
+          .help("Path to a yaml file describing the desired end-state changes for a particular " +
+              "data source. The yaml file may contain many documents, and each document is a " +
+              "change with 'source', 'set', and 'remove' keys. The 'set' key is a map of key " +
+              "value pairs to set in a data source. The 'remove' key is a list of keys to " +
+              "remove. The 'source' key defines the data source which you wish to receive the " +
+              "modifications described by 'set' and 'remove'.\n" +
+              "\n" +
+              "Data sources can be defined in one of two ways: by paths or variables. To define " +
+              "by a path is simple: 'source' is a string to a data source path relative to the " +
+              "data directory. To define a source by variables, use a map value for 'source' " +
+              "instead, where the keys are variable names and values are their values. Variables " +
+              "are only supported by dynamic hierarchies. For more information about " +
+              "hierarchies, see --hierarchy.\n" +
+              "\n" +
+              "Example:\n" +
+              "---\n" +
+              "  source: teams/myteam.yaml\n" +
+              "  set:\n" +
+              "    myapp::version: 2\n" +
+              "    myapp::favorite_website: http://www.redhat.com\n" +
+              "---\n" +
+              "  source:\n" +
+              "    team: myteam\n" +
+              "    environment: stage\n" +
+              "  set:\n" +
+              "    myapp::favorite_website: http://stage.redhat.com");
 
       subparser.addArgument("--target", "-t")
           .dest("target")
@@ -278,16 +294,32 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
-          .help("Path to a yaml file describing the source hierarchy, relative to the data "
-              + "directory "
-              + "(see data-dir option). If not provided, will look for a value in config files "
-              + "with key 'hierarchy'. Expected YAML structure looks like: \n"
-              + "global.yaml:\n"
-              + "  teams/myteam.yaml:\n"
-              + "    - teams/myteam/dev.yaml\n"
-              + "    - teams/myteam/stage.yaml\n"
-              + "    - teams/myteam/prod.yaml\n"
-              + "  teams/otherteam.yaml");
+          .help("Path to a yaml file describing the source hierarchy, relative to the data " +
+              "directory (see data-dir option). If not provided, will look for a value in config " +
+              "files with key 'hierarchy'. Hierarchies come in two flavors: static and dynamic. " +
+              "Static hierarchies have an explicit YAML structure like: \n" +
+              "global.yaml:\n" +
+              "  teams/myteam.yaml:\n" +
+              "    - teams/myteam/dev.yaml\n" +
+              "    - teams/myteam/stage.yaml\n" +
+              "    - teams/myteam/prod.yaml\n" +
+              "  teams/otherteam.yaml\n" +
+              "\n" +
+              "Dynamic hierarchies are defined with variables and potential values for those " +
+              "variables. They look like: \n" +
+              "sources:\n" +
+              "  - common.yaml\n" +
+              "  - team/%{team}.yaml\n" +
+              "  - environment/%{environment}.yaml\n" +
+              "  - team/%{team}/%{environment}.yaml\n" +
+              "potentials:\n" +
+              "  team:\n" +
+              "    - teamA\n" +
+              "    - teamB\n" +
+              "  environment:\n" +
+              "    - qa\n" +
+              "    - prod"
+          );
 
       subparser.addArgument("--data-dir", "-d")
           .dest("data_dir")
@@ -416,7 +448,8 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
-          .help("Optional path to hierarchy. Only used for sorting entries in the output changes.");
+          .help("Optional path to hierarchy. Only used for sorting entries in the output " +
+              "changes. For more information about hierarchies, see: apply --help");
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")

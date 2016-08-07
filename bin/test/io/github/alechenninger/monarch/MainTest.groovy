@@ -140,8 +140,16 @@ global.yaml:
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
     def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
 
-    print myteamYaml
-    print stageYaml
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
+    assert [
+        'fizz': 'buzz',
+        'myapp::favorite_website': 'http://stage.redhat.com',
+    ] == yaml.load(stageYaml)
+    assert [
+        'bar': 'baz',
+        'myapp::version': 2,
+        'myapp::favorite_website': 'http://www.redhat.com'
+    ] == yaml.load(myteamYaml)
   }
 
   @Test
@@ -366,5 +374,58 @@ set:
     ]
 
     assert expected == changes
+  }
+
+  @Test
+  void "should apply change by variables"() {
+    writeFile('/etc/changes.yaml', '''
+---
+  source: teams/myteam.yaml
+  set:
+    myapp::version: 2
+    myapp::favorite_website: http://www.redhat.com
+---
+  source: teams/myteam/stage.yaml
+  set:
+    myapp::favorite_website: http://stage.redhat.com
+''')
+
+    writeDataSources([
+        'global.yaml': 'foo: "bar"',
+        'teams/myteam.yaml': 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ])
+
+    writeFile('/etc/hierarchy.yaml', '''
+sources:
+  - global.yaml
+  - teams/%{team}.yaml
+  - teams/%{team}/%{environment}.yaml
+potentials:
+  team:
+    - myteam
+    - otherteam
+  environment:
+    - dev
+    - qa
+    - stage
+    - prod
+''')
+
+    main.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -t team=myteam -d $dataDir -o /output/")
+
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
+
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
+    assert [
+        'fizz': 'buzz',
+        'myapp::favorite_website': 'http://stage.redhat.com',
+    ] == yaml.load(stageYaml)
+    assert [
+        'bar': 'baz',
+        'myapp::version': 2,
+        'myapp::favorite_website': 'http://www.redhat.com'
+    ] == yaml.load(myteamYaml)
   }
 }

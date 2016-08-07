@@ -45,7 +45,7 @@ public interface MonarchParsers {
     int extensionIndex = fileName.lastIndexOf('.');
     if (extensionIndex < 0) {
       throw new MonarchException("Please use a file extension. I don't know how to parse this "
-          + "file: " + fileName);
+          + "file: " + path);
     }
     String extension = fileName.substring(extensionIndex + 1);
 

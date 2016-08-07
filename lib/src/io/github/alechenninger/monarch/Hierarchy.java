@@ -4,8 +4,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 public interface Hierarchy {
+
   /**
    * Tries to return the most appropriate hierarchy for the object.
    */
@@ -22,6 +24,12 @@ public interface Hierarchy {
 
           return fromDynamicSourceExpressions(sources, potentials);
         }
+      }
+
+      if (map.containsKey("hierarchy")) {
+        Logger log = Logger.getAnonymousLogger();
+        log.warning("Hierarchy had a 'hierarchy' key, and this is being treated as a data source. " +
+            "You might have meant to remove this key and replace it its current value");
       }
     }
 
