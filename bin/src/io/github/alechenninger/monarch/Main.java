@@ -60,8 +60,6 @@ public class Main {
 
   private final MonarchArgParser parser;
 
-  private static final Charset UTF_8 = Charset.forName("UTF-8");
-
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
       MonarchParsers parsers, OutputStream consoleOut) {
     this.monarch = monarch;
@@ -143,7 +141,7 @@ public class Main {
         SourceSpec target = options.target()
             .orElseThrow(missingOptionException("target"));
 
-        Map<String, Map<String, Object>> currentData =
+        Map<String, SourceData> currentData =
             parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
         Source source = hierarchy.sourceFor(target).orElseThrow(
             () -> new IllegalArgumentException("Target source not found in hierarchy: " + target));
@@ -161,7 +159,7 @@ public class Main {
   }
 
   private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
-      Map<String, Map<String, Object>> currentData, Source source) throws IOException {
+      Map<String, SourceData> currentSources, Source source) throws IOException {
     if (!changes.iterator().hasNext()) {
       consoleOut.println("No changes provided; formatting target.");
     }
@@ -169,6 +167,9 @@ public class Main {
     List<String> affectedSources = source.descendants().stream()
         .map(Source::path)
         .collect(Collectors.toList());
+    // TODO: Consider currentSources of type Sources or something like that with getter for this
+    Map<String, Map<String, Object>> currentData = currentSources.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().data()));
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
         source, changes, currentData, mergeKeys);
@@ -181,15 +182,14 @@ public class Main {
       }
 
       Path sourcePath = outputDir.resolve(path);
-      ensureParentDirectories(sourcePath);
-
-      SortedMap<String, Object> sorted = new TreeMap<>(pathToData.getValue());
-
-      if (sorted.isEmpty()) {
-        Files.write(sourcePath, new byte[]{});
-      } else {
-        yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
-      }
+      Map<String, Object> data = pathToData.getValue();
+      OutputStream out = Files.newOutputStream(sourcePath);
+      // I think this would never be false in valid case; if currentSources doesn't contain it then
+      // it is not in the hierarchy, and monarch wouldn't have been able to work with it.
+      SourceData sourceData = currentSources.containsKey(path)
+          ? currentSources.get(path)
+          : parsers.parseData(sourcePath);
+      sourceData.update(data, out);
     }
   }
 

@@ -121,7 +121,7 @@ public interface MonarchParsers {
     }
   }
 
-  default Map<String, Object> parseData(String pathOrParseable, FileSystem fileSystem) {
+  default SourceData parseData(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
       return parseData(path);
@@ -130,7 +130,7 @@ public interface MonarchParsers {
       ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
 
       try {
-        return yaml().parseMap(parseableStream);
+        return yaml().parseData(parseableStream);
       } catch (Exception parseException) {
         e.addSuppressed(parseException);
         throw new MonarchException("Failed to parse data", e);
@@ -138,24 +138,29 @@ public interface MonarchParsers {
     }
   }
 
-  default Map<String, Object> parseData(Path path) {
+  default SourceData parseData(Path path) {
     try {
-      return forPath(path).parseMap(Files.newInputStream(path));
-    } catch (NoSuchFileException ignored) {
-      return Collections.emptyMap();
+      if (!Files.exists(path)) {
+        Path parent = path.getParent();
+        if (parent != null) {
+          Files.createDirectories(parent);
+        }
+        Files.write(path, new byte[]{});
+      }
+      return forPath(path).parseData(Files.newInputStream(path));
     } catch (Exception e) {
       throw new MonarchFileParseException("data", path, e);
     }
   }
 
-  default Map<String, Map<String, Object>> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
-    Map<String, Map<String, Object>> data = new HashMap<>();
+  default Map<String, SourceData> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
+    Map<String, SourceData> data = new HashMap<>();
 
     hierarchy.descendants().stream()
         .map(Source::path)
         .forEach(source -> {
           Path sourcePath = dataDir.resolve(source);
-          Map<String, Object> sourceData = parseData(sourcePath);
+          SourceData sourceData = parseData(sourcePath);
           data.put(source, sourceData);
         });
 

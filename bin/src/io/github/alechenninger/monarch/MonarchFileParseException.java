@@ -24,7 +24,7 @@ public class MonarchFileParseException extends MonarchException {
   private final Path path;
 
   public MonarchFileParseException(String whatWasBeingParsed, Path path, Exception cause) {
-    super("Failed to parse '" + whatWasBeingParsed + "' at: " + path , cause);
+    super("Failed to parse " + whatWasBeingParsed + " at: " + path , cause);
     this.path = path;
   }
 

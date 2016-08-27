@@ -22,6 +22,7 @@ import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.ParsersConfiguration;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
 import org.yaml.snakeyaml.Yaml;
@@ -47,6 +48,7 @@ public interface ApplyChangesOptions {
   Optional<SourceSpec> target();
   Optional<Path> dataDir();
   Optional<Path> outputDir();
+  Optional<ParsersConfiguration> parsersConfiguration();
 
   default ApplyChangesOptions fallingBackTo(ApplyChangesOptions fallback) {
     return new OverridableApplyChangesOptions(this, fallback);

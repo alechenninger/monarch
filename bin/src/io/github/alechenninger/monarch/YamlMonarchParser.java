@@ -18,15 +18,31 @@
 
 package io.github.alechenninger.monarch;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.yaml.snakeyaml.Yaml;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.nio.charset.Charset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class YamlMonarchParser implements MonarchParser {
   private final Yaml yaml;
@@ -68,6 +84,72 @@ public class YamlMonarchParser implements MonarchParser {
           .orElse(Collections.emptyMap());
     } catch (ClassCastException e) {
       throw new MonarchException("Expected inputStream to parse as map.", e);
+    }
+  }
+
+  private static final String BEGIN_MONARCH_MANAGED = "# --- Begin managed by monarch";
+  private static final String END_MONARCH_MANAGED = "# --- End managed by monarch";
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public SourceData parseData(InputStream in) throws IOException {
+    Reader reader = new InputStreamReader(in, Charset.forName("UTF-8"));
+    try (BufferedReader buffered = new BufferedReader(reader)) {
+      String string = buffered.lines().collect(Collectors.joining("\n"));
+      int beginIndex = string.indexOf(BEGIN_MONARCH_MANAGED);
+      int endIndex = string.indexOf(END_MONARCH_MANAGED);
+
+      String pre = string.substring(0, beginIndex);
+      String managed = string.substring(beginIndex, endIndex);
+      String post = string.substring(endIndex);
+
+      Map<String, Object> unmanagedData = yaml.loadAs(pre, Map.class);
+      unmanagedData.putAll(yaml.loadAs(post, Map.class));
+      Map<String, Object> managedData = yaml.loadAs(managed, Map.class);
+
+      Map<String, Object> data = new HashMap<>();
+      data.putAll(unmanagedData);
+      data.putAll(managedData);
+
+      // TODO: Consider warning if unmanaged / managed have overlapping keys
+
+      Map<String, Object> unmodifiable = Collections.unmodifiableMap(data);
+
+      return new SourceData() {
+        @Override
+        public Map<String, Object> data() {
+          return unmodifiable;
+        }
+
+        @Override
+        public void update(Map<String, Object> newData, OutputStream out) throws IOException {
+          MapDifference<String, Object> diff = Maps.difference(data, newData);
+          Sets.SetView<String> unmanagedDifferingKeys =
+              Sets.intersection(unmanagedData.keySet(), diff.entriesDiffering().keySet());
+          Sets.SetView<String> unmanagedRemovedKeys =
+              Sets.intersection(unmanagedData.keySet(), diff.entriesOnlyOnLeft().keySet());
+
+          // TODO: Flag to allow source to become managed?
+          // We could keep out of unmanaged region as long as we didn't need to touch it.
+          // If we did, the user may desire monarch manage the whole file instead of fail.
+          if (!unmanagedDifferingKeys.isEmpty() || !unmanagedRemovedKeys.isEmpty()) {
+            throw new MonarchException("Update would modify unmanaged region(s) of the data " +
+                "source. unmanagedDifferingKeys=" + unmanagedDifferingKeys + " " +
+                "unmanagedRemovedKeys=" + unmanagedRemovedKeys);
+          }
+
+          SortedMap<String, Object> newManaged = new TreeMap<>(newData);
+          unmanagedData.keySet().forEach(newManaged::remove);
+          String newManagedYaml = yaml.dump(newManaged);
+
+          String newYaml = Joiner.on('\n').join(pre, BEGIN_MONARCH_MANAGED,
+              "# Generated on " + ZonedDateTime.now(), newManagedYaml,
+              END_MONARCH_MANAGED, post);
+
+          OutputStreamWriter writer = new OutputStreamWriter(out, Charset.forName("UTF-8"));
+          writer.write(newYaml);
+        }
+      };
     }
   }
 }

@@ -77,7 +77,7 @@ public class Monarch {
       Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     List<Source> lineage = target.lineage();
 
-    DataLookup sourceLookup = new DataLookupFromMap(data, target, mergeKeys);
+    DataLookup targetLookup = new DataLookupFromMap(data, target, mergeKeys);
 
     Map<String, Object> sourceData = data.get(target.path());
     Map<String, Object> resultSourceData = sourceData == null
@@ -98,7 +98,7 @@ public class Monarch {
         Object setValue = setEntry.getValue();
 
         if (target.isNotTargetedBy(change.sourceSpec())) {
-          if (sourceLookup.isValueInherited(setKey, setValue)) {
+          if (targetLookup.isValueInherited(setKey, setValue)) {
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {
                 Merger merger = Merger.startingWith(resultSourceData.get(setKey));
