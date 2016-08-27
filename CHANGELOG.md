@@ -1,5 +1,39 @@
 # Change Log
 
+## [v0.6.0](https://github.com/alechenninger/monarch/tree/v0.6.0) (2016-08-07)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.6...v0.6.0)
+
+**Closed issues:**
+
+- Support hierarchy defined with variables instead of static path tree [\#53](https://github.com/alechenninger/monarch/issues/53)
+
+**Merged pull requests:**
+
+- Add support for dynamic hierarchy \(fixes \#53\) [\#57](https://github.com/alechenninger/monarch/pull/57) ([alechenninger](https://github.com/alechenninger))
+
+## [v0.5.6](https://github.com/alechenninger/monarch/tree/v0.5.6) (2016-07-14)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.5...v0.5.6)
+
+**Closed issues:**
+
+- monarch set --put "" results in NPE [\#62](https://github.com/alechenninger/monarch/issues/62)
+
+## [v0.5.5](https://github.com/alechenninger/monarch/tree/v0.5.5) (2016-07-14)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.4...v0.5.5)
+
+**Closed issues:**
+
+- Create change when setting value if change does not yet exist [\#58](https://github.com/alechenninger/monarch/issues/58)
+- Regression: doesn't like missing data sources in hierarchy any more [\#56](https://github.com/alechenninger/monarch/issues/56)
+- Allow providing multiple targets [\#38](https://github.com/alechenninger/monarch/issues/38)
+
+## [v0.5.4](https://github.com/alechenninger/monarch/tree/v0.5.4) (2016-06-03)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.3...v0.5.4)
+
+**Merged pull requests:**
+
+- Correctly parse non file paths [\#52](https://github.com/alechenninger/monarch/pull/52) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.5.3](https://github.com/alechenninger/monarch/tree/v0.5.3) (2016-06-03)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.2...v0.5.3)
 
