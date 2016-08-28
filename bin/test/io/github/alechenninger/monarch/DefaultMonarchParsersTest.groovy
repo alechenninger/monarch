@@ -18,21 +18,32 @@
 
 package io.github.alechenninger.monarch
 
+import com.google.common.io.CharStreams
 import com.google.common.jimfs.Jimfs
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Path
+
+import static org.junit.Assert.fail
 
 @RunWith(JUnit4.class)
 class DefaultMonarchParsersTest {
   def fs = Jimfs.newFileSystem()
-  def parsers = new MonarchParsers.Default()
+  def dumperOptions = new DumperOptions().with {
+    defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+    prettyFlow = true
+    return it
+  }
+  def yaml = new Yaml(dumperOptions)
+  def parsers = new MonarchParsers.Default(yaml)
 
-  void writeFile(String file, String data) {
-    def path = fs.getPath(file)
+  void writeFile(Path path, String data) {
     def parent = path.getParent()
 
     if (parent != null) {
@@ -40,6 +51,10 @@ class DefaultMonarchParsersTest {
     }
 
     Files.write(path, data.getBytes('UTF-8'))
+  }
+
+  void writeFile(String file, String data) {
+    writeFile(fs.getPath(file), data)
   }
 
   @Test
@@ -95,5 +110,169 @@ foo:
   @Test
   void shouldParsePathToMissingFileAsEmptyData() {
     assert parsers.parseData("/etc/not_a_thing.yaml", fs).data() == [:]
+  }
+
+  @Test
+  void shouldNotRewriteSourceWhenAddingNewKeys() {
+    def sourcePath = fs.getPath('/source.yaml')
+    def existingData = '''# really important comment that I don't want removed
+existing: 123
+
+  # sassy comment about technical debt
+#
+'''
+    writeFile(sourcePath, existingData)
+
+    parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+        .writeNew(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+
+    def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
+
+    assert newData.contains(existingData)
+    assert [
+        'existing': 123,
+        'new': 'from monarch w/ <3'
+    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+  }
+
+  @Test
+  void shouldNotRewriteSourceWhenAddingAdditionalManagedKeys() {
+    def sourcePath = fs.getPath('/source.yaml')
+    def existingData = '''# really important comment that I don't want removed
+existing: 123
+
+  # sassy comment about technical debt
+#
+'''
+    writeFile(sourcePath, existingData)
+
+    parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+        .writeNew(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+    parsers.forPath(sourcePath)
+        .parseData(Files.newInputStream(sourcePath))
+        .writeNew(
+            ['existing': 123, 'new': 'from monarch w/ <3', 'additional': 456],
+            Files.newOutputStream(sourcePath))
+
+    def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
+
+    assert newData.contains(existingData)
+    assert [
+        'existing': 123,
+        'new': 'from monarch w/ <3',
+        'additional': 456
+    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+  }
+
+  @Test
+  void shouldFailToChangeKeysThatAreNotManagedByMonarch() {
+    def sourcePath = fs.getPath('/source.yaml')
+    def existingData = '''# really important comment that I don't want removed
+existing: 123
+
+  # sassy comment about technical debt
+#
+'''
+    writeFile(sourcePath, existingData)
+
+    try {
+      parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+          .writeNew(['existing': 456], Files.newOutputStream(sourcePath))
+      fail("Expected exception")
+    } catch (Exception expected) {}
+
+    def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
+    assert newData.isEmpty()
+  }
+
+  @Test
+  void shouldFailToRemoveKeysThatAreNotManagedByMonarch() {
+    def sourcePath = fs.getPath('/source.yaml')
+    def existingData = '''# really important comment that I don't want removed
+existing: 123
+
+  # sassy comment about technical debt
+#
+'''
+    writeFile(sourcePath, existingData)
+
+    try {
+      parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+          .writeNew([:], Files.newOutputStream(sourcePath))
+      fail("Expected exception")
+    } catch (Exception expected) {}
+
+    def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
+    assert newData.isEmpty()
+  }
+
+  @Test
+  void shouldHappilyChangeKeysThatAreManagedByMonarch() {
+    def sourcePath = fs.getPath('/source.yaml')
+    def existingData = '''# really important comment that I don't want removed
+existing: 123
+
+  # sassy comment about technical debt
+#
+'''
+    writeFile(sourcePath, existingData)
+
+    parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+        .writeNew(['existing': 123, 'managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+    parsers.forPath(sourcePath)
+        .parseData(Files.newInputStream(sourcePath))
+        .writeNew(
+        ['existing': 123, 'managed': 'monarch is my favorite'],
+        Files.newOutputStream(sourcePath))
+
+    def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
+
+    assert newData.contains(existingData)
+    assert [
+        'existing': 123,
+        'managed': 'monarch is my favorite',
+    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+  }
+
+  @Test
+  void shouldHappilyRemoveKeysThatAreManagedByMonarch() {
+    def sourcePath = fs.getPath('/source.yaml')
+    def existingData = '''# really important comment that I don't want removed
+existing: 123
+
+  # sassy comment about technical debt
+#
+'''
+    writeFile(sourcePath, existingData)
+
+    parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+        .writeNew(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+    parsers.forPath(sourcePath)
+        .parseData(Files.newInputStream(sourcePath))
+        .writeNew(
+        ['existing': 123],
+        Files.newOutputStream(sourcePath))
+
+    def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
+
+    assert newData.contains(existingData)
+    assert [
+        'existing': 123,
+    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+  }
+
+  @Test
+  void shouldNotRewriteSourceWhenChangingManagedKeys() {
+
+  }
+
+  @Test
+  void shouldNotRewriteSourceWhenRemovingManagedKeys() {
+
+  }
+
+  @Test
+  void shouldMaintainUnmanagedSourceBeforeAndAfterManagedPortion() {
+
   }
 }

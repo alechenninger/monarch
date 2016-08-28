@@ -158,7 +158,7 @@ public class YamlMonarchParser implements MonarchParser {
 
     @Override
     public void writeNew(Map<String, Object> newData, OutputStream out) throws IOException {
-      MapDifference<String, Object> diff = Maps.difference(this.data, newData);
+      MapDifference<String, Object> diff = Maps.difference(data, newData);
       Sets.SetView<String> unmanagedDifferingKeys =
           Sets.intersection(unmanagedData.keySet(), diff.entriesDiffering().keySet());
       Sets.SetView<String> unmanagedRemovedKeys =
@@ -173,6 +173,7 @@ public class YamlMonarchParser implements MonarchParser {
             "unmanagedRemovedKeys=" + unmanagedRemovedKeys);
       }
 
+      Map<String, Object> oldManaged = Maps.difference(data, unmanagedData).entriesOnlyOnLeft();
       SortedMap<String, Object> newManaged = new TreeMap<>(newData);
       unmanagedData.keySet().forEach(newManaged::remove);
       List<String> parts = new ArrayList<>(5);
@@ -181,9 +182,11 @@ public class YamlMonarchParser implements MonarchParser {
         parts.add(pre + '\n');
       }
 
-      if (!newManaged.isEmpty()) {
+      if (!newManaged.isEmpty() || !oldManaged.isEmpty()) {
         parts.add(BEGIN_MONARCH_MANAGED);
-        parts.add(yaml.dump(newManaged).trim());
+        if (!newManaged.isEmpty()) {
+          parts.add(yaml.dump(newManaged).trim());
+        }
         parts.add(END_MONARCH_MANAGED + '\n');
       }
 

@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch
 import com.google.common.jimfs.Jimfs
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -28,6 +29,7 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -40,13 +42,13 @@ class MainTest {
   def yaml = new Yaml(dumperOptions)
   def consolePath = fs.getPath("console")
   def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
+  def parsers = new MonarchParsers.Default(yaml)
 
   def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
-      new MonarchParsers.Default(yaml), consoleCapture)
+      parsers, consoleCapture)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
-
   static def hierarchy = '''
 global.yaml:
   teams/myteam.yaml:
@@ -55,7 +57,7 @@ global.yaml:
 
   void writeFile(String file, String data) {
     def path = fs.getPath(file)
-    def parent = path.getParent()
+    def parent = path.parent
 
     if (parent != null) {
       Files.createDirectories(parent)
@@ -65,7 +67,11 @@ global.yaml:
   }
 
   void writeDataSource(String source, String data) {
-    writeFile("$dataDir/$source", data)
+    def sourcePath = fs.getPath(dataDir, source)
+    sourcePath.parent?.identity Files.&createDirectories
+    parsers.forPath(sourcePath)
+        .newSourceData()
+        .writeNew(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
   }
 
   void writeDataSources(Map<String, String> sourceToData) {
@@ -377,7 +383,7 @@ set:
   }
 
   @Test
-  void "should apply change by variables"() {
+  void shouldApplyChangeByVariables() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -427,5 +433,44 @@ potentials:
         'myapp::version': 2,
         'myapp::favorite_website': 'http://www.redhat.com'
     ] == yaml.load(myteamYaml)
+  }
+
+  @Test
+  void applyShouldWriteSourceIfAllKeysRemoved() {
+    writeDataSource('global.yaml', 'bar: 123')
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+remove:
+  - bar
+''')
+
+    main.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
+
+    assert Files.exists(fs.getPath('/output/global.yaml'))
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert [:] == (yaml.load(globalYaml) ?: [:])
+  }
+
+  @Test
+  void applyShouldNotWriteSourceIfWasEmptyAndIsStillEmpty() {
+    writeFile('/etc/changes.yaml', '''
+---
+source: teams/myteam.yaml
+set:
+  foo: bar
+''')
+
+    main.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
+
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
+  }
+
+  @Test
+  @Ignore("TODO: test this")
+  void applyShouldNotWriteAnythingIfWriteFailed() {
+    // need to have a test Parsers implementation that just fails to write all the time
   }
 }
