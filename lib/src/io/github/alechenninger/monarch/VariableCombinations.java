@@ -19,9 +19,11 @@
 package io.github.alechenninger.monarch;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,7 +41,8 @@ class VariableCombinations {
     VariableCombinations combos = new VariableCombinations(usedVars);
 
     for (String missingVar : missingVars) {
-      for (String potential : potentials.get(missingVar)) {
+      for (String potential :
+          Optional.ofNullable(potentials.get(missingVar)).orElse(Collections.emptyList())) {
         combos.put(missingVar, potential);
       }
     }

@@ -26,10 +26,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -42,8 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -59,8 +57,6 @@ public class Main {
   private final boolean debugInfo = true;
 
   private final MonarchArgParser parser;
-
-  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
       MonarchParsers parsers, OutputStream consoleOut) {
@@ -140,15 +136,15 @@ public class Main {
             .orElseThrow(missingOptionException("data directory"));
         Hierarchy hierarchy = options.hierarchy()
             .orElseThrow(missingOptionException("hierarchy"));
-        SourceSpec target = options.target()
+        SourceSpec targetSpec = options.target()
             .orElseThrow(missingOptionException("target"));
 
-        Map<String, Map<String, Object>> currentData =
+        Map<String, SourceData> currentData =
             parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
-        Source source = hierarchy.sourceFor(target).orElseThrow(
-            () -> new IllegalArgumentException("Target source not found in hierarchy: " + target));
+        Source target = hierarchy.sourceFor(targetSpec).orElseThrow(
+            () -> new IllegalArgumentException("Target source not found in hierarchy: " + targetSpec));
 
-        applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, source);
+        applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, target);
       } catch (Exception e) {
         printError(e);
         consoleOut.println();
@@ -161,34 +157,48 @@ public class Main {
   }
 
   private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
-      Map<String, Map<String, Object>> currentData, Source source) throws IOException {
+      Map<String, SourceData> currentSources, Source target) throws IOException {
     if (!changes.iterator().hasNext()) {
       consoleOut.println("No changes provided; formatting target.");
     }
 
-    List<String> affectedSources = source.descendants().stream()
+    List<String> affectedSources = target.descendants().stream()
         .map(Source::path)
         .collect(Collectors.toList());
+    // TODO: Consider currentSources of type Sources or something like that with getter for this
+    Map<String, Map<String, Object>> currentData = currentSources.entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().data()));
 
     Map<String, Map<String, Object>> result = monarch.generateSources(
-        source, changes, currentData, mergeKeys);
+        target, changes, currentData, mergeKeys);
 
     for (Map.Entry<String, Map<String, Object>> pathToData : result.entrySet()) {
       String path = pathToData.getKey();
 
+      // We only output a source if it is target or under.
       if (!affectedSources.contains(path)) {
         continue;
       }
 
-      Path sourcePath = outputDir.resolve(path);
-      ensureParentDirectories(sourcePath);
+      Path outPath = outputDir.resolve(path);
+      Map<String, Object> outData = pathToData.getValue();
+      SourceData sourceData = currentSources.containsKey(path)
+          ? currentSources.get(path)
+          : parsers.forPath(outPath).newSourceData();
 
-      SortedMap<String, Object> sorted = new TreeMap<>(pathToData.getValue());
+      if (sourceData.isEmpty() && outData.isEmpty()) {
+        continue;
+      }
 
-      if (sorted.isEmpty()) {
-        Files.write(sourcePath, new byte[]{});
-      } else {
-        yaml.dump(sorted, Files.newBufferedWriter(sourcePath, UTF_8));
+      try {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        sourceData.writeNew(outData, out);
+        ensureParentDirectories(outPath);
+        Files.write(outPath, out.toByteArray());
+      } catch (Exception e) {
+        // TODO: Proper logger
+        new MonarchException("Failed to write updated data source at " + path + " to " + outPath, e)
+            .printStackTrace(consoleOut);
       }
     }
   }

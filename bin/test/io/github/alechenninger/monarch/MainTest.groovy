@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch
 import com.google.common.jimfs.Jimfs
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -28,6 +29,7 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -37,16 +39,16 @@ class MainTest {
     prettyFlow = true
     return it
   }
-  def yaml = new Yaml()
+  def yaml = new Yaml(dumperOptions)
   def consolePath = fs.getPath("console")
   def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
+  def parsers = new MonarchParsers.Default(yaml)
 
-  def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs,
-      new MonarchParsers.Default(), consoleCapture)
+  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
+      parsers, consoleCapture)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
-
   static def hierarchy = '''
 global.yaml:
   teams/myteam.yaml:
@@ -55,7 +57,7 @@ global.yaml:
 
   void writeFile(String file, String data) {
     def path = fs.getPath(file)
-    def parent = path.getParent()
+    def parent = path.parent
 
     if (parent != null) {
       Files.createDirectories(parent)
@@ -65,7 +67,11 @@ global.yaml:
   }
 
   void writeDataSource(String source, String data) {
-    writeFile("$dataDir/$source", data)
+    def sourcePath = fs.getPath(dataDir, source)
+    sourcePath.parent?.identity Files.&createDirectories
+    parsers.forPath(sourcePath)
+        .newSourceData()
+        .writeNew(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
   }
 
   void writeDataSources(Map<String, String> sourceToData) {
@@ -83,7 +89,7 @@ global.yaml:
 
   @After
   void printConsole() {
-    System.out.print(getConsole())
+    System.out.print(console)
   }
 
   @Test
@@ -191,7 +197,7 @@ outputDir: /output/
     assert main.run("--help") == 0
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
-    assert getConsole() =~ /usage: monarch.*\{apply/
+    assert console =~ /usage: monarch.*\{apply/
   }
 
   @Test
@@ -199,49 +205,49 @@ outputDir: /output/
     assert main.run("foobar") == 2
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
-    assert getConsole() =~ /usage: monarch.*\{apply/
+    assert console =~ /usage: monarch.*\{apply/
   }
 
   @Test
   void shouldPrintHelpForApplyCommand() {
     assert main.run("apply --help") == 0
-    assert getConsole().contains("usage: monarch apply")
+    assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
     assert main.run("apply --target foo --changes bar --wat") == 2
-    assert getConsole().contains("usage: monarch apply")
+    assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
     assert main.run("apply") == 2
-    assert getConsole().contains("usage: monarch apply")
+    assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForSetCommand() {
     assert main.run("set --help") == 0
-    assert getConsole().contains("usage: monarch set")
+    assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
     main.run("set --source global.yaml foo --changes petstore.yaml")
-    assert getConsole().contains("usage: monarch set")
+    assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
     assert main.run("set") == 2
-    assert getConsole().contains("usage: monarch set")
+    assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldShowVersion() {
     assert main.run("--version") == 0
-    assert getConsole() ==~ /[0-9].[0-9].[0-9]\n/
+    assert console ==~ /[0-9].[0-9].[0-9]\n/
   }
 
   @Test
@@ -266,7 +272,7 @@ outputDir: /output/
 
     main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    assert getConsole() =~ '/etc/changes.yaml'
+    assert console =~ '/etc/changes.yaml'
   }
 
   @Test
@@ -293,7 +299,7 @@ set:
 
     main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    assert getConsole() =~ hierarchyFile
+    assert console =~ hierarchyFile
   }
 
   @Test
@@ -377,7 +383,7 @@ set:
   }
 
   @Test
-  void "should apply change by variables"() {
+  void shouldApplyChangeByVariables() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -427,5 +433,44 @@ potentials:
         'myapp::version': 2,
         'myapp::favorite_website': 'http://www.redhat.com'
     ] == yaml.load(myteamYaml)
+  }
+
+  @Test
+  void applyShouldWriteSourceIfAllKeysRemoved() {
+    writeDataSource('global.yaml', 'bar: 123')
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+remove:
+  - bar
+''')
+
+    main.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
+
+    assert Files.exists(fs.getPath('/output/global.yaml'))
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert [:] == (yaml.load(globalYaml) ?: [:])
+  }
+
+  @Test
+  void applyShouldNotWriteSourceIfWasEmptyAndIsStillEmpty() {
+    writeFile('/etc/changes.yaml', '''
+---
+source: teams/myteam.yaml
+set:
+  foo: bar
+''')
+
+    main.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
+
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
+  }
+
+  @Test
+  @Ignore("TODO: test this")
+  void applyShouldNotWriteAnythingIfWriteFailed() {
+    // need to have a test Parsers implementation that just fails to write all the time
   }
 }

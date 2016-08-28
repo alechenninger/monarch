@@ -108,6 +108,13 @@ public interface SourceSpec {
     public int hashCode() {
       return Objects.hash(variables);
     }
+
+    @Override
+    public String toString() {
+      return "VariableSourceSpec{" +
+          "variables=" + variables +
+          '}';
+    }
   }
 
   class PathSourceSpec implements SourceSpec {
@@ -143,6 +150,13 @@ public interface SourceSpec {
     @Override
     public int hashCode() {
       return Objects.hash(path);
+    }
+
+    @Override
+    public String toString() {
+      return "PathSourceSpec{" +
+          "path='" + path + '\'' +
+          '}';
     }
   }
 }

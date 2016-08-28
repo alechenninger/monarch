@@ -121,10 +121,10 @@ public interface MonarchParsers {
     }
   }
 
-  default Map<String, Object> parseData(String pathOrParseable, FileSystem fileSystem) {
+  default Map<String, Object> parseMap(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
-      return parseData(path);
+      return parseMap(path);
     } catch (InvalidPathException | MonarchFileParseException e) {
       byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
       ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
@@ -133,29 +133,64 @@ public interface MonarchParsers {
         return yaml().parseMap(parseableStream);
       } catch (Exception parseException) {
         e.addSuppressed(parseException);
+        throw new MonarchException("Failed to parse map", e);
+      }
+    }
+  }
+
+  default Map<String, Object> parseMap(Path path) {
+    try {
+      return forPath(path).parseMap(Files.newInputStream(path));
+    } catch (NoSuchFileException e) {
+      return Collections.emptyMap();
+    } catch (Exception e) {
+      throw new MonarchFileParseException("map", path, e);
+    }
+  }
+
+  /**
+   * If {@code pathOrParseable} is a valid file path but the file does not exist, an empty
+   * {@link SourceData} will be returned.
+   */
+  default SourceData parseData(String pathOrParseable, FileSystem fileSystem) {
+    try {
+      Path path = fileSystem.getPath(pathOrParseable);
+      return parseData(path);
+    } catch (InvalidPathException | MonarchFileParseException e) {
+      byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
+      ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
+
+      try {
+        return yaml().parseData(parseableStream);
+      } catch (Exception parseException) {
+        e.addSuppressed(parseException);
         throw new MonarchException("Failed to parse data", e);
       }
     }
   }
 
-  default Map<String, Object> parseData(Path path) {
+  /**
+   * If {@code path} does not exist, an empty {@link SourceData} will be returned.
+   */
+  default SourceData parseData(Path path) {
     try {
-      return forPath(path).parseMap(Files.newInputStream(path));
-    } catch (NoSuchFileException ignored) {
-      return Collections.emptyMap();
+      return forPath(path).parseData(Files.newInputStream(path));
+    } catch (NoSuchFileException e) {
+      return forPath(path).newSourceData();
     } catch (Exception e) {
       throw new MonarchFileParseException("data", path, e);
     }
   }
 
-  default Map<String, Map<String, Object>> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
-    Map<String, Map<String, Object>> data = new HashMap<>();
+  default Map<String, SourceData> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
+    Map<String, SourceData> data = new HashMap<>();
 
     hierarchy.descendants().stream()
+        // TODO .parallel() but yaml is not threadsafe
         .map(Source::path)
         .forEach(source -> {
           Path sourcePath = dataDir.resolve(source);
-          Map<String, Object> sourceData = parseData(sourcePath);
+          SourceData sourceData = parseData(sourcePath);
           data.put(source, sourceData);
         });
 

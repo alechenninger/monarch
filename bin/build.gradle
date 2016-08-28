@@ -27,6 +27,7 @@ mainClassName = 'io.github.alechenninger.monarch.Main'
 dependencies {
   compile 'org.yaml:snakeyaml:1.16'
   compile 'net.sourceforge.argparse4j:argparse4j:0.7.0'
+  compile 'com.google.guava:guava:19.0'
   compile project(':monarch-lib')
   testCompile 'org.codehaus.groovy:groovy:2.4.5'
   testCompile 'junit:junit:4.12'
