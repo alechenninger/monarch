@@ -148,7 +148,6 @@ public interface MonarchParsers {
     }
   }
 
-
   /**
    * If {@code pathOrParseable} is a valid file path but the file does not exist, an empty
    * {@link SourceData} will be returned.

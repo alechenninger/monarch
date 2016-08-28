@@ -186,7 +186,6 @@ public class Main {
           ? currentSources.get(path)
           : parsers.forPath(outPath).newSourceData();
 
-      // TODO: Test net new and old remove all keys are both written out
       if (sourceData.isEmpty() && outData.isEmpty()) {
         continue;
       }

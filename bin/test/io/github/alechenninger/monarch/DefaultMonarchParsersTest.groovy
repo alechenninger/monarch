@@ -26,11 +26,7 @@ import org.junit.runners.JUnit4
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.OpenOption
-import java.nio.file.Path
-import java.nio.file.StandardOpenOption
+import java.nio.file.*
 
 import static org.junit.Assert.fail
 
@@ -134,7 +130,7 @@ existing: 123
     assert [
         'existing': 123,
         'new': 'from monarch w/ <3'
-    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+    ] == yaml.load(Files.newBufferedReader(sourcePath))
   }
 
   @Test
@@ -163,7 +159,7 @@ existing: 123
         'existing': 123,
         'new': 'from monarch w/ <3',
         'additional': 456
-    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+    ] == yaml.load(Files.newBufferedReader(sourcePath))
   }
 
   @Test
@@ -205,7 +201,7 @@ existing: 123
     } catch (Exception expected) {}
 
     def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
-    assert newData.isEmpty()
+    assert newData.empty
   }
 
   @Test
@@ -215,9 +211,7 @@ existing: 123
     parsers.forPath(sourcePath).newSourceData()
         .writeNew(['new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
 
-    assert ['new': 'from monarch w/ <3'] == parsers.forPath(sourcePath)
-        .parseData(Files.newInputStream(sourcePath))
-        .data()
+    assert ['new': 'from monarch w/ <3'] == yaml.load(Files.newBufferedReader(sourcePath))
   }
 
   @Test
@@ -230,9 +224,7 @@ existing: 123
         .parseData(Files.newInputStream(sourcePath))
         .writeNew(['managed': 'monarch is my favorite'], Files.newOutputStream(sourcePath))
 
-    assert ['managed': 'monarch is my favorite'] == parsers.forPath(sourcePath)
-        .parseData(Files.newInputStream(sourcePath))
-        .data()
+    assert ['managed': 'monarch is my favorite'] == yaml.load(Files.newBufferedReader(sourcePath))
   }
 
   @Test
@@ -245,9 +237,7 @@ existing: 123
         .parseData(Files.newInputStream(sourcePath))
         .writeNew([:], Files.newOutputStream(sourcePath))
 
-    assert [:] == parsers.forPath(sourcePath)
-        .parseData(Files.newInputStream(sourcePath))
-        .data()
+    assert [:] == (yaml.load(Files.newBufferedReader(sourcePath)) ?: [:])
   }
 
   @Test
@@ -275,7 +265,7 @@ existing: 123
     assert [
         'existing': 123,
         'managed': 'monarch is my favorite',
-    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+    ] == yaml.load(newData)
   }
 
   @Test
@@ -302,7 +292,7 @@ existing: 123
     assert newData.contains(existingData)
     assert [
         'existing': 123,
-    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+    ] == yaml.load(newData)
   }
 
   @Test
@@ -315,7 +305,7 @@ existing: 123
 #
 '''
     def postData = '''# stuff
-  post: true'''
+post:  true'''
 
     writeFile(sourcePath, preData)
     parsers.forPath(sourcePath)
@@ -339,6 +329,44 @@ existing: 123
         'existing': 123,
         'managed': 'monarch is my favorite',
         'post': true,
-    ] == parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath)).data()
+    ] == yaml.load(newData)
+  }
+
+  @Test
+  void shouldKeepDuplicatedKeyInUnmanagedDataAndRemoveFromManagedData() {
+    def sourcePath = fs.getPath('/source.yaml')
+
+    parsers.forPath(sourcePath).newSourceData()
+        .writeNew(['key': 'value'], Files.newOutputStream(sourcePath))
+
+    writeFile(sourcePath, '\n# test\nkey: value', StandardOpenOption.WRITE, StandardOpenOption.APPEND)
+
+    parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+        .writeNew(['key': 'value'], Files.newOutputStream(sourcePath))
+
+    def written = CharStreams.toString(Files.newBufferedReader(sourcePath))
+
+    assert written.contains('# test\nkey: value')
+    assert written.count('key') == 1
+    assert ['key': 'value'] == yaml.load(written)
+  }
+
+  @Test
+  void shouldFailToChangeOrRemoveKeysWhichAreDuplicatedInManagedAndUnmanagedData() {
+    def sourcePath = fs.getPath('/source.yaml')
+
+    parsers.forPath(sourcePath).newSourceData()
+        .writeNew(['key': 'value'], Files.newOutputStream(sourcePath))
+
+    writeFile(sourcePath, '\n# test\nkey: value', StandardOpenOption.WRITE, StandardOpenOption.APPEND)
+
+    try {
+      parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
+          .writeNew(['key': 'new'], Files.newOutputStream(sourcePath))
+      fail("Expected exception")
+    } catch (Exception expected) {}
+
+    def written = CharStreams.toString(Files.newBufferedReader(sourcePath))
+    assert written.empty
   }
 }
