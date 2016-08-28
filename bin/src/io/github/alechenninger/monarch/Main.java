@@ -180,27 +180,26 @@ public class Main {
         continue;
       }
 
-      if (currentSources.containsKey(path)) {
-        SourceData sourceData = currentSources.get(path);
-        Map<String, Object> outData = pathToData.getValue();
+      Path outPath = outputDir.resolve(path);
+      Map<String, Object> outData = pathToData.getValue();
+      SourceData sourceData = currentSources.containsKey(path)
+          ? currentSources.get(path)
+          : parsers.forPath(outPath).newSourceData();
 
-        // TODO: Test net new and old remove all keys are both written out
-        if (sourceData.isEmpty() && outData.isEmpty()) {
-          continue;
-        }
+      // TODO: Test net new and old remove all keys are both written out
+      if (sourceData.isEmpty() && outData.isEmpty()) {
+        continue;
+      }
 
-        Path outPath = outputDir.resolve(path);
-
-        try {
-          ByteArrayOutputStream out = new ByteArrayOutputStream();
-          sourceData.writeNew(outData, out);
-          ensureParentDirectories(outPath);
-          Files.write(outPath, out.toByteArray());
-        } catch (Exception e) {
-          // TODO: Proper logger
-          new MonarchException("Failed to write updated data source at " + path + " to " + outPath, e)
-              .printStackTrace(consoleOut);
-        }
+      try {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        sourceData.writeNew(outData, out);
+        ensureParentDirectories(outPath);
+        Files.write(outPath, out.toByteArray());
+      } catch (Exception e) {
+        // TODO: Proper logger
+        new MonarchException("Failed to write updated data source at " + path + " to " + outPath, e)
+            .printStackTrace(consoleOut);
       }
     }
   }
