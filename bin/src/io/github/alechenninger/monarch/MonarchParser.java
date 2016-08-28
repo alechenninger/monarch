@@ -35,5 +35,6 @@ public interface MonarchParser {
   Hierarchy parseHierarchy(InputStream hierarchyInput);
   List<Change> parseChanges(InputStream changesInput);
   Map<String, Object> parseMap(InputStream inputStream);
+  SourceData newSourceData();
   SourceData parseData(InputStream inputStream) throws IOException;
 }

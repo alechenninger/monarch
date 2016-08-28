@@ -121,6 +121,38 @@ public interface MonarchParsers {
     }
   }
 
+  default Map<String, Object> parseMap(String pathOrParseable, FileSystem fileSystem) {
+    try {
+      Path path = fileSystem.getPath(pathOrParseable);
+      return parseMap(path);
+    } catch (InvalidPathException | MonarchFileParseException e) {
+      byte[] parseable = pathOrParseable.getBytes(Charset.forName("UTF-8"));
+      ByteArrayInputStream parseableStream = new ByteArrayInputStream(parseable);
+
+      try {
+        return yaml().parseMap(parseableStream);
+      } catch (Exception parseException) {
+        e.addSuppressed(parseException);
+        throw new MonarchException("Failed to parse map", e);
+      }
+    }
+  }
+
+  default Map<String, Object> parseMap(Path path) {
+    try {
+      return forPath(path).parseMap(Files.newInputStream(path));
+    } catch (NoSuchFileException e) {
+      return Collections.emptyMap();
+    } catch (Exception e) {
+      throw new MonarchFileParseException("map", path, e);
+    }
+  }
+
+
+  /**
+   * If {@code pathOrParseable} is a valid file path but the file does not exist, an empty
+   * {@link SourceData} will be returned.
+   */
   default SourceData parseData(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
@@ -138,16 +170,14 @@ public interface MonarchParsers {
     }
   }
 
+  /**
+   * If {@code path} does not exist, an empty {@link SourceData} will be returned.
+   */
   default SourceData parseData(Path path) {
     try {
-      if (!Files.exists(path)) {
-        Path parent = path.getParent();
-        if (parent != null) {
-          Files.createDirectories(parent);
-        }
-        Files.write(path, new byte[]{});
-      }
       return forPath(path).parseData(Files.newInputStream(path));
+    } catch (NoSuchFileException e) {
+      return forPath(path).newSourceData();
     } catch (Exception e) {
       throw new MonarchFileParseException("data", path, e);
     }

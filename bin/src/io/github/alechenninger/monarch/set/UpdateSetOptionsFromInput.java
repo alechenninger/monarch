@@ -70,7 +70,7 @@ public class UpdateSetOptionsFromInput implements UpdateSetOptions {
   @Override
   public Map<String, Object> putInSet() {
     return input.getPutPathsOrYaml().stream()
-        .map(pathOrYaml -> parsers.parseData(pathOrYaml, fileSystem))
+        .map(pathOrYaml -> parsers.parseMap(pathOrYaml, fileSystem))
         .reduce(new HashMap<>(), (m1, m2) -> { m1.putAll(m2); return m1; });
   }
 

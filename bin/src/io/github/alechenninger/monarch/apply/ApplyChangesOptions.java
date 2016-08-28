@@ -48,7 +48,7 @@ public interface ApplyChangesOptions {
   Optional<SourceSpec> target();
   Optional<Path> dataDir();
   Optional<Path> outputDir();
-  Optional<ParsersConfiguration> parsersConfiguration();
+//  Optional<ParsersConfiguration> parsersConfiguration();
 
   default ApplyChangesOptions fallingBackTo(ApplyChangesOptions fallback) {
     return new OverridableApplyChangesOptions(this, fallback);

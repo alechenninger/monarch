@@ -32,7 +32,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.nio.charset.Charset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -87,8 +86,10 @@ public class YamlMonarchParser implements MonarchParser {
     }
   }
 
-  private static final String BEGIN_MONARCH_MANAGED = "# --- Begin managed by monarch";
-  private static final String END_MONARCH_MANAGED = "# --- End managed by monarch";
+  @Override
+  public SourceData newSourceData() {
+    return new YamlSourceData(Collections.emptyMap(), Collections.emptyMap(), "", "");
+  }
 
   @Override
   @SuppressWarnings("unchecked")
@@ -96,60 +97,88 @@ public class YamlMonarchParser implements MonarchParser {
     Reader reader = new InputStreamReader(in, Charset.forName("UTF-8"));
     try (BufferedReader buffered = new BufferedReader(reader)) {
       String string = buffered.lines().collect(Collectors.joining("\n"));
-      int beginIndex = string.indexOf(BEGIN_MONARCH_MANAGED);
-      int endIndex = string.indexOf(END_MONARCH_MANAGED);
+      int beginIndex = string.indexOf(YamlSourceData.BEGIN_MONARCH_MANAGED);
+      int endIndex = string.indexOf(YamlSourceData.END_MONARCH_MANAGED);
 
-      String pre = string.substring(0, beginIndex);
+      if (beginIndex == -1) {
+        beginIndex = string.length();
+        endIndex = beginIndex;
+      }
+
+      String pre = string.substring(0, beginIndex).trim();
       String managed = string.substring(beginIndex, endIndex);
-      String post = string.substring(endIndex);
+      String post = string.substring(endIndex).trim();
 
-      Map<String, Object> unmanagedData = yaml.loadAs(pre, Map.class);
-      unmanagedData.putAll(yaml.loadAs(post, Map.class));
-      Map<String, Object> managedData = yaml.loadAs(managed, Map.class);
+      Map<String, Object> unmanagedData = new HashMap<>();
+      Map<String, Object> preData = yaml.loadAs(pre, Map.class);
+      Map<String, Object> postData = yaml.loadAs(post, Map.class);
+
+      if (preData != null) unmanagedData.putAll(preData);
+      if (postData != null) unmanagedData.putAll(postData);
+
+      Map<String, Object> managedData = Optional
+          .ofNullable(yaml.loadAs(managed, Map.class))
+          .orElse(Collections.emptyMap());
 
       Map<String, Object> data = new HashMap<>();
       data.putAll(unmanagedData);
       data.putAll(managedData);
 
       // TODO: Consider warning if unmanaged / managed have overlapping keys
+      return new YamlSourceData(data, unmanagedData, pre, post);
+    }
+  }
 
-      Map<String, Object> unmodifiable = Collections.unmodifiableMap(data);
+  private class YamlSourceData implements SourceData {
+    private final Map<String, Object> data;
+    private final Map<String, Object> unmanagedData;
+    private final String pre;
+    private final String post;
 
-      return new SourceData() {
-        @Override
-        public Map<String, Object> data() {
-          return unmodifiable;
-        }
+    private static final String BEGIN_MONARCH_MANAGED = "# --- Begin managed by monarch";
+    private static final String END_MONARCH_MANAGED = "# --- End managed by monarch";
 
-        @Override
-        public void update(Map<String, Object> newData, OutputStream out) throws IOException {
-          MapDifference<String, Object> diff = Maps.difference(data, newData);
-          Sets.SetView<String> unmanagedDifferingKeys =
-              Sets.intersection(unmanagedData.keySet(), diff.entriesDiffering().keySet());
-          Sets.SetView<String> unmanagedRemovedKeys =
-              Sets.intersection(unmanagedData.keySet(), diff.entriesOnlyOnLeft().keySet());
+    YamlSourceData(Map<String, Object> data, Map<String, Object> unmanagedData, String pre,
+        String post) {
+      this.data = Collections.unmodifiableMap(data);
+      this.unmanagedData = Objects.requireNonNull(unmanagedData);
+      this.pre = Objects.requireNonNull(pre);
+      this.post = Objects.requireNonNull(post);
+    }
 
-          // TODO: Flag to allow source to become managed?
-          // We could keep out of unmanaged region as long as we didn't need to touch it.
-          // If we did, the user may desire monarch manage the whole file instead of fail.
-          if (!unmanagedDifferingKeys.isEmpty() || !unmanagedRemovedKeys.isEmpty()) {
-            throw new MonarchException("Update would modify unmanaged region(s) of the data " +
-                "source. unmanagedDifferingKeys=" + unmanagedDifferingKeys + " " +
-                "unmanagedRemovedKeys=" + unmanagedRemovedKeys);
-          }
+    @Override
+    public Map<String, Object> data() {
+      return data;
+    }
 
-          SortedMap<String, Object> newManaged = new TreeMap<>(newData);
-          unmanagedData.keySet().forEach(newManaged::remove);
-          String newManagedYaml = yaml.dump(newManaged);
+    @Override
+    public void writeNew(Map<String, Object> newData, OutputStream out) throws IOException {
+      MapDifference<String, Object> diff = Maps.difference(this.data, newData);
+      Sets.SetView<String> unmanagedDifferingKeys =
+          Sets.intersection(unmanagedData.keySet(), diff.entriesDiffering().keySet());
+      Sets.SetView<String> unmanagedRemovedKeys =
+          Sets.intersection(unmanagedData.keySet(), diff.entriesOnlyOnLeft().keySet());
 
-          String newYaml = Joiner.on('\n').join(pre, BEGIN_MONARCH_MANAGED,
-              "# Generated on " + ZonedDateTime.now(), newManagedYaml,
-              END_MONARCH_MANAGED, post);
+      // TODO: Flag to allow source to become managed?
+      // We could keep out of unmanaged region as long as we didn't need to touch it.
+      // If we did, the user may desire monarch manage the whole file instead of fail.
+      if (!unmanagedDifferingKeys.isEmpty() || !unmanagedRemovedKeys.isEmpty()) {
+        throw new MonarchException("Update would modify unmanaged region(s) of the data " +
+            "source. unmanagedDifferingKeys=" + unmanagedDifferingKeys + " " +
+            "unmanagedRemovedKeys=" + unmanagedRemovedKeys);
+      }
 
-          OutputStreamWriter writer = new OutputStreamWriter(out, Charset.forName("UTF-8"));
-          writer.write(newYaml);
-        }
-      };
+      SortedMap<String, Object> newManaged = new TreeMap<>(newData);
+      unmanagedData.keySet().forEach(newManaged::remove);
+      String newManagedYaml = yaml.dump(newManaged).trim();
+
+      String newYaml = Joiner.on('\n').join(pre, '\n' + BEGIN_MONARCH_MANAGED, newManagedYaml,
+          END_MONARCH_MANAGED + '\n', post);
+
+      try (OutputStreamWriter writer = new OutputStreamWriter(out, Charset.forName("UTF-8"))) {
+        writer.write(newYaml);
+        writer.flush();
+      }
     }
   }
 }

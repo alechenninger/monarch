@@ -37,12 +37,12 @@ class MainTest {
     prettyFlow = true
     return it
   }
-  def yaml = new Yaml()
+  def yaml = new Yaml(dumperOptions)
   def consolePath = fs.getPath("console")
   def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
 
-  def main = new Main(new Monarch(), new Yaml(dumperOptions), "/etc/monarch.yaml", fs,
-      new MonarchParsers.Default(), consoleCapture)
+  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
+      new MonarchParsers.Default(yaml), consoleCapture)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -126,6 +126,7 @@ global.yaml:
 ---
   source: teams/myteam/stage.yaml
   set:
+    fizz: baloo
     myapp::favorite_website: http://stage.redhat.com
 ''')
 
