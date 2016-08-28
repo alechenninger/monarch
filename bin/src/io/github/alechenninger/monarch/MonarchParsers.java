@@ -187,6 +187,7 @@ public interface MonarchParsers {
     Map<String, SourceData> data = new HashMap<>();
 
     hierarchy.descendants().stream()
+        // TODO .parallel() but yaml is not threadsafe
         .map(Source::path)
         .forEach(source -> {
           Path sourcePath = dataDir.resolve(source);

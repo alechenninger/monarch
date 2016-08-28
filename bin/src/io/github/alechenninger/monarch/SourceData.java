@@ -23,7 +23,16 @@ import java.io.OutputStream;
 import java.util.Map;
 
 public interface SourceData {
+
   Map<String, Object> data();
+  
+  default boolean isEmpty() {
+    return data().isEmpty();
+  }
+
+  default boolean isNotEmpty() {
+    return !isEmpty();
+  }
 
   /**
    * Outputs {@code newData} to {@code out} in the same data format as the source.

@@ -103,11 +103,13 @@ public class YamlMonarchParser implements MonarchParser {
     try (BufferedReader buffered = new BufferedReader(reader)) {
       String dataString = buffered.lines().collect(Collectors.joining("\n"));
       int managedBegin = dataString.indexOf(BEGIN_MONARCH_MANAGED);
-      int managedEnd = dataString.indexOf(END_MONARCH_MANAGED) + END_MONARCH_MANAGED.length();
+      int managedEnd = dataString.lastIndexOf(END_MONARCH_MANAGED) + END_MONARCH_MANAGED.length();
 
       if (managedBegin == -1) {
         managedBegin = dataString.length();
         managedEnd = managedBegin;
+      } else if (managedEnd < END_MONARCH_MANAGED.length()) {
+        managedEnd = dataString.length();
       }
 
       String pre = dataString.substring(0, managedBegin).trim();
@@ -115,6 +117,7 @@ public class YamlMonarchParser implements MonarchParser {
       String post = dataString.substring(managedEnd).trim();
 
       Map<String, Object> unmanagedData = new HashMap<>();
+
       Map<String, Object> preData = yaml.loadAs(pre, Map.class);
       Map<String, Object> postData = yaml.loadAs(post, Map.class);
 
@@ -172,10 +175,28 @@ public class YamlMonarchParser implements MonarchParser {
 
       SortedMap<String, Object> newManaged = new TreeMap<>(newData);
       unmanagedData.keySet().forEach(newManaged::remove);
-      String newManagedYaml = yaml.dump(newManaged).trim();
+      List<String> parts = new ArrayList<>(5);
 
-      String newYaml = Joiner.on('\n').join(pre, '\n' + BEGIN_MONARCH_MANAGED, newManagedYaml,
-          END_MONARCH_MANAGED + '\n', post);
+      if (!pre.isEmpty()) {
+        parts.add(pre + '\n');
+      }
+
+      if (!newManaged.isEmpty()) {
+        parts.add(BEGIN_MONARCH_MANAGED);
+        parts.add(yaml.dump(newManaged).trim());
+        parts.add(END_MONARCH_MANAGED + '\n');
+      }
+
+      if (!post.isEmpty()) {
+        parts.add(post);
+      }
+
+      String newYaml = Joiner.on('\n').join(parts);
+
+      if (newYaml.trim().isEmpty() && data.isEmpty()) {
+        out.close();
+        return;
+      }
 
       try (OutputStreamWriter writer = new OutputStreamWriter(out, Charset.forName("UTF-8"))) {
         writer.write(newYaml);

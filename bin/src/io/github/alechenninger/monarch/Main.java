@@ -26,6 +26,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -179,21 +180,27 @@ public class Main {
         continue;
       }
 
-      Path outPath = outputDir.resolve(path);
-      Map<String, Object> outData = pathToData.getValue();
-      SourceData sourceData = currentSources.containsKey(path)
-          ? currentSources.get(path)
-          : parsers.forPath(outPath).newSourceData();
+      if (currentSources.containsKey(path)) {
+        SourceData sourceData = currentSources.get(path);
+        Map<String, Object> outData = pathToData.getValue();
 
-      ensureParentDirectories(outPath);
-      OutputStream out = Files.newOutputStream(outPath);
+        // TODO: Test net new and old remove all keys are both written out
+        if (sourceData.isEmpty() && outData.isEmpty()) {
+          continue;
+        }
 
-      try {
-        sourceData.writeNew(outData, out);
-      } catch (Exception e) {
-        // TODO: Proper logger
-        new MonarchException("Failed to write updated data source at " + path + " to " + outPath, e)
-            .printStackTrace(consoleOut);
+        Path outPath = outputDir.resolve(path);
+
+        try {
+          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          sourceData.writeNew(outData, out);
+          ensureParentDirectories(outPath);
+          Files.write(outPath, out.toByteArray());
+        } catch (Exception e) {
+          // TODO: Proper logger
+          new MonarchException("Failed to write updated data source at " + path + " to " + outPath, e)
+              .printStackTrace(consoleOut);
+        }
       }
     }
   }
