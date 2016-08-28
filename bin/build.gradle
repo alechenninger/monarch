@@ -49,7 +49,7 @@ sourceSets {
 
 jar {
   manifest {
-    attributes("Implementation-Version": version)
+    attributes("Implementation-Version": version + " built at " + new Date())
   }
 }
 
