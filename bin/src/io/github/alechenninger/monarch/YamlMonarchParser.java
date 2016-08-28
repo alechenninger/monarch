@@ -46,6 +46,9 @@ import java.util.stream.Collectors;
 public class YamlMonarchParser implements MonarchParser {
   private final Yaml yaml;
 
+  private static final String BEGIN_MONARCH_MANAGED = "# --- Begin managed by monarch";
+  private static final String END_MONARCH_MANAGED = "# --- End managed by monarch";
+
   public YamlMonarchParser(Yaml yaml) {
     this.yaml = Objects.requireNonNull(yaml, "yaml");
   }
@@ -57,6 +60,7 @@ public class YamlMonarchParser implements MonarchParser {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public List<Change> parseChanges(InputStream changesInput) {
     try {
       Iterable<Object> parsedChanges = yaml.loadAll(changesInput);
@@ -77,6 +81,7 @@ public class YamlMonarchParser implements MonarchParser {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Map<String, Object> parseMap(InputStream inputStream) {
     try {
       return Optional.ofNullable((Map<String, Object>) yaml.load(inputStream))
@@ -96,18 +101,18 @@ public class YamlMonarchParser implements MonarchParser {
   public SourceData parseData(InputStream in) throws IOException {
     Reader reader = new InputStreamReader(in, Charset.forName("UTF-8"));
     try (BufferedReader buffered = new BufferedReader(reader)) {
-      String string = buffered.lines().collect(Collectors.joining("\n"));
-      int beginIndex = string.indexOf(YamlSourceData.BEGIN_MONARCH_MANAGED);
-      int endIndex = string.indexOf(YamlSourceData.END_MONARCH_MANAGED);
+      String dataString = buffered.lines().collect(Collectors.joining("\n"));
+      int managedBegin = dataString.indexOf(BEGIN_MONARCH_MANAGED);
+      int managedEnd = dataString.indexOf(END_MONARCH_MANAGED) + END_MONARCH_MANAGED.length();
 
-      if (beginIndex == -1) {
-        beginIndex = string.length();
-        endIndex = beginIndex;
+      if (managedBegin == -1) {
+        managedBegin = dataString.length();
+        managedEnd = managedBegin;
       }
 
-      String pre = string.substring(0, beginIndex).trim();
-      String managed = string.substring(beginIndex, endIndex);
-      String post = string.substring(endIndex).trim();
+      String pre = dataString.substring(0, managedBegin).trim();
+      String managed = dataString.substring(managedBegin, managedEnd);
+      String post = dataString.substring(managedEnd).trim();
 
       Map<String, Object> unmanagedData = new HashMap<>();
       Map<String, Object> preData = yaml.loadAs(pre, Map.class);
@@ -134,9 +139,6 @@ public class YamlMonarchParser implements MonarchParser {
     private final Map<String, Object> unmanagedData;
     private final String pre;
     private final String post;
-
-    private static final String BEGIN_MONARCH_MANAGED = "# --- Begin managed by monarch";
-    private static final String END_MONARCH_MANAGED = "# --- End managed by monarch";
 
     YamlSourceData(Map<String, Object> data, Map<String, Object> unmanagedData, String pre,
         String post) {

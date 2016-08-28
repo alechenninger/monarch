@@ -43,14 +43,14 @@ class DefaultMonarchParsersTest {
   }
 
   @Test
-  void shouldParseParseableData() {
-    assert parsers.parseData("foo: bar", FileSystems.default) == ['foo': 'bar']
+  void shouldParseParseableMap() {
+    assert parsers.parseMap("foo: bar", FileSystems.default) == ['foo': 'bar']
   }
 
   @Test
-  void shouldParsePathAsData() {
+  void shouldParsePathAsMap() {
     writeFile('/etc/test.yaml', 'foo: bar')
-    assert parsers.parseData('/etc/test.yaml', fs) == ['foo': 'bar']
+    assert parsers.parseMap('/etc/test.yaml', fs) == ['foo': 'bar']
   }
 
   @Test
@@ -77,7 +77,23 @@ foo:
   }
 
   @Test
+  void shouldParsePathToMissingFileAsEmptyMap() {
+    assert parsers.parseMap("/etc/not_a_thing.yaml", fs) == [:]
+  }
+
+  @Test
+  void shouldParseParseableData() {
+    assert parsers.parseData("foo: bar", FileSystems.default).data() == ['foo': 'bar']
+  }
+
+  @Test
+  void shouldParsePathAsData() {
+    writeFile('/etc/test.yaml', 'foo: bar')
+    assert parsers.parseData('/etc/test.yaml', fs).data() == ['foo': 'bar']
+  }
+
+  @Test
   void shouldParsePathToMissingFileAsEmptyData() {
-    assert parsers.parseData("/etc/not_a_thing.yaml", fs) == [:]
+    assert parsers.parseData("/etc/not_a_thing.yaml", fs).data() == [:]
   }
 }

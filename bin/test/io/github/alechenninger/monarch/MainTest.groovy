@@ -83,7 +83,7 @@ global.yaml:
 
   @After
   void printConsole() {
-    System.out.print(getConsole())
+    System.out.print(console)
   }
 
   @Test
@@ -126,7 +126,6 @@ global.yaml:
 ---
   source: teams/myteam/stage.yaml
   set:
-    fizz: baloo
     myapp::favorite_website: http://stage.redhat.com
 ''')
 
@@ -192,7 +191,7 @@ outputDir: /output/
     assert main.run("--help") == 0
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
-    assert getConsole() =~ /usage: monarch.*\{apply/
+    assert console =~ /usage: monarch.*\{apply/
   }
 
   @Test
@@ -200,49 +199,49 @@ outputDir: /output/
     assert main.run("foobar") == 2
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
-    assert getConsole() =~ /usage: monarch.*\{apply/
+    assert console =~ /usage: monarch.*\{apply/
   }
 
   @Test
   void shouldPrintHelpForApplyCommand() {
     assert main.run("apply --help") == 0
-    assert getConsole().contains("usage: monarch apply")
+    assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
     assert main.run("apply --target foo --changes bar --wat") == 2
-    assert getConsole().contains("usage: monarch apply")
+    assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
     assert main.run("apply") == 2
-    assert getConsole().contains("usage: monarch apply")
+    assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForSetCommand() {
     assert main.run("set --help") == 0
-    assert getConsole().contains("usage: monarch set")
+    assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
     main.run("set --source global.yaml foo --changes petstore.yaml")
-    assert getConsole().contains("usage: monarch set")
+    assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
     assert main.run("set") == 2
-    assert getConsole().contains("usage: monarch set")
+    assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldShowVersion() {
     assert main.run("--version") == 0
-    assert getConsole() ==~ /[0-9].[0-9].[0-9]\n/
+    assert console ==~ /[0-9].[0-9].[0-9]\n/
   }
 
   @Test
@@ -267,7 +266,7 @@ outputDir: /output/
 
     main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    assert getConsole() =~ '/etc/changes.yaml'
+    assert console =~ '/etc/changes.yaml'
   }
 
   @Test
@@ -294,7 +293,7 @@ set:
 
     main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    assert getConsole() =~ hierarchyFile
+    assert console =~ hierarchyFile
   }
 
   @Test
