@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -49,7 +50,7 @@ public interface DynamicNode {
     private final Map<String, String> variablesUsed;
 
     public RenderedNode(String path, Map<String, String> variablesUsed) {
-      this.path = path;
+      this.path = Objects.requireNonNull(path);
       this.variablesUsed = Collections.unmodifiableMap(variablesUsed);
     }
 
@@ -59,6 +60,28 @@ public interface DynamicNode {
 
     public Map<String, String> variablesUsed() {
       return variablesUsed;
+    }
+
+    @Override
+    public String toString() {
+      return "RenderedNode{" +
+          "path='" + path + '\'' +
+          ", variablesUsed=" + variablesUsed +
+          '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      RenderedNode that = (RenderedNode) o;
+      return Objects.equals(path, that.path) &&
+          Objects.equals(variablesUsed, that.variablesUsed);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(path, variablesUsed);
     }
   }
 }
