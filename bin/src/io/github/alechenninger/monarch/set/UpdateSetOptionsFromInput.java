@@ -20,7 +20,7 @@ package io.github.alechenninger.monarch.set;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
-import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SourceSpec;
 
 import java.nio.file.FileSystem;
@@ -34,10 +34,10 @@ import java.util.Set;
 
 public class UpdateSetOptionsFromInput implements UpdateSetOptions {
   private final UpdateSetInput input;
-  private final MonarchParsers parsers;
+  private final DataFormats parsers;
   private final FileSystem fileSystem;
 
-  public UpdateSetOptionsFromInput(UpdateSetInput input, MonarchParsers parsers, FileSystem
+  public UpdateSetOptionsFromInput(UpdateSetInput input, DataFormats parsers, FileSystem
       fileSystem) {
     this.input = input;
     this.parsers = parsers;

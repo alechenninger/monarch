@@ -21,9 +21,10 @@ package io.github.alechenninger.monarch.apply;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
-import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -48,16 +49,20 @@ public interface ApplyChangesOptions {
   Optional<Path> dataDir();
   Optional<Path> outputDir();
 
+  default Optional<YamlConfiguration> yamlConfiguration() {
+    return Optional.empty();
+  }
+
   default ApplyChangesOptions fallingBackTo(ApplyChangesOptions fallback) {
     return new OverridableApplyChangesOptions(this, fallback);
   }
 
-  static ApplyChangesOptions fromInput(ApplyChangesInput inputs, FileSystem fileSystem, MonarchParsers parsers) {
+  static ApplyChangesOptions fromInput(ApplyChangesInput inputs, FileSystem fileSystem, DataFormats parsers) {
     return new ApplyChangesOptionsFromInput(inputs, parsers, fileSystem);
   }
 
   static ApplyChangesOptions fromInputAndConfigFiles(ApplyChangesInput input, FileSystem
-      fileSystem, MonarchParsers parsers, Path defaultConfigPath) {
+      fileSystem, DataFormats parsers, Path defaultConfigPath) {
     ApplyChangesOptions options = fromInput(input, fileSystem, parsers);
 
     List<Path> configPaths = input.getConfigPaths()

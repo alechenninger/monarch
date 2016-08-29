@@ -29,7 +29,6 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -42,7 +41,7 @@ class MainTest {
   def yaml = new Yaml(dumperOptions)
   def consolePath = fs.getPath("console")
   def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
-  def parsers = new MonarchParsers.Default(yaml)
+  def parsers = new DataFormats.Default(yaml)
 
   def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
       parsers, consoleCapture)

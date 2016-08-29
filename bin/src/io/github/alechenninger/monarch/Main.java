@@ -50,7 +50,7 @@ public class Main {
   private final Path defaultConfigPath;
   private final FileSystem fileSystem;
   private final Monarch monarch;
-  private final MonarchParsers parsers;
+  private final DataFormats parsers;
   private final Yaml yaml;
   private final PrintStream consoleOut;
   // TODO make this configurable; maybe use a 'real' logger
@@ -59,7 +59,7 @@ public class Main {
   private final MonarchArgParser parser;
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      MonarchParsers parsers, OutputStream consoleOut) {
+      DataFormats parsers, OutputStream consoleOut) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.parsers = parsers;
@@ -293,7 +293,7 @@ public class Main {
         yaml,
         System.getProperty("user.home") + "/.monarch/config.yaml",
         FileSystems.getDefault(),
-        new MonarchParsers.Default(yaml),
+        new DataFormats.Default(yaml),
         System.out)
         .run(args);
 

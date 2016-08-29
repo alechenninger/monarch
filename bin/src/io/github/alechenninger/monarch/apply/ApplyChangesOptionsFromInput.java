@@ -20,7 +20,7 @@ package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
-import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SourceSpec;
 
 import java.nio.file.FileSystem;
@@ -32,10 +32,10 @@ import java.util.Set;
 
 public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
   private final ApplyChangesInput input;
-  private final MonarchParsers parsers;
+  private final DataFormats parsers;
   private final FileSystem fileSystem;
 
-  public ApplyChangesOptionsFromInput(ApplyChangesInput input, MonarchParsers parsers,
+  public ApplyChangesOptionsFromInput(ApplyChangesInput input, DataFormats parsers,
       FileSystem fileSystem) {
     this.input = input;
     this.parsers = parsers;

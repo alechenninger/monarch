@@ -31,7 +31,7 @@ import java.nio.file.*
 import static org.junit.Assert.fail
 
 @RunWith(JUnit4.class)
-class DefaultMonarchParsersTest {
+class DefaultDataFormatsTest {
   def fs = Jimfs.newFileSystem()
   def dumperOptions = new DumperOptions().with {
     defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
@@ -39,7 +39,7 @@ class DefaultMonarchParsersTest {
     return it
   }
   def yaml = new Yaml(dumperOptions)
-  def parsers = new MonarchParsers.Default(yaml)
+  def parsers = new DataFormats.Default(yaml)
 
   void writeFile(Path path, String data, OpenOption... options) {
     def parent = path.getParent()

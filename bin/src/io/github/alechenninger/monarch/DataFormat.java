@@ -20,18 +20,13 @@ package io.github.alechenninger.monarch;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Parses some kind(s) of {@link InputStream} into monarch primitives like {@link Hierarchy} and
- * {@link Change}.
- *
- * <p>For example, the {@link YamlMonarchParser} can parse YAML files. Other parsers capable of
- * parsing other kinds of input streams may exist.
+ * Abstracts a data format that can be used for defining hierarchies, changes, and data sources.
  */
-public interface MonarchParser {
+public interface DataFormat {
   Hierarchy parseHierarchy(InputStream hierarchyInput);
   List<Change> parseChanges(InputStream changesInput);
   Map<String, Object> parseMap(InputStream inputStream);
