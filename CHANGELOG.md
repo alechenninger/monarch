@@ -1,5 +1,12 @@
 # Change Log
 
+## [v0.7.1](https://github.com/alechenninger/monarch/tree/v0.7.1) (2016-10-08)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.7.0...v0.7.1)
+
+**Closed issues:**
+
+- monarch set does not rewrite remove values correctly [\#71](https://github.com/alechenninger/monarch/issues/71)
+
 ## [v0.7.0](https://github.com/alechenninger/monarch/tree/v0.7.0) (2016-10-08)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.6.0...v0.7.0)
 
