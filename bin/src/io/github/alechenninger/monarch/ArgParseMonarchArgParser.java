@@ -292,7 +292,9 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .nargs("+")
           .help("Space delimited paths to files which configures default values for command line "
               + "options. The default config path of ~/.monarch/config.yaml is always checked. " +
-              "Config values read are 'dataDir', 'outputDir', and 'hierarchy'.");
+              "Config values read are 'dataDir', 'outputDir', 'hierarchy', and 'dataFormats'. " +
+              "'dataFormats' has sub values for supported data formats, like 'yaml'. Each data " +
+              "format has its own options. 'yaml' has 'indent' and 'isolate'.");
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
@@ -357,7 +359,8 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "source that would require changing keys not previously managed by monarch. Never " +
               "will cause monarch to always manage the entire source.\n" +
               "\n" +
-              "Defaults to 'always'.");
+              "Defaults to config files (see --config), and if neither are set defaults to '" +
+              YamlConfiguration.DEFAULT.updateIsolation().name().toLowerCase() + "'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
