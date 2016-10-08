@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -61,7 +62,7 @@ class DefaultChange implements Change {
       map.put("set", set);
     }
     if (remove != null && !remove.isEmpty()) {
-      map.put("remove", remove);
+      map.put("remove", new ArrayList<>(remove));
     }
     return Collections.unmodifiableMap(map);
   }

@@ -305,7 +305,7 @@ set:
   }
 
   @Test
-  void shouldCreateNewChangesetIfNoneExists() {
+  void setShouldCreateNewChangesetIfNoneExists() {
     main.run("set", "--changes", "/etc/new.yaml", "--source", "teams/myteam.yaml", "--put", "foo: bar");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/new.yaml")))
@@ -318,7 +318,7 @@ set:
   }
 
   @Test
-  void shouldDoNothingIfEmptyStringPassedToPut() {
+  void setShouldDoNothingIfEmptyStringPassedToPut() {
     writeFile('/etc/changes.yaml', '''
 ---
 source: teams/myteam.yaml
@@ -338,7 +338,7 @@ set:
   }
 
   @Test
-  void shouldCreateChangeByVariables() {
+  void setShouldCreateChangeByVariables() {
     main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops",
         "--put", "app_version: 2");
 
@@ -353,7 +353,7 @@ set:
   }
 
   @Test
-  void shouldUpdateExistingChangeByVariables() {
+  void setShouldUpdateExistingChangeByVariables() {
     writeFile('/etc/changes.yaml', '''
 ---
 source:
@@ -385,7 +385,25 @@ set:
   }
 
   @Test
-  void shouldApplyChangeByVariables() {
+  void setShouldMaintainRemoveKeys() {
+    writeFile('/etc/changes.yaml', '''
+---
+source: foo/bar.yaml
+set:
+  key: value
+remove:
+  - key_to_remove
+''')
+
+    main.run("set", "--change", "/etc/changes.yaml", "--source", "foo/bar.yaml");
+
+    def changes = new String(Files.readAllBytes(fs.getPath("/etc/changes.yaml")), 'UTF-8')
+
+    assert changes =~ /- key_to_remove/
+  }
+
+  @Test
+  void applyShouldApplyChangeByVariables() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
