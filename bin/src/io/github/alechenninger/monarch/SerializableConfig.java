@@ -31,7 +31,7 @@ public class SerializableConfig {
   private Set<String> mergeKeys;
   private String dataDir;
   private String outputDir;
-  private SerializableYamlConfig yamlConfig;
+  private DataFormats dataFormats;
 
   /**
    * @return May be List, String, or Map
@@ -73,16 +73,27 @@ public class SerializableConfig {
     this.outputDir = outputDir;
   }
 
-  /** @see SerializableYamlConfig#toYamlConfiguration()  */
-  public SerializableYamlConfig getYamlConfig() {
-    return yamlConfig;
+  public DataFormats getDataFormats() {
+    return dataFormats;
   }
 
-  public void setYamlConfig(SerializableYamlConfig yamlConfig) {
-    this.yamlConfig = yamlConfig;
+  public void setDataFormats(DataFormats dataFormats) {
+    this.dataFormats = dataFormats;
   }
 
-  public static class SerializableYamlConfig {
+  public static class DataFormats {
+    private Yaml yaml;
+
+    public Yaml getYaml() {
+      return yaml;
+    }
+
+    public void setYaml(Yaml yaml) {
+      this.yaml = yaml;
+    }
+  }
+
+  public static class Yaml {
     private Integer indent;
     private Isolate isolate;
 

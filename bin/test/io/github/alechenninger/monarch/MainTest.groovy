@@ -504,8 +504,9 @@ set:
   @Test
   void applyShouldUseYamlConfigurationFromConfigFile() {
     writeFile('/etc/config.yaml', '''
-yamlConfig:
-  isolate: never
+dataFormats:
+  yaml:
+    isolate: never
 ''')
 
     writeUnmanagedDataSource('global.yaml', '''
@@ -525,5 +526,57 @@ set:
     def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
 
     assert ['key': 'new value'] == yaml.load(globalYaml)
+  }
+
+  @Test
+  void applyShouldAllowConfiguringYamlIsolateToNeverOverCommandLineOverriddingConfig() {
+    writeFile('/etc/config.yaml', '''
+dataFormats:
+  yaml:
+    isolate: always
+''')
+
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'never', '--config', '/etc/config.yaml')
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert ['key': 'new value'] == yaml.load(globalYaml)
+  }
+
+  @Test
+  void applyShouldAllowConfiguringYamlIsolateToAlwaysOverCommandLineOverriddingConfig() {
+    writeFile('/etc/config.yaml', '''
+dataFormats:
+  yaml:
+    isolate: never
+''')
+
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'always', '--config', '/etc/config.yaml')
+
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
   }
 }
