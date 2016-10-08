@@ -46,17 +46,14 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
   private final AppInfo appInfo;
   // TODO proper logger
   private final PrintStream consoleOut;
-  private final YamlConfiguration.Isolate defaultYamlIsolate;
 
   private static final String SUBPARSER_DEST = "subparser";
   private static final String DEFAULT_COMMAND_WARNING = "WARNING: Defaulting to 'apply' command. "
       + "In the future this default will be removed";
 
-  public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut,
-      YamlConfiguration.Isolate defaultYamlIsolate) {
+  public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut) {
     this.appInfo = appInfo;
     this.consoleOut = consoleOut;
-    this.defaultYamlIsolate = defaultYamlIsolate;
   }
 
   @Override
@@ -229,7 +226,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     T getInput(Namespace parsed);
   }
 
-  private final CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
+  private static final CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
     @Override
     public String name() {
       return "apply";
@@ -360,7 +357,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "source that would require changing keys not previously managed by monarch. Never " +
               "will cause monarch to always manage the entire source.\n" +
               "\n" +
-              "Defaults to '" + defaultYamlIsolate + "'.");
+              "Defaults to 'always'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
@@ -427,7 +424,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     }
   };
 
-  private final CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
+  private static final CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
     @Override
     public String name() {
       return "set";

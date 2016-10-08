@@ -70,8 +70,8 @@ public class Main {
         : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
-    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut,
-        defaultYamlIsolate);
+    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut
+    );
   }
 
   public int run(String argsSpaceDelimited) {
