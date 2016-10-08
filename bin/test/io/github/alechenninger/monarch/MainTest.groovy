@@ -19,7 +19,6 @@
 package io.github.alechenninger.monarch
 
 import com.google.common.jimfs.Jimfs
-import io.github.alechenninger.monarch.yaml.YamlConfiguration
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -45,7 +44,7 @@ class MainTest {
   def parsers = new DataFormats.Default(yaml)
 
   def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
-      parsers, consoleCapture, YamlConfiguration.DEFAULT.updateIsolation())
+      parsers, consoleCapture)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"

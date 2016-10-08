@@ -60,8 +60,7 @@ public class Main {
   private final MonarchArgParser parser;
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      DataFormats dataFormats, OutputStream consoleOut,
-      YamlConfiguration.Isolate defaultYamlIsolate) {
+      DataFormats dataFormats, OutputStream consoleOut) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.dataFormats = dataFormats;
@@ -307,7 +306,7 @@ public class Main {
             return Optional.of(YamlConfiguration.DEFAULT);
           }
         }),
-        System.out, YamlConfiguration.DEFAULT.updateIsolation())
+        System.out)
         .run(args);
 
     System.exit(exitCode);
