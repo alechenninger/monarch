@@ -1,5 +1,19 @@
 # Change Log
 
+## [v0.7.0](https://github.com/alechenninger/monarch/tree/v0.7.0) (2016-10-08)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.6.0...v0.7.0)
+
+**Closed issues:**
+
+- Allow configuring yaml dump behavior [\#68](https://github.com/alechenninger/monarch/issues/68)
+- NPE when no potentials found for a variable [\#65](https://github.com/alechenninger/monarch/issues/65)
+- Add ability to restrict modifications to an isolated portion of a yaml file [\#42](https://github.com/alechenninger/monarch/issues/42)
+
+**Merged pull requests:**
+
+- Allow configuring Yaml parser/dumper [\#70](https://github.com/alechenninger/monarch/pull/70) ([alechenninger](https://github.com/alechenninger))
+- Isolated updates [\#64](https://github.com/alechenninger/monarch/pull/64) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.6.0](https://github.com/alechenninger/monarch/tree/v0.6.0) (2016-08-07)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.5.6...v0.6.0)
 
