@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch
 
 import com.google.common.jimfs.Jimfs
+import io.github.alechenninger.monarch.yaml.YamlConfiguration
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -44,7 +45,7 @@ class MainTest {
   def parsers = new DataFormats.Default(yaml)
 
   def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
-      parsers, consoleCapture)
+      parsers, consoleCapture, YamlConfiguration.DEFAULT.updateIsolation())
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -502,6 +503,27 @@ set:
 
   @Test
   void applyShouldUseYamlConfigurationFromConfigFile() {
+    writeFile('/etc/config.yaml', '''
+yamlConfig:
+  isolate: never
+''')
 
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--config', '/etc/config.yaml')
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert ['key': 'new value'] == yaml.load(globalYaml)
   }
 }

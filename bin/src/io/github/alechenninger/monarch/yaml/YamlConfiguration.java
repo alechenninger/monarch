@@ -35,7 +35,7 @@ public interface YamlConfiguration {
     // This involves modifying unmanaged portion while maintaining formatting and whitespace.
     // Not trivial to do.
     //WHEN_POSSIBLE,
-    NEVER
+    NEVER;
   }
 
   /** Extendable for reusable toString */

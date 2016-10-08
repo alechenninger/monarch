@@ -84,7 +84,7 @@ public class SerializableConfig {
 
   public static class SerializableYamlConfig {
     private Integer indent;
-    private YamlConfiguration.Isolate isolate;
+    private Isolate isolate;
 
     public Integer getIndent() {
       return indent;
@@ -94,11 +94,11 @@ public class SerializableConfig {
       this.indent = indent;
     }
 
-    public YamlConfiguration.Isolate getIsolate() {
+    public Isolate getIsolate() {
       return isolate;
     }
 
-    public void setIsolate(YamlConfiguration.Isolate isolate) {
+    public void setIsolate(Isolate isolate) {
       this.isolate = isolate;
     }
 
@@ -110,10 +110,17 @@ public class SerializableConfig {
         }
 
         @Override
-        public Isolate updateIsolation() {
-          return isolate == null ? super.updateIsolation() : isolate;
+        public YamlConfiguration.Isolate updateIsolation() {
+          return isolate == null
+              ? super.updateIsolation()
+              : YamlConfiguration.Isolate.valueOf(isolate.name().toUpperCase());
         }
       };
+    }
+
+    public enum Isolate {
+      always,
+      never
     }
   }
 }

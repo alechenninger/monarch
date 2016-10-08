@@ -60,7 +60,8 @@ public class Main {
   private final MonarchArgParser parser;
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      DataFormats dataFormats, OutputStream consoleOut) {
+      DataFormats dataFormats, OutputStream consoleOut,
+      YamlConfiguration.Isolate defaultYamlIsolate) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.dataFormats = dataFormats;
@@ -69,7 +70,8 @@ public class Main {
         : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
-    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut);
+    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut,
+        defaultYamlIsolate);
   }
 
   public int run(String argsSpaceDelimited) {
@@ -289,7 +291,7 @@ public class Main {
   public static void main(String[] args) throws IOException, ArgumentParserException {
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
-    dumperOptions.setIndent(2);
+    dumperOptions.setIndent(YamlConfiguration.DEFAULT.indent());
     dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 
     Yaml yaml = new Yaml(dumperOptions);
@@ -299,8 +301,13 @@ public class Main {
         yaml,
         System.getProperty("user.home") + "/.monarch/config.yaml",
         FileSystems.getDefault(),
-        new DataFormats.Default(yaml),
-        System.out)
+        new DataFormats.Default(new DataFormatsConfiguration() {
+          @Override
+          public Optional<YamlConfiguration> yamlConfiguration() {
+            return Optional.of(YamlConfiguration.DEFAULT);
+          }
+        }),
+        System.out, YamlConfiguration.DEFAULT.updateIsolation())
         .run(args);
 
     System.exit(exitCode);

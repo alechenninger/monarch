@@ -46,14 +46,17 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
   private final AppInfo appInfo;
   // TODO proper logger
   private final PrintStream consoleOut;
+  private final YamlConfiguration.Isolate defaultYamlIsolate;
 
   private static final String SUBPARSER_DEST = "subparser";
   private static final String DEFAULT_COMMAND_WARNING = "WARNING: Defaulting to 'apply' command. "
       + "In the future this default will be removed";
 
-  public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut) {
+  public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut,
+      YamlConfiguration.Isolate defaultYamlIsolate) {
     this.appInfo = appInfo;
     this.consoleOut = consoleOut;
+    this.defaultYamlIsolate = defaultYamlIsolate;
   }
 
   @Override
@@ -226,7 +229,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     T getInput(Namespace parsed);
   }
 
-  static CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
+  private final CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
     @Override
     public String name() {
       return "apply";
@@ -346,20 +349,18 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               + "either collections or maps. If not provided, will look for an array value in "
               + "config files with key 'outputDir'.");
 
-      String defaultIsolate = YamlConfiguration.DEFAULT.updateIsolation().toString().toLowerCase();
       subparser.addArgument("--yaml-isolate")
           .dest("yaml_isolate")
           .choices(Arrays.stream(YamlConfiguration.Isolate.values())
               .map(i -> i.toString().toLowerCase())
               .collect(Collectors.toList()))
-          .setDefault(defaultIsolate)
           .help("Controls when you want monarch to possibly avoid destructive edits to existing " +
               "YAML data sources with regards to format, ordering, and/or comments outside of " +
               "keys previously created by monarch. Always will cause monarch to abort updating a " +
               "source that would require changing keys not previously managed by monarch. Never " +
               "will cause monarch to always manage the entire source.\n" +
               "\n" +
-              "Defaults to '" + defaultIsolate + "'.");
+              "Defaults to '" + defaultYamlIsolate + "'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
@@ -418,7 +419,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
         @Override
         public Optional<YamlConfiguration.Isolate> getYamlIsolate() {
-          return Optional.of(parsed.getString("yaml_isolate"))
+          return Optional.ofNullable(parsed.getString("yaml_isolate"))
               .map(String::toUpperCase)
               .map(YamlConfiguration.Isolate::valueOf);
         }
@@ -426,7 +427,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     }
   };
 
-  static CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
+  private final CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
     @Override
     public String name() {
       return "set";

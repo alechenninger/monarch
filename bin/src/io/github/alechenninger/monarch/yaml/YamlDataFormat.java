@@ -70,6 +70,7 @@ public class YamlDataFormat implements DataFormat {
   public YamlDataFormat(YamlConfiguration config) {
     Objects.requireNonNull(config);
 
+    // TODO: Allow configuring more stuff maybe
     DumperOptions options = new DumperOptions();
     options.setIndent(config.indent());
     options.setPrettyFlow(true);
