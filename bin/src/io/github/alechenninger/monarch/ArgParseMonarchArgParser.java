@@ -83,7 +83,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
     try {
       List<String> unknownArgs = new ArrayList<>();
-      Namespace parsed = parseArgsDefaultingToApply(parser, args, unknownArgs);
+      Namespace parsed = parseArgs(parser, args, unknownArgs);
       String subparser = parsed.getString(SUBPARSER_DEST);
 
       if (!unknownArgs.isEmpty()) {
@@ -171,48 +171,14 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     }
   }
 
-  private Namespace parseArgsDefaultingToApply(ArgumentParser parser, String[] args,
+  private Namespace parseArgs(ArgumentParser parser, String[] args,
       List<String> unknownArgs) throws
       ArgumentParserException {
     try {
-      Namespace parsed = parser.parseKnownArgs(args, unknownArgs);
-
-      if (!unknownArgs.isEmpty()) {
-        List<String> defaultedArgs = new ArrayList<>(args.length + 1);
-        Collections.addAll(defaultedArgs, args);
-        defaultedArgs.add(0, applySpec.name());
-
-        List<String> secondTryUnknowns = new ArrayList<>(unknownArgs);
-        try {
-          Namespace secondTryParsed = parser.parseKnownArgs(
-              defaultedArgs.stream().toArray(String[]::new), secondTryUnknowns);
-
-          if (secondTryUnknowns.isEmpty()) {
-            consoleOut.println(DEFAULT_COMMAND_WARNING);
-
-            unknownArgs.clear();
-            unknownArgs.addAll(secondTryUnknowns);
-
-            return secondTryParsed;
-          }
-        } catch (ArgumentParserException ignored) {
-          // retry failed, ignore it...
-        }
-      }
-
-      return parsed;
+      return parser.parseKnownArgs(args, unknownArgs);
     } catch (AbortParsingException e) {
       e.subparser.ifPresent(s -> e.attrs.put(SUBPARSER_DEST, s));
       return new Namespace(e.attrs);
-    } catch (UnrecognizedCommandException e) {
-      List<String> defaultedArgs = new ArrayList<>(args.length + 1);
-      Collections.addAll(defaultedArgs, args);
-      defaultedArgs.add(0, applySpec.name());
-      unknownArgs.clear();
-
-      consoleOut.println(DEFAULT_COMMAND_WARNING);
-
-      return parser.parseKnownArgs(defaultedArgs.stream().toArray(String[]::new), unknownArgs);
     }
   }
 

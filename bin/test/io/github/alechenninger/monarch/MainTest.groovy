@@ -98,7 +98,7 @@ global.yaml:
   }
 
   @Test
-  void shouldDefaultToApplyCommand() {
+  void shouldNotDefaultToApplyCommand() {
     writeFile('/etc/changes.yaml', '''
 ---
   source: teams/myteam.yaml
@@ -119,11 +119,8 @@ global.yaml:
 
     main.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
-    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
-    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
-
-    print myteamYaml
-    print stageYaml
+    assert Files.notExists(fs.getPath('/output/teams/myteam.yaml'))
+    assert Files.notExists(fs.getPath('/output/teams/myteam/stage.yaml'))
   }
 
   @Test
@@ -186,7 +183,7 @@ dataDir: /etc/hierarchy/
 outputDir: /output/
 ''')
 
-    main.run("-h ${hierarchyFile} --target teams/myteam.yaml " +
+    main.run("apply -h ${hierarchyFile} --target teams/myteam.yaml " +
         "--config /etc/some_other_config.yaml /etc/and_one_more.yaml -c /etc/changes.yaml")
 
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
