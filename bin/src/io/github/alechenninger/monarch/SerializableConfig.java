@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
+
 import java.util.Set;
 
 /**
@@ -29,6 +31,7 @@ public class SerializableConfig {
   private Set<String> mergeKeys;
   private String dataDir;
   private String outputDir;
+  private SerializableYamlConfig yamlConfig;
 
   /**
    * @return May be List, String, or Map
@@ -68,5 +71,49 @@ public class SerializableConfig {
 
   public void setOutputDir(String outputDir) {
     this.outputDir = outputDir;
+  }
+
+  /** @see SerializableYamlConfig#toYamlConfiguration()  */
+  public SerializableYamlConfig getYamlConfig() {
+    return yamlConfig;
+  }
+
+  public void setYamlConfig(SerializableYamlConfig yamlConfig) {
+    this.yamlConfig = yamlConfig;
+  }
+
+  public static class SerializableYamlConfig {
+    private Integer indent;
+    private YamlConfiguration.Isolate isolate;
+
+    public Integer getIndent() {
+      return indent;
+    }
+
+    public void setIndent(Integer indent) {
+      this.indent = indent;
+    }
+
+    public YamlConfiguration.Isolate getIsolate() {
+      return isolate;
+    }
+
+    public void setIsolate(YamlConfiguration.Isolate isolate) {
+      this.isolate = isolate;
+    }
+
+    public YamlConfiguration toYamlConfiguration() {
+      return new YamlConfiguration.Default() {
+        @Override
+        public int indent() {
+          return indent == null ? super.indent() : indent;
+        }
+
+        @Override
+        public Isolate updateIsolation() {
+          return isolate == null ? super.updateIsolation() : isolate;
+        }
+      };
+    }
   }
 }

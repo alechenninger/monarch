@@ -21,7 +21,9 @@ package io.github.alechenninger.monarch.apply;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.SerializableConfig;
+import io.github.alechenninger.monarch.SerializableConfig.SerializableYamlConfig;
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -67,5 +69,11 @@ public class ApplyChangesOptionsFromSerializableConfig implements ApplyChangesOp
   @Override
   public Optional<Path> outputDir() {
     return Optional.ofNullable(config.getOutputDir()).map(fileSystem::getPath);
+  }
+
+  @Override
+  public Optional<YamlConfiguration> yamlConfiguration() {
+    return Optional.ofNullable(config.getYamlConfig())
+        .map(SerializableYamlConfig::toYamlConfiguration);
   }
 }

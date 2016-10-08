@@ -31,10 +31,10 @@ public interface YamlConfiguration {
 
   enum Isolate {
     ALWAYS,
-    // TODO: Support IF_POSSIBLE
+    // TODO: Support WHEN_POSSIBLE
     // This involves modifying unmanaged portion while maintaining formatting and whitespace.
     // Not trivial to do.
-    //IF_POSSIBLE,
+    //WHEN_POSSIBLE,
     NEVER
   }
 
@@ -42,7 +42,7 @@ public interface YamlConfiguration {
   class Default implements YamlConfiguration {
     @Override
     public String toString() {
-      return "Default{" +
+      return "YamlConfiguration{" +
           "indent=" + indent() +
           ", updateIsolation=" + updateIsolation() +
           '}';

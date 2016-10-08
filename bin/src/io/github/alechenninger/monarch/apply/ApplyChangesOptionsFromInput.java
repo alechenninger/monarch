@@ -22,6 +22,7 @@ import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -68,6 +69,11 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
   @Override
   public Optional<Path> dataDir() {
     return input.getDataDir().map(fileSystem::getPath);
+  }
+
+  @Override
+  public Optional<YamlConfiguration> yamlConfiguration() {
+    return null;
   }
 
   @Override

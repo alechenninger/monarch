@@ -70,7 +70,7 @@ global.yaml:
     sourcePath.parent?.identity Files.&createDirectories
     parsers.forPath(sourcePath)
         .newSourceData()
-        .writeNew(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
+        .writeUpdate(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
   }
 
   void writeDataSources(Map<String, String> sourceToData) {

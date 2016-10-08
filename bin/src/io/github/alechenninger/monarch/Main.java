@@ -192,7 +192,7 @@ public class Main {
 
       try {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        sourceData.writeNew(outData, out);
+        sourceData.writeUpdate(outData, out);
         ensureParentDirectories(outPath);
         Files.write(outPath, out.toByteArray());
       } catch (Exception e) {

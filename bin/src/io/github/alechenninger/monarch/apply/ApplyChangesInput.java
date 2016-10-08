@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,5 +43,7 @@ public interface ApplyChangesInput {
   boolean isHelpRequested();
 
   String getHelpMessage();
+
+  Optional<YamlConfiguration.Isolate> getYamlIsolate();
 
 }

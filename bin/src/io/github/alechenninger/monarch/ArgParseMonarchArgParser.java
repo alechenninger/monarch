@@ -20,6 +20,7 @@ package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Argument;
@@ -34,6 +35,7 @@ import net.sourceforge.argparse4j.internal.UnrecognizedCommandException;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -344,6 +346,21 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               + "either collections or maps. If not provided, will look for an array value in "
               + "config files with key 'outputDir'.");
 
+      String defaultIsolate = YamlConfiguration.DEFAULT.updateIsolation().toString().toLowerCase();
+      subparser.addArgument("--yaml-isolate")
+          .dest("yaml_isolate")
+          .choices(Arrays.stream(YamlConfiguration.Isolate.values())
+              .map(i -> i.toString().toLowerCase())
+              .collect(Collectors.toList()))
+          .setDefault(defaultIsolate)
+          .help("Controls when you want monarch to possibly avoid destructive edits to existing " +
+              "YAML data sources with regards to format, ordering, and/or comments outside of " +
+              "keys previously created by monarch. Always will cause monarch to abort updating a " +
+              "source that would require changing keys not previously managed by monarch. Never " +
+              "will cause monarch to always manage the entire source.\n" +
+              "\n" +
+              "Defaults to '" + defaultIsolate + "'.");
+
       return parsed -> new ApplyChangesInput() {
         @Override
         public Optional<String> getHierarchyPathOrYaml() {
@@ -397,6 +414,12 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         @Override
         public String getHelpMessage() {
           return subparser.formatHelp();
+        }
+
+        @Override
+        public Optional<YamlConfiguration.Isolate> getYamlIsolate() {
+          return Optional.of(parsed.getString("yaml_isolate"))
+              .map(YamlConfiguration.Isolate::valueOf);
         }
       };
     }

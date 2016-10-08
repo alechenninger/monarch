@@ -122,7 +122,7 @@ existing: 123
     writeFile(sourcePath, existingData)
 
     parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-        .writeNew(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
 
     def newData = CharStreams.toString(Files.newBufferedReader(sourcePath))
 
@@ -145,10 +145,10 @@ existing: 123
     writeFile(sourcePath, existingData)
 
     parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-        .writeNew(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew(
+        .writeUpdate(
             ['existing': 123, 'new': 'from monarch w/ <3', 'additional': 456],
             Files.newOutputStream(sourcePath))
 
@@ -175,7 +175,7 @@ existing: 123
 
     try {
       parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-          .writeNew(['existing': 456], Files.newOutputStream(sourcePath))
+          .writeUpdate(['existing': 456], Files.newOutputStream(sourcePath))
       fail("Expected exception")
     } catch (Exception expected) {}
 
@@ -196,7 +196,7 @@ existing: 123
 
     try {
       parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-          .writeNew([:], Files.newOutputStream(sourcePath))
+          .writeUpdate([:], Files.newOutputStream(sourcePath))
       fail("Expected exception")
     } catch (Exception expected) {}
 
@@ -209,7 +209,7 @@ existing: 123
     def sourcePath = fs.getPath('/source.yaml')
 
     parsers.forPath(sourcePath).newSourceData()
-        .writeNew(['new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
 
     assert ['new': 'from monarch w/ <3'] == yaml.load(Files.newBufferedReader(sourcePath))
   }
@@ -219,10 +219,10 @@ existing: 123
     def sourcePath = fs.getPath('/source.yaml')
 
     parsers.forPath(sourcePath).newSourceData()
-        .writeNew(['managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew(['managed': 'monarch is my favorite'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['managed': 'monarch is my favorite'], Files.newOutputStream(sourcePath))
 
     assert ['managed': 'monarch is my favorite'] == yaml.load(Files.newBufferedReader(sourcePath))
   }
@@ -232,10 +232,10 @@ existing: 123
     def sourcePath = fs.getPath('/source.yaml')
 
     parsers.forPath(sourcePath).newSourceData()
-        .writeNew(['managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew([:], Files.newOutputStream(sourcePath))
+        .writeUpdate([:], Files.newOutputStream(sourcePath))
 
     assert [:] == (yaml.load(Files.newBufferedReader(sourcePath)) ?: [:])
   }
@@ -252,10 +252,10 @@ existing: 123
     writeFile(sourcePath, existingData)
 
     parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-        .writeNew(['existing': 123, 'managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['existing': 123, 'managed': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew(
+        .writeUpdate(
         ['existing': 123, 'managed': 'monarch is my favorite'],
         Files.newOutputStream(sourcePath))
 
@@ -280,10 +280,10 @@ existing: 123
     writeFile(sourcePath, existingData)
 
     parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-        .writeNew(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['existing': 123, 'new': 'from monarch w/ <3'], Files.newOutputStream(sourcePath))
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew(
+        .writeUpdate(
         ['existing': 123],
         Files.newOutputStream(sourcePath))
 
@@ -310,14 +310,14 @@ post:  true'''
     writeFile(sourcePath, preData)
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew(
+        .writeUpdate(
             ['existing': 123, 'managed': 'from monarch w/ <3', 'post': true],
             Files.newOutputStream(sourcePath))
     writeFile(sourcePath, postData, StandardOpenOption.WRITE, StandardOpenOption.APPEND)
 
     parsers.forPath(sourcePath)
         .parseData(Files.newInputStream(sourcePath))
-        .writeNew(
+        .writeUpdate(
             ['existing': 123, 'managed': 'monarch is my favorite', 'post': true],
             Files.newOutputStream(sourcePath))
 
@@ -337,12 +337,12 @@ post:  true'''
     def sourcePath = fs.getPath('/source.yaml')
 
     parsers.forPath(sourcePath).newSourceData()
-        .writeNew(['key': 'value'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['key': 'value'], Files.newOutputStream(sourcePath))
 
     writeFile(sourcePath, '\n# test\nkey: value', StandardOpenOption.WRITE, StandardOpenOption.APPEND)
 
     parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-        .writeNew(['key': 'value'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['key': 'value'], Files.newOutputStream(sourcePath))
 
     def written = CharStreams.toString(Files.newBufferedReader(sourcePath))
 
@@ -356,13 +356,13 @@ post:  true'''
     def sourcePath = fs.getPath('/source.yaml')
 
     parsers.forPath(sourcePath).newSourceData()
-        .writeNew(['key': 'value'], Files.newOutputStream(sourcePath))
+        .writeUpdate(['key': 'value'], Files.newOutputStream(sourcePath))
 
     writeFile(sourcePath, '\n# test\nkey: value', StandardOpenOption.WRITE, StandardOpenOption.APPEND)
 
     try {
       parsers.forPath(sourcePath).parseData(Files.newInputStream(sourcePath))
-          .writeNew(['key': 'new'], Files.newOutputStream(sourcePath))
+          .writeUpdate(['key': 'new'], Files.newOutputStream(sourcePath))
       fail("Expected exception")
     } catch (Exception expected) {}
 

@@ -35,12 +35,12 @@ public interface SourceData {
   }
 
   /**
-   * Outputs {@code newData} to {@code out} in the same data format as the source.
+   * Outputs {@code update} to {@code out} in the same data format as the source.
    *
    * <p>Some implementations may use the original source to influence the output, such as by
    * maintaining comments, formatting, or style, etc.
    *
    * <p>Closes {@code out} when done.
    */
-  void writeNew(Map<String, Object> newData, OutputStream out) throws IOException;
+  void writeUpdate(Map<String, Object> update, OutputStream out) throws IOException;
 }

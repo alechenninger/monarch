@@ -189,16 +189,16 @@ public class YamlDataFormat implements DataFormat {
     }
 
     @Override
-    public void writeNew(Map<String, Object> update, OutputStream out) throws IOException {
-      String newYaml = updateStrategy.getNewYaml(pre, post, managed, unmanaged, update);
+    public void writeUpdate(Map<String, Object> update, OutputStream out) throws IOException {
+      String updateYaml = updateStrategy.getUpdate(this, update);
 
-      if (newYaml.trim().isEmpty() && managed.isEmpty() && unmanaged.isEmpty()) {
+      if (updateYaml.trim().isEmpty() && managed.isEmpty() && unmanaged.isEmpty()) {
         out.close();
         return;
       }
 
       try (OutputStreamWriter writer = new OutputStreamWriter(out, Charset.forName("UTF-8"))) {
-        writer.write(newYaml);
+        writer.write(updateYaml);
         writer.flush();
       }
     }
@@ -217,8 +217,8 @@ public class YamlDataFormat implements DataFormat {
       }
     }
 
-    String getNewYaml(String pre, String post, Map<String, Object> managed,
-        Map<String, Object> unmanaged, Map<String, Object> update);
+    /** @return YAML string of updated source data */
+    String getUpdate(YamlSourceData data, Map<String, Object> update);
   }
 
   static class AlwaysIsolateUpdates implements UpdateStrategy {
@@ -229,13 +229,12 @@ public class YamlDataFormat implements DataFormat {
     }
 
     @Override
-    public String getNewYaml(String pre, String post, Map<String, Object> managed,
-        Map<String, Object> unmanaged, Map<String, Object> update) {
-      MapDifference<String, Object> unmanagedVsUpdate = Maps.difference(unmanaged, update);
+    public String getUpdate(YamlSourceData data, Map<String, Object> update) {
+      MapDifference<String, Object> unmanagedVsUpdate = Maps.difference(data.unmanaged, update);
       Sets.SetView<String> unmanagedDifferingKeys =
-          Sets.intersection(unmanaged.keySet(), unmanagedVsUpdate.entriesDiffering().keySet());
+          Sets.intersection(data.unmanaged.keySet(), unmanagedVsUpdate.entriesDiffering().keySet());
       Sets.SetView<String> unmanagedRemovedKeys =
-          Sets.intersection(unmanaged.keySet(), unmanagedVsUpdate.entriesOnlyOnLeft().keySet());
+          Sets.intersection(data.unmanaged.keySet(), unmanagedVsUpdate.entriesOnlyOnLeft().keySet());
 
       if (!unmanagedDifferingKeys.isEmpty() || !unmanagedRemovedKeys.isEmpty()) {
         throw new MonarchException("Update would modify unmanaged region(s) of the data " +
@@ -246,11 +245,11 @@ public class YamlDataFormat implements DataFormat {
       SortedMap<String, Object> newManaged = new TreeMap<>(unmanagedVsUpdate.entriesOnlyOnRight());
       List<String> parts = new ArrayList<>(5);
 
-      if (!pre.isEmpty()) {
-        parts.add(pre + '\n');
+      if (!data.pre.isEmpty()) {
+        parts.add(data.pre + '\n');
       }
 
-      if (!newManaged.isEmpty() || !managed.isEmpty()) {
+      if (!newManaged.isEmpty() || !data.managed.isEmpty()) {
         parts.add(BEGIN_MONARCH_MANAGED);
         if (!newManaged.isEmpty()) {
           parts.add(yaml.dump(newManaged).trim());
@@ -258,8 +257,8 @@ public class YamlDataFormat implements DataFormat {
         parts.add(END_MONARCH_MANAGED + '\n');
       }
 
-      if (!post.isEmpty()) {
-        parts.add(post);
+      if (!data.post.isEmpty()) {
+        parts.add(data.post);
       }
 
       return Joiner.on('\n').join(parts);
@@ -274,8 +273,7 @@ public class YamlDataFormat implements DataFormat {
     }
 
     @Override
-    public String getNewYaml(String pre, String post, Map<String, Object> managed,
-        Map<String, Object> unmanaged, Map<String, Object> update) {
+    public String getUpdate(YamlSourceData data, Map<String, Object> update) {
       return BEGIN_MONARCH_MANAGED + '\n' +
           (update.isEmpty() ? "" : yaml.dump(update).trim() + '\n') +
           END_MONARCH_MANAGED;

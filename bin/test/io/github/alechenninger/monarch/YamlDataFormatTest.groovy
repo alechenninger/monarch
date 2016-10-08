@@ -55,7 +55,7 @@ class YamlDataFormatTest {
       def sourcePath = fs.getPath('/source.yaml')
       Files.write(sourcePath, 'unmanaged: 123'.bytes)
       parser.parseData(Files.newInputStream(sourcePath))
-          .writeNew(['unmanaged': 456], Files.newOutputStream(sourcePath))
+          .writeUpdate(['unmanaged': 456], Files.newOutputStream(sourcePath))
       def updated = new String(Files.readAllBytes(sourcePath))
       assert 1 == updated.count('unmanaged')
       assert ['unmanaged': 456] == yaml.load(updated)
