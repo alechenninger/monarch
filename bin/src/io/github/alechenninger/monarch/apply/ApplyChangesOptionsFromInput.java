@@ -73,7 +73,12 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
 
   @Override
   public Optional<YamlConfiguration> yamlConfiguration() {
-    return null;
+    return input.getYamlIsolate().map(i -> new YamlConfiguration.Default() {
+      @Override
+      public Isolate updateIsolation() {
+        return i;
+      }
+    });
   }
 
   @Override

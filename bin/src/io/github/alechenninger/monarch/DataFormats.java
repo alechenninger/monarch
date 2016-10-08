@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import io.github.alechenninger.monarch.yaml.YamlDataFormat;
 import org.yaml.snakeyaml.Yaml;
 
@@ -32,6 +33,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Represents both a collection of known {@link DataFormat}s by capability, and a strategy for
@@ -39,6 +41,12 @@ import java.util.Map;
  */
 public interface DataFormats {
   DataFormat yaml();
+
+  /**
+   * @return New {@code DataFormats} using the supplied configuration. The current object is not
+   * reconfigured.
+   */
+  DataFormats withConfiguration(DataFormatsConfiguration config);
 
   default DataFormat forPath(Path path) {
     String fileName = path.getFileName().toString();
@@ -199,19 +207,36 @@ public interface DataFormats {
   }
 
   class Default implements DataFormats {
+    private final DataFormatsConfiguration config;
     private final Yaml yaml;
 
     public Default() {
       this(new Yaml());
     }
 
+    public Default(DataFormatsConfiguration config) {
+      this.config = config;
+      this.yaml = new Yaml();
+    }
+
     public Default(Yaml yaml) {
       this.yaml = yaml;
+      this.config = new DataFormatsConfiguration() {
+        @Override
+        public Optional<YamlConfiguration> yamlConfiguration() {
+          return Optional.empty();
+        }
+      };
     }
 
     @Override
     public DataFormat yaml() {
-      return new YamlDataFormat(yaml);
+      return config.yamlConfiguration().map(YamlDataFormat::new).orElse(new YamlDataFormat(yaml));
+    }
+
+    @Override
+    public DataFormats withConfiguration(DataFormatsConfiguration config) {
+      return new Default(config);
     }
   }
 }

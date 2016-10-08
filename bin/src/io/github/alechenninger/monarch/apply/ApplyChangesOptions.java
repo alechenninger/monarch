@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.DataFormatsConfiguration;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.DataFormats;
@@ -49,6 +50,15 @@ public interface ApplyChangesOptions {
   Optional<Path> dataDir();
   Optional<Path> outputDir();
 
+  default Optional<DataFormatsConfiguration> dataFormatsConfiguration() {
+    return Optional.of(new DataFormatsConfiguration() {
+      @Override
+      public Optional<YamlConfiguration> yamlConfiguration() {
+        return ApplyChangesOptions.this.yamlConfiguration();
+      }
+    });
+  }
+
   default Optional<YamlConfiguration> yamlConfiguration() {
     return Optional.empty();
   }
@@ -62,8 +72,8 @@ public interface ApplyChangesOptions {
   }
 
   static ApplyChangesOptions fromInputAndConfigFiles(ApplyChangesInput input, FileSystem
-      fileSystem, DataFormats parsers, Path defaultConfigPath) {
-    ApplyChangesOptions options = fromInput(input, fileSystem, parsers);
+      fileSystem, DataFormats dataFormats, Path defaultConfigPath) {
+    ApplyChangesOptions options = fromInput(input, fileSystem, dataFormats);
 
     List<Path> configPaths = input.getConfigPaths()
         .stream()

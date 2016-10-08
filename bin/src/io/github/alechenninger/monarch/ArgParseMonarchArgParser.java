@@ -419,6 +419,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         @Override
         public Optional<YamlConfiguration.Isolate> getYamlIsolate() {
           return Optional.of(parsed.getString("yaml_isolate"))
+              .map(String::toUpperCase)
               .map(YamlConfiguration.Isolate::valueOf);
         }
       };

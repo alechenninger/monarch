@@ -73,6 +73,12 @@ global.yaml:
         .writeUpdate(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
   }
 
+  void writeUnmanagedDataSource(String source, String data) {
+    def sourcePath = fs.getPath(dataDir, source);
+    sourcePath.parent?.identity Files.&createDirectories
+    Files.write(sourcePath, data.getBytes('UTF-8'))
+  }
+
   void writeDataSources(Map<String, String> sourceToData) {
     sourceToData.each { key, value -> writeDataSource(key, value)}
   }
@@ -471,5 +477,31 @@ set:
   @Ignore("TODO: test this")
   void applyShouldNotWriteAnythingIfWriteFailed() {
     // need to have a test Parsers implementation that just fails to write all the time
+  }
+
+  @Test
+  void applyShouldAllowConfiguringYamlIsolateToNeverOverCommandLine() {
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'never')
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert ['key': 'new value'] == yaml.load(globalYaml)
+  }
+
+  @Test
+  void applyShouldUseYamlConfigurationFromConfigFile() {
+
   }
 }
