@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
+
 import java.util.Set;
 
 /**
@@ -29,6 +31,7 @@ public class SerializableConfig {
   private Set<String> mergeKeys;
   private String dataDir;
   private String outputDir;
+  private DataFormats dataFormats;
 
   /**
    * @return May be List, String, or Map
@@ -68,5 +71,67 @@ public class SerializableConfig {
 
   public void setOutputDir(String outputDir) {
     this.outputDir = outputDir;
+  }
+
+  public DataFormats getDataFormats() {
+    return dataFormats;
+  }
+
+  public void setDataFormats(DataFormats dataFormats) {
+    this.dataFormats = dataFormats;
+  }
+
+  public static class DataFormats {
+    private Yaml yaml;
+
+    public Yaml getYaml() {
+      return yaml;
+    }
+
+    public void setYaml(Yaml yaml) {
+      this.yaml = yaml;
+    }
+  }
+
+  public static class Yaml {
+    private Integer indent;
+    private Isolate isolate;
+
+    public Integer getIndent() {
+      return indent;
+    }
+
+    public void setIndent(Integer indent) {
+      this.indent = indent;
+    }
+
+    public Isolate getIsolate() {
+      return isolate;
+    }
+
+    public void setIsolate(Isolate isolate) {
+      this.isolate = isolate;
+    }
+
+    public YamlConfiguration toYamlConfiguration() {
+      return new YamlConfiguration.Default() {
+        @Override
+        public int indent() {
+          return indent == null ? super.indent() : indent;
+        }
+
+        @Override
+        public YamlConfiguration.Isolate updateIsolation() {
+          return isolate == null
+              ? super.updateIsolation()
+              : YamlConfiguration.Isolate.valueOf(isolate.name().toUpperCase());
+        }
+      };
+    }
+
+    public enum Isolate {
+      always,
+      never
+    }
   }
 }

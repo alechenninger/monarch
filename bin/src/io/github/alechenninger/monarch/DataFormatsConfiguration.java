@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2016  Alec Henninger
+ * Copyright (C) 2016 Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,23 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch
+package io.github.alechenninger.monarch;
 
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
-import org.yaml.snakeyaml.Yaml
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
-@RunWith(JUnit4.class)
-class YamlMonarchParserTest {
-  def parser = new YamlMonarchParser(new Yaml())
+import java.util.Optional;
 
-  @Test
-  void shouldTolerateEmptyYamlDocumentsWhenParseChangeset() {
-    def changesetInput = new ByteArrayInputStream('\n---\n'.getBytes("UTF-8"))
-
-    Iterable<Change> parsed = parser.parseChanges(changesetInput)
-
-    assert parsed.iterator().hasNext() == false
-  }
+public interface DataFormatsConfiguration {
+  Optional<YamlConfiguration> yamlConfiguration();
 }

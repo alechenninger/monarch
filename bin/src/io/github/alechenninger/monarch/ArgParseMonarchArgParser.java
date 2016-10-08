@@ -20,6 +20,7 @@ package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.Argument;
@@ -34,6 +35,7 @@ import net.sourceforge.argparse4j.internal.UnrecognizedCommandException;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -224,7 +226,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
     T getInput(Namespace parsed);
   }
 
-  static CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
+  private static final CommandSpec<ApplyChangesInput> applySpec = new CommandSpec<ApplyChangesInput>() {
     @Override
     public String name() {
       return "apply";
@@ -290,7 +292,9 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .nargs("+")
           .help("Space delimited paths to files which configures default values for command line "
               + "options. The default config path of ~/.monarch/config.yaml is always checked. " +
-              "Config values read are 'dataDir', 'outputDir', and 'hierarchy'.");
+              "Config values read are 'dataDir', 'outputDir', 'hierarchy', and 'dataFormats'. " +
+              "'dataFormats' has sub values for supported data formats, like 'yaml'. Each data " +
+              "format has its own options. 'yaml' has 'indent' and 'isolate'.");
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
@@ -343,6 +347,20 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               + "all of their ancestor's and merge them together, provided they are like types of "
               + "either collections or maps. If not provided, will look for an array value in "
               + "config files with key 'outputDir'.");
+
+      subparser.addArgument("--yaml-isolate")
+          .dest("yaml_isolate")
+          .choices(Arrays.stream(YamlConfiguration.Isolate.values())
+              .map(i -> i.toString().toLowerCase())
+              .collect(Collectors.toList()))
+          .help("Controls when you want monarch to possibly avoid destructive edits to existing " +
+              "YAML data sources with regards to format, ordering, and/or comments outside of " +
+              "keys previously created by monarch. Always will cause monarch to abort updating a " +
+              "source that would require changing keys not previously managed by monarch. Never " +
+              "will cause monarch to always manage the entire source.\n" +
+              "\n" +
+              "Defaults to config files (see --config), and if neither are set defaults to '" +
+              YamlConfiguration.DEFAULT.updateIsolation().name().toLowerCase() + "'.");
 
       return parsed -> new ApplyChangesInput() {
         @Override
@@ -398,11 +416,18 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         public String getHelpMessage() {
           return subparser.formatHelp();
         }
+
+        @Override
+        public Optional<YamlConfiguration.Isolate> getYamlIsolate() {
+          return Optional.ofNullable(parsed.getString("yaml_isolate"))
+              .map(String::toUpperCase)
+              .map(YamlConfiguration.Isolate::valueOf);
+        }
       };
     }
   };
 
-  static CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
+  private static final CommandSpec<UpdateSetInput> updateSetSpec = new CommandSpec<UpdateSetInput>() {
     @Override
     public String name() {
       return "set";

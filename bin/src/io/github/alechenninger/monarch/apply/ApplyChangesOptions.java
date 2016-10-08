@@ -19,11 +19,13 @@
 package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.DataFormatsConfiguration;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
-import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -48,17 +50,30 @@ public interface ApplyChangesOptions {
   Optional<Path> dataDir();
   Optional<Path> outputDir();
 
+  default Optional<DataFormatsConfiguration> dataFormatsConfiguration() {
+    return Optional.of(new DataFormatsConfiguration() {
+      @Override
+      public Optional<YamlConfiguration> yamlConfiguration() {
+        return ApplyChangesOptions.this.yamlConfiguration();
+      }
+    });
+  }
+
+  default Optional<YamlConfiguration> yamlConfiguration() {
+    return Optional.empty();
+  }
+
   default ApplyChangesOptions fallingBackTo(ApplyChangesOptions fallback) {
     return new OverridableApplyChangesOptions(this, fallback);
   }
 
-  static ApplyChangesOptions fromInput(ApplyChangesInput inputs, FileSystem fileSystem, MonarchParsers parsers) {
+  static ApplyChangesOptions fromInput(ApplyChangesInput inputs, FileSystem fileSystem, DataFormats parsers) {
     return new ApplyChangesOptionsFromInput(inputs, parsers, fileSystem);
   }
 
   static ApplyChangesOptions fromInputAndConfigFiles(ApplyChangesInput input, FileSystem
-      fileSystem, MonarchParsers parsers, Path defaultConfigPath) {
-    ApplyChangesOptions options = fromInput(input, fileSystem, parsers);
+      fileSystem, DataFormats dataFormats, Path defaultConfigPath) {
+    ApplyChangesOptions options = fromInput(input, fileSystem, dataFormats);
 
     List<Path> configPaths = input.getConfigPaths()
         .stream()

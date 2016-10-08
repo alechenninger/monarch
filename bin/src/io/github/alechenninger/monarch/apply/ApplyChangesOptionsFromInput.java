@@ -20,8 +20,9 @@ package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
-import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -32,10 +33,10 @@ import java.util.Set;
 
 public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
   private final ApplyChangesInput input;
-  private final MonarchParsers parsers;
+  private final DataFormats parsers;
   private final FileSystem fileSystem;
 
-  public ApplyChangesOptionsFromInput(ApplyChangesInput input, MonarchParsers parsers,
+  public ApplyChangesOptionsFromInput(ApplyChangesInput input, DataFormats parsers,
       FileSystem fileSystem) {
     this.input = input;
     this.parsers = parsers;
@@ -68,6 +69,16 @@ public class ApplyChangesOptionsFromInput implements ApplyChangesOptions {
   @Override
   public Optional<Path> dataDir() {
     return input.getDataDir().map(fileSystem::getPath);
+  }
+
+  @Override
+  public Optional<YamlConfiguration> yamlConfiguration() {
+    return input.getYamlIsolate().map(i -> new YamlConfiguration.Default() {
+      @Override
+      public Isolate updateIsolation() {
+        return i;
+      }
+    });
   }
 
   @Override

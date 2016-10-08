@@ -21,7 +21,7 @@ package io.github.alechenninger.monarch.set;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
-import io.github.alechenninger.monarch.MonarchParsers;
+import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
 import org.yaml.snakeyaml.Yaml;
@@ -51,12 +51,12 @@ public interface UpdateSetOptions {
   }
 
   static UpdateSetOptions fromInput(UpdateSetInput input, FileSystem fileSystem,
-      MonarchParsers parsers) {
+      DataFormats parsers) {
     return new UpdateSetOptionsFromInput(input, parsers, fileSystem);
   }
 
   static UpdateSetOptions fromInputAndConfigFiles(UpdateSetInput input,
-      FileSystem fileSystem, MonarchParsers parsers, Path defaultConfigPath) {
+      FileSystem fileSystem, DataFormats parsers, Path defaultConfigPath) {
     UpdateSetOptions options = fromInput(input, fileSystem, parsers);
 
     List<Path> configPaths = input.getConfigPaths()

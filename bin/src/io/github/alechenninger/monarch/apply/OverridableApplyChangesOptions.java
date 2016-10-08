@@ -19,9 +19,11 @@
 package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.DataFormatsConfiguration;
 import io.github.alechenninger.monarch.SourceSpec;
 import io.github.alechenninger.monarch.util.ConcatIterable;
 import io.github.alechenninger.monarch.Hierarchy;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -70,6 +72,11 @@ public class OverridableApplyChangesOptions implements ApplyChangesOptions {
   @Override
   public Optional<Path> outputDir() {
     return overridden(ApplyChangesOptions::outputDir);
+  }
+
+  @Override
+  public Optional<YamlConfiguration> yamlConfiguration() {
+    return overridden(ApplyChangesOptions::yamlConfiguration);
   }
 
   private <T> Optional<T> overridden(Function<ApplyChangesOptions, Optional<T>> input) {

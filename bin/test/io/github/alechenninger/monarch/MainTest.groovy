@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch
 
 import com.google.common.jimfs.Jimfs
+import io.github.alechenninger.monarch.yaml.YamlConfiguration
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -29,7 +30,6 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -42,10 +42,10 @@ class MainTest {
   def yaml = new Yaml(dumperOptions)
   def consolePath = fs.getPath("console")
   def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
-  def parsers = new MonarchParsers.Default(yaml)
+  def parsers = new DataFormats.Default(yaml)
 
   def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
-      parsers, consoleCapture)
+      parsers, consoleCapture, YamlConfiguration.DEFAULT.updateIsolation())
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -71,7 +71,13 @@ global.yaml:
     sourcePath.parent?.identity Files.&createDirectories
     parsers.forPath(sourcePath)
         .newSourceData()
-        .writeNew(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
+        .writeUpdate(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
+  }
+
+  void writeUnmanagedDataSource(String source, String data) {
+    def sourcePath = fs.getPath(dataDir, source);
+    sourcePath.parent?.identity Files.&createDirectories
+    Files.write(sourcePath, data.getBytes('UTF-8'))
   }
 
   void writeDataSources(Map<String, String> sourceToData) {
@@ -472,5 +478,105 @@ set:
   @Ignore("TODO: test this")
   void applyShouldNotWriteAnythingIfWriteFailed() {
     // need to have a test Parsers implementation that just fails to write all the time
+  }
+
+  @Test
+  void applyShouldAllowConfiguringYamlIsolateToNeverOverCommandLine() {
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'never')
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert ['key': 'new value'] == yaml.load(globalYaml)
+  }
+
+  @Test
+  void applyShouldUseYamlConfigurationFromConfigFile() {
+    writeFile('/etc/config.yaml', '''
+dataFormats:
+  yaml:
+    isolate: never
+''')
+
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--config', '/etc/config.yaml')
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert ['key': 'new value'] == yaml.load(globalYaml)
+  }
+
+  @Test
+  void applyShouldAllowConfiguringYamlIsolateToNeverOverCommandLineOverriddingConfig() {
+    writeFile('/etc/config.yaml', '''
+dataFormats:
+  yaml:
+    isolate: always
+''')
+
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'never', '--config', '/etc/config.yaml')
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+
+    assert ['key': 'new value'] == yaml.load(globalYaml)
+  }
+
+  @Test
+  void applyShouldAllowConfiguringYamlIsolateToAlwaysOverCommandLineOverriddingConfig() {
+    writeFile('/etc/config.yaml', '''
+dataFormats:
+  yaml:
+    isolate: never
+''')
+
+    writeUnmanagedDataSource('global.yaml', '''
+key: value
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+        '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'always', '--config', '/etc/config.yaml')
+
+    assert Files.notExists(fs.getPath('/output/global.yaml'))
   }
 }

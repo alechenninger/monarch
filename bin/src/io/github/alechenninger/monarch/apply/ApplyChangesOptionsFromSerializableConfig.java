@@ -22,13 +22,13 @@ import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ApplyChangesOptionsFromSerializableConfig implements ApplyChangesOptions {
   private final SerializableConfig config;
@@ -67,5 +67,12 @@ public class ApplyChangesOptionsFromSerializableConfig implements ApplyChangesOp
   @Override
   public Optional<Path> outputDir() {
     return Optional.ofNullable(config.getOutputDir()).map(fileSystem::getPath);
+  }
+
+  @Override
+  public Optional<YamlConfiguration> yamlConfiguration() {
+    return Optional.ofNullable(config.getDataFormats())
+        .map(SerializableConfig.DataFormats::getYaml)
+        .map(SerializableConfig.Yaml::toYamlConfiguration);
   }
 }

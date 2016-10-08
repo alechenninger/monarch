@@ -18,6 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
+import io.github.alechenninger.monarch.yaml.YamlDataFormat;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.ByteArrayInputStream;
@@ -31,15 +33,22 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * Represents both a collection of known {@link MonarchParser}s by capability, and a strategy for
+ * Represents both a collection of known {@link DataFormat}s by capability, and a strategy for
  * determining which parser to use given a {@link Path} or file extension, etc.
  */
-public interface MonarchParsers {
-  MonarchParser yaml();
+public interface DataFormats {
+  DataFormat yaml();
 
-  default MonarchParser forPath(Path path) {
+  /**
+   * @return New {@code DataFormats} using the supplied configuration. The current object is not
+   * reconfigured.
+   */
+  DataFormats withConfiguration(DataFormatsConfiguration config);
+
+  default DataFormat forPath(Path path) {
     String fileName = path.getFileName().toString();
 
     int extensionIndex = fileName.lastIndexOf('.');
@@ -52,7 +61,7 @@ public interface MonarchParsers {
     return forExtension(extension);
   }
 
-  default MonarchParser forExtension(String extension) {
+  default DataFormat forExtension(String extension) {
     switch (extension.toLowerCase()) {
       case "yml":
       case "yaml": return yaml();
@@ -64,7 +73,7 @@ public interface MonarchParsers {
   default Hierarchy parseHierarchy(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
-      MonarchParser parser = forPath(path);
+      DataFormat parser = forPath(path);
 
       try {
         return parser.parseHierarchy(Files.newInputStream(path));
@@ -93,7 +102,7 @@ public interface MonarchParsers {
   default List<Change> parseChanges(String pathOrParseable, FileSystem fileSystem) {
     try {
       Path path = fileSystem.getPath(pathOrParseable);
-      MonarchParser parser = forPath(path);
+      DataFormat parser = forPath(path);
 
       if (Files.notExists(path)) {
         return Collections.emptyList();
@@ -197,20 +206,37 @@ public interface MonarchParsers {
     return data;
   }
 
-  class Default implements MonarchParsers {
+  class Default implements DataFormats {
+    private final DataFormatsConfiguration config;
     private final Yaml yaml;
 
     public Default() {
       this(new Yaml());
     }
 
+    public Default(DataFormatsConfiguration config) {
+      this.config = config;
+      this.yaml = new Yaml();
+    }
+
     public Default(Yaml yaml) {
       this.yaml = yaml;
+      this.config = new DataFormatsConfiguration() {
+        @Override
+        public Optional<YamlConfiguration> yamlConfiguration() {
+          return Optional.empty();
+        }
+      };
     }
 
     @Override
-    public MonarchParser yaml() {
-      return new YamlMonarchParser(yaml);
+    public DataFormat yaml() {
+      return config.yamlConfiguration().map(YamlDataFormat::new).orElse(new YamlDataFormat(yaml));
+    }
+
+    @Override
+    public DataFormats withConfiguration(DataFormatsConfiguration config) {
+      return new Default(config);
     }
   }
 }

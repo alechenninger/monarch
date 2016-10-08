@@ -22,6 +22,7 @@ import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.apply.ApplyChangesOptions;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
+import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -50,7 +51,7 @@ public class Main {
   private final Path defaultConfigPath;
   private final FileSystem fileSystem;
   private final Monarch monarch;
-  private final MonarchParsers parsers;
+  private final DataFormats dataFormats;
   private final Yaml yaml;
   private final PrintStream consoleOut;
   // TODO make this configurable; maybe use a 'real' logger
@@ -59,16 +60,18 @@ public class Main {
   private final MonarchArgParser parser;
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      MonarchParsers parsers, OutputStream consoleOut) {
+      DataFormats dataFormats, OutputStream consoleOut,
+      YamlConfiguration.Isolate defaultYamlIsolate) {
     this.monarch = monarch;
     this.yaml = yaml;
-    this.parsers = parsers;
+    this.dataFormats = dataFormats;
     this.consoleOut = consoleOut instanceof PrintStream
         ? (PrintStream) consoleOut
         : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
-    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut);
+    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut
+    );
   }
 
   public int run(String argsSpaceDelimited) {
@@ -103,7 +106,7 @@ public class Main {
 
       try {
         UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
-            fileSystem, parsers, defaultConfigPath);
+            fileSystem, dataFormats, defaultConfigPath);
 
         SourceSpec source = options.source()
             .orElseThrow(missingOptionException("source"));
@@ -128,7 +131,11 @@ public class Main {
 
       try {
         ApplyChangesOptions options = ApplyChangesOptions.fromInputAndConfigFiles(
-            applyChangesInput, fileSystem, parsers, defaultConfigPath);
+            applyChangesInput, fileSystem, dataFormats, defaultConfigPath);
+
+        DataFormats configuredFormats = options.dataFormatsConfiguration()
+            .map(dataFormats::withConfiguration)
+            .orElse(dataFormats);
 
         Path outputDir = options.outputDir()
             .orElseThrow(missingOptionException("output directory"));
@@ -140,7 +147,7 @@ public class Main {
             .orElseThrow(missingOptionException("target"));
 
         Map<String, SourceData> currentData =
-            parsers.parseDataSourcesInHierarchy(dataDir, hierarchy);
+            configuredFormats.parseDataSourcesInHierarchy(dataDir, hierarchy);
         Source target = hierarchy.sourceFor(targetSpec).orElseThrow(
             () -> new IllegalArgumentException("Target source not found in hierarchy: " + targetSpec));
 
@@ -159,7 +166,8 @@ public class Main {
   private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
       Map<String, SourceData> currentSources, Source target) throws IOException {
     if (!changes.iterator().hasNext()) {
-      consoleOut.println("No changes provided; formatting target.");
+      consoleOut.println("No changes provided. Still writing sources at and under target to " +
+          outputDir);
     }
 
     List<String> affectedSources = target.descendants().stream()
@@ -184,7 +192,7 @@ public class Main {
       Map<String, Object> outData = pathToData.getValue();
       SourceData sourceData = currentSources.containsKey(path)
           ? currentSources.get(path)
-          : parsers.forPath(outPath).newSourceData();
+          : dataFormats.forPath(outPath).newSourceData();
 
       if (sourceData.isEmpty() && outData.isEmpty()) {
         continue;
@@ -192,7 +200,7 @@ public class Main {
 
       try {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        sourceData.writeNew(outData, out);
+        sourceData.writeUpdate(outData, out);
         ensureParentDirectories(outPath);
         Files.write(outPath, out.toByteArray());
       } catch (Exception e) {
@@ -283,7 +291,7 @@ public class Main {
   public static void main(String[] args) throws IOException, ArgumentParserException {
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
-    dumperOptions.setIndent(2);
+    dumperOptions.setIndent(YamlConfiguration.DEFAULT.indent());
     dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 
     Yaml yaml = new Yaml(dumperOptions);
@@ -293,8 +301,13 @@ public class Main {
         yaml,
         System.getProperty("user.home") + "/.monarch/config.yaml",
         FileSystems.getDefault(),
-        new MonarchParsers.Default(yaml),
-        System.out)
+        new DataFormats.Default(new DataFormatsConfiguration() {
+          @Override
+          public Optional<YamlConfiguration> yamlConfiguration() {
+            return Optional.of(YamlConfiguration.DEFAULT);
+          }
+        }),
+        System.out, YamlConfiguration.DEFAULT.updateIsolation())
         .run(args);
 
     System.exit(exitCode);

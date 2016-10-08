@@ -16,31 +16,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.yaml;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Map;
+public interface YamlConfiguration {
+  YamlConfiguration DEFAULT = new Default();
 
-public interface SourceData {
-
-  Map<String, Object> data();
-  
-  default boolean isEmpty() {
-    return data().isEmpty();
+  default int indent() {
+    return 2;
   }
 
-  default boolean isNotEmpty() {
-    return !isEmpty();
+  default Isolate updateIsolation() {
+    return Isolate.ALWAYS;
   }
 
-  /**
-   * Outputs {@code update} to {@code out} in the same data format as the source.
-   *
-   * <p>Some implementations may use the original source to influence the output, such as by
-   * maintaining comments, formatting, or style, etc.
-   *
-   * <p>Closes {@code out} when done.
-   */
-  void writeUpdate(Map<String, Object> update, OutputStream out) throws IOException;
+  enum Isolate {
+    ALWAYS,
+    // TODO: Support WHEN_POSSIBLE
+    // This involves modifying unmanaged portion while maintaining formatting and whitespace.
+    // Not trivial to do.
+    //WHEN_POSSIBLE,
+    NEVER;
+  }
+
+  /** Extendable for reusable toString */
+  class Default implements YamlConfiguration {
+    @Override
+    public String toString() {
+      return "YamlConfiguration{" +
+          "indent=" + indent() +
+          ", updateIsolation=" + updateIsolation() +
+          '}';
+    }
+  }
 }
+
