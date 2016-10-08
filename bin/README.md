@@ -1,3 +1,4 @@
+
 ```
 usage: monarch [-?] [--version] {apply,set} ...
 
@@ -11,10 +12,8 @@ commands:
   If none chosen, defaults to 'apply'
 
   {apply,set}            Pass --help to a command for more information.
-    apply                Applies a changeset to  a  target  data source and
-                         its descendants.
-    set                  Add or remove  key  value  pairs  to  set within a
-                         change.
+    apply                Applies changes to a target data source and its descendants.
+    set                  Add or remove key value pairs to set within a change.
 
 https://github.com/alechenninger/monarch
 ```
@@ -23,6 +22,7 @@ https://github.com/alechenninger/monarch
 usage: monarch apply [-?] --changes CHANGES --target TARGET [TARGET ...]
                [--configs CONFIG [CONFIG ...]] [--hierarchy HIERARCHY] [--data-dir DATA_DIR]
                [--output-dir OUTPUT_DIR] [--merge-keys MERGE_KEY [MERGE_KEY ...]]
+               [--yaml-isolate {always,never}]
 
 Applies changes to a target data source and its descendants.
 
@@ -70,7 +70,9 @@ optional arguments:
                          Space delimited paths to  files  which  configures  default values for
                          command line options. The  default  config  path of ~/.monarch/config.
                          yaml  is  always   checked.   Config   values   read   are  'dataDir',
-                         'outputDir', and 'hierarchy'.
+                         'outputDir', 'hierarchy',  and  'dataFormats'.  'dataFormats'  has sub
+                         values for supported data formats,  like  'yaml'. Each data format has
+                         its own options. 'yaml' has 'indent' and 'isolate'.
   --hierarchy HIERARCHY, -h HIERARCHY
                          Path to a yaml file describing  the  source hierarchy, relative to the
                          data directory (see data-dir option).  If  not provided, will look for
@@ -115,6 +117,16 @@ optional arguments:
                          merge  them  together,  provided  they   are   like  types  of  either
                          collections or maps. If not provided, will  look for an array value in
                          config files with key 'outputDir'.
+  --yaml-isolate {always,never}
+                         Controls when you want monarch to  possibly avoid destructive edits to
+                         existing YAML data sources  with  regards  to format, ordering, and/or
+                         comments outside of keys  previously  created  by monarch. Always will
+                         cause monarch to abort updating  a  source that would require changing
+                         keys not previously managed by  monarch.  Never  will cause monarch to
+                         always manage the entire source.
+                         
+                         Defaults to config  files  (see  --config),  and  if  neither  are set
+                         defaults to 'always'.
 ```
 
 ```
