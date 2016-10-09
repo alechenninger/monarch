@@ -6,24 +6,6 @@ import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
 class DynamicHierarchyTest {
-//  def hierarchy = new DynamicHierarchy(
-//      DynamicNode.fromInterpolated([
-//          "common",
-//          "%{os}",
-//          "environment/%{environment}",
-//          "teams/%{team}/%{environment}",
-//          "teams/%{team}/%{environment}/%{app}",
-//          "nodes/%{hostname}",
-//      ]),
-//      [
-//          "hostname": [Potential.of("foo.com"), Potential.of("bar.com")],
-//          "team": [Potential.of("teamA"), Potential.of("teamB")],
-//          "environment": [Potential.of("qa"), Potential.of("prod")],
-//          "app": [Potential.of("store"), Potential.of("blog")],
-//          "os": [Potential.of("rhel")],
-//      ]
-//  )
-
   def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
 sources:
   - common
@@ -37,9 +19,11 @@ potentials:
     foo.com:
       team: teamA
       environment: prod
+      os: rhel
     bar.com:
   team:
-  - teamA
+  - teamA:
+      app: store
   - teamB
   environment:
   - qa
@@ -66,9 +50,7 @@ potentials:
         "teams/teamB/qa/store",
         "teams/teamA/prod/store",
         "teams/teamB/prod/store",
-        "teams/teamA/qa/blog",
         "teams/teamB/qa/blog",
-        "teams/teamA/prod/blog",
         "teams/teamB/prod/blog",
         "nodes/foo.com",
         "nodes/bar.com",
@@ -105,8 +87,8 @@ potentials:
   // Question of: is potentials expected to be comprehensive WRT when a variable may be potentially
   // absent or not? I'm thinking if it's not absent, then you should supply the variable.
   void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
-    assert hierarchy.sourceFor(["hostname": "foo.com"]).get()
-        .lineage().collect { it.path() } == ["nodes/foo.com", "common"]
+    assert hierarchy.sourceFor(["hostname": "bar.com"]).get()
+        .lineage().collect { it.path() } == ["nodes/bar.com", "common"]
   }
 
   @Test
@@ -134,7 +116,6 @@ potentials:
         "teams/teamB/qa",
         "teams/teamA/qa/store",
         "teams/teamB/qa/store",
-        "teams/teamA/qa/blog",
         "teams/teamB/qa/blog",
     ]
   }
@@ -173,5 +154,17 @@ potentials:
 
     assert hierarchy.sourceFor(["bar": "baz"]).get()
         .descendants().collect { it.path() } == ["baz", "bar/baz"]
+  }
+
+  @Test
+  void shouldUseImpliedValuesForHierarchy() {
+    assert hierarchy.sourceFor(['hostname': 'foo.com']).get().lineage().collect { it.path() } == [
+        "nodes/foo.com",
+        "teams/teamA/prod/store",
+        "teams/teamA/prod",
+        "environment/prod",
+        "rhel",
+        "common",
+    ]
   }
 }

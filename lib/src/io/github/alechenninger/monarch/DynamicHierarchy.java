@@ -1,11 +1,14 @@
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -87,13 +90,42 @@ public class DynamicHierarchy implements Hierarchy {
 
     private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
         Map<String, List<Potential>> potentials, int index) {
-      this.variables = variables;
+      Map<String, String> variablesPlusImplied = new HashMap<>(variables);
+      Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
+
+      while (!varsToExamine.isEmpty()) {
+        String var = varsToExamine.poll();
+        for (Potential potential : potentials.get(var)) {
+          if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
+            continue;
+          }
+
+          for (Map.Entry<String, String> implied : potential.getImpliedValues().entrySet()) {
+            String impliedKey = implied.getKey();
+            String impliedValue = implied.getValue();
+
+            if (variablesPlusImplied.containsKey(impliedKey)) {
+              String currentValue = variablesPlusImplied.get(impliedKey);
+              if (!Objects.equals(currentValue, impliedValue)) {
+                throw new IllegalStateException("Conflicting implied values for variable. " +
+                    "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
+                    "conflicts with '" + currentValue + "'");
+              }
+            } else {
+              variablesPlusImplied.put(impliedKey, impliedValue);
+              varsToExamine.add(impliedKey);
+            }
+          }
+        }
+      }
+
+      this.variables = variablesPlusImplied;
       this.sources = sources;
       this.potentials = potentials;
       this.index = index;
 
       DynamicNode dynamicNode = sources.get(index);
-      List<DynamicNode.RenderedNode> renders = dynamicNode.render(variables, potentials);
+      List<DynamicNode.RenderedNode> renders = dynamicNode.render(this.variables, potentials);
 
       if (renders.size() != 1) {
         throw new IllegalArgumentException("Expected source with all variables provided to " +

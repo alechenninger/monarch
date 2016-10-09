@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -89,4 +90,33 @@ public class InterpolatedDynamicNode implements DynamicNode {
     return interpolator;
   }
 
+  @Override
+  public String toString() {
+    return "InterpolatedDynamicNode{" +
+        "expression='" + expression + '\'' +
+        ", variableOpening='" + variableOpening + '\'' +
+        ", variableClosing='" + variableClosing + '\'' +
+        ", escapeCharacter=" + escapeCharacter +
+        ", variableNames=" + variableNames +
+        ", riables=" + variables() +
+        '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    InterpolatedDynamicNode that = (InterpolatedDynamicNode) o;
+    return Objects.equals(expression, that.expression) &&
+        Objects.equals(variableOpening, that.variableOpening) &&
+        Objects.equals(variableClosing, that.variableClosing) &&
+        Objects.equals(escapeCharacter, that.escapeCharacter) &&
+        Objects.equals(variableNames, that.variableNames);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(expression, variableOpening, variableClosing, escapeCharacter,
+        variableNames);
+  }
 }

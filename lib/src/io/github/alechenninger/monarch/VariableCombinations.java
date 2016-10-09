@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,21 +34,33 @@ class VariableCombinations {
   static Stream<Map<String, String>> stream(List<String> variableNames,
       Map<String, String> variables, Map<String, List<Potential>> potentials) {
     Map<String, String> variablesPlusImplied = new HashMap<>(variables);
-    variables.keySet().forEach(key ->
-        potentials.get(key).forEach(potential ->
-          potential.getImpliedValues().forEach((impliedKey, impliedValue) -> {
-            if (variablesPlusImplied.containsKey(impliedKey)) {
-              String currentValue = variablesPlusImplied.get(impliedKey);
-              if (!Objects.equals(currentValue, impliedValue)) {
-                throw new IllegalStateException("Conflicting implied values for variable. " +
-                    "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
-                    "conflicts with '" + currentValue + "'");
-              }
-            } else {
-              variablesPlusImplied.put(impliedKey, impliedValue);
+    Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
+
+    while (!varsToExamine.isEmpty()) {
+      String var = varsToExamine.poll();
+      for (Potential potential : potentials.get(var)) {
+        if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
+          continue;
+        }
+
+        for (Map.Entry<String, String> implied : potential.getImpliedValues().entrySet()) {
+          String impliedKey = implied.getKey();
+          String impliedValue = implied.getValue();
+
+          if (variablesPlusImplied.containsKey(impliedKey)) {
+            String currentValue = variablesPlusImplied.get(impliedKey);
+            if (!Objects.equals(currentValue, impliedValue)) {
+              throw new IllegalStateException("Conflicting implied values for variable. " +
+                  "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
+                  "conflicts with '" + currentValue + "'");
             }
-          })
-        ));
+          } else {
+            variablesPlusImplied.put(impliedKey, impliedValue);
+            varsToExamine.add(impliedKey);
+          }
+        }
+      }
+    }
 
     Map<String, String> usedVars = variablesPlusImplied.entrySet().stream()
         .filter(entry -> variableNames.contains(entry.getKey()))
@@ -56,7 +70,7 @@ class VariableCombinations {
         .filter(var -> !usedVars.keySet().contains(var))
         .collect(Collectors.toList());
 
-    VariableCombinations combos = new VariableCombinations(usedVars);
+    VariableCombinations combos = new VariableCombinations(usedVars, potentials);
 
     for (String missingVar : missingVars) {
       List<Potential> potentialsForVar = potentials.get(missingVar);
@@ -75,18 +89,60 @@ class VariableCombinations {
   }
 
   private final List<Map<String, String>> combos = new ArrayList<>();
+  private final Map<String, List<Potential>> potentials;
 
-  private VariableCombinations(Map<String, String> variablesProvided) {
+  private VariableCombinations(Map<String, String> variablesProvided,
+      Map<String, List<Potential>> potentials) {
+    this.potentials = potentials;
+
     combos.add(new HashMap<>(variablesProvided));
   }
 
   private void put(String variable, String value) {
     List<Map<String, String>> newCombos = new ArrayList<>();
-    for (Map<String, String> combo : combos) {
+    combos: for (Map<String, String> combo : combos) {
+      if (potentials.containsKey(variable)) {
+        for (Potential potential : potentials.get(variable)) {
+          if (!potential.getValue().equals(value)) {
+            continue;
+          }
+
+          for (Map.Entry<String, String> implied : potential.getImpliedValues().entrySet()) {
+            String impliedKey = implied.getKey();
+            String impliedValue = implied.getValue();
+            if (combo.containsKey(impliedKey)) {
+              String currentValue = combo.get(impliedKey);
+              if (!Objects.equals(currentValue, impliedValue)) {
+                throw new IllegalStateException("Conflicting implied values for variable. " +
+                    "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
+                    "conflicts with '" + currentValue + "'");
+              }
+            } else {
+              combo.put(impliedKey, impliedValue);
+            }
+          }
+        }
+      }
+
       if (combo.containsKey(variable)) {
-        Map<String, String> newCombo = new HashMap<>(combo);
-        newCombo.put(variable, value);
-        newCombos.add(newCombo);
+        // Is it already implied in this combo?
+        for (Map.Entry<String, String> comboEntry : combo.entrySet()) {
+          for (Potential potential : potentials.get(comboEntry.getKey())) {
+            if (!potential.getValue().equals(comboEntry.getValue())) {
+              continue;
+            }
+
+            if (potential.getImpliedValues().containsKey(variable)) {
+              continue combos;
+            }
+          }
+        }
+
+        if (!Objects.equals(combo.get(variable), value)) {
+          Map<String, String> newCombo = new HashMap<>(combo);
+          newCombo.put(variable, value);
+          newCombos.add(newCombo);
+        }
       } else {
         combo.put(variable, value);
       }
