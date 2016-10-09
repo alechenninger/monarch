@@ -18,15 +18,11 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Queue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,33 +30,6 @@ class VariableCombinations {
   static Stream<Map<String, String>> stream(List<String> variableNames,
       Map<String, String> variables, Map<String, List<Potential>> potentials) {
     Map<String, String> variablesPlusImplied = new HashMap<>(variables);
-    Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
-
-    while (!varsToExamine.isEmpty()) {
-      String var = varsToExamine.poll();
-      for (Potential potential : potentials.get(var)) {
-        if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
-          continue;
-        }
-
-        for (Map.Entry<String, String> implied : potential.getImpliedValues().entrySet()) {
-          String impliedKey = implied.getKey();
-          String impliedValue = implied.getValue();
-
-          if (variablesPlusImplied.containsKey(impliedKey)) {
-            String currentValue = variablesPlusImplied.get(impliedKey);
-            if (!Objects.equals(currentValue, impliedValue)) {
-              throw new IllegalStateException("Conflicting implied values for variable. " +
-                  "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
-                  "conflicts with '" + currentValue + "'");
-            }
-          } else {
-            variablesPlusImplied.put(impliedKey, impliedValue);
-            varsToExamine.add(impliedKey);
-          }
-        }
-      }
-    }
 
     Map<String, String> usedVars = variablesPlusImplied.entrySet().stream()
         .filter(entry -> variableNames.contains(entry.getKey()))

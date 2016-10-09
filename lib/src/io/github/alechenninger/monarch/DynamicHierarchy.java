@@ -90,6 +90,7 @@ public class DynamicHierarchy implements Hierarchy {
 
     private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
         Map<String, List<Potential>> potentials, int index) {
+      // TODO: lazily do some of this work or move it elsewhere?
       Map<String, String> variablesPlusImplied = new HashMap<>(variables);
       Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
 
@@ -181,5 +182,4 @@ public class DynamicHierarchy implements Hierarchy {
           .orElse(false);
     }
   }
-
 }

@@ -1,6 +1,5 @@
 package io.github.alechenninger.monarch;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,9 @@ public interface Hierarchy {
 
                           if (potentialToImplications.size() > 1) {
                             throw new IllegalArgumentException("Expected 1 key for potential " +
-                                "with implied values.");
+                                "with implied values. You probably need to correct your YAML " +
+                                "indentation. Keys found were: " +
+                                potentialToImplications.keySet());
                           }
 
                           Map.Entry<String, Object> potentialAndImplications =

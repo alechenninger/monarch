@@ -1,5 +1,3 @@
-import io.github.alechenninger.monarch.DynamicHierarchy
-import io.github.alechenninger.monarch.DynamicNode
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Potential
 import org.junit.Test
@@ -16,11 +14,11 @@ sources:
   - nodes/%{hostname}
 potentials:
   hostname:
-    foo.com:
-      team: teamA
-      environment: prod
-      os: rhel
-    bar.com:
+    - foo.com:
+        team: teamA
+        environment: prod
+        os: rhel
+    - bar.com
   team:
   - teamA:
       app: store
