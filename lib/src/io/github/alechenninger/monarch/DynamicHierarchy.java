@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 // environment=qa in ancestry.
 public class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> sources;
-  private final Map<String, List<String>> potentials;
+  private final Map<String, List<Potential>> potentials;
 
   /**
    *
@@ -23,7 +23,7 @@ public class DynamicHierarchy implements Hierarchy {
    * @param potentials For each variable, a List of known possible values. When a variable is found
    *                   but not supplied, all possible values are used if needed.
    */
-  public DynamicHierarchy(List<DynamicNode> sources, Map<String, List<String>> potentials) {
+  public DynamicHierarchy(List<DynamicNode> sources, Map<String, List<Potential>> potentials) {
     this.sources = sources;
     this.potentials = potentials;
   }
@@ -81,12 +81,12 @@ public class DynamicHierarchy implements Hierarchy {
   private static class RenderedSource extends AbstractSource {
     private final Map<String, String> variables;
     private final List<DynamicNode> sources;
-    private final Map<String, List<String>> potentials;
+    private final Map<String, List<Potential>> potentials;
     private final int index;
     private final DynamicNode.RenderedNode rendered;
 
     private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
-        Map<String, List<String>> potentials, int index) {
+        Map<String, List<Potential>> potentials, int index) {
       this.variables = variables;
       this.sources = sources;
       this.potentials = potentials;

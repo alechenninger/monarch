@@ -1,10 +1,12 @@
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public interface Hierarchy {
 
@@ -18,9 +20,67 @@ public interface Hierarchy {
       if (map.containsKey("sources")) {
         if ((map.size() == 2 && map.containsKey("potentials")) || map.size() == 1) {
           List<String> sources = (List<String>) map.get("sources");
-          Map<String, List<String>> potentials = Optional
-              .ofNullable((Map<String, List<String>>) map.get("potentials"))
-              .orElse(Collections.emptyMap());
+          Map<String, List<Potential>> potentials = Optional
+              .ofNullable((Map<String, Object>) map.get("potentials"))
+              .orElse(Collections.emptyMap())
+              .entrySet()
+              .stream()
+              .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+                Object value = entry.getValue();
+                if (value instanceof List) {
+                  return ((List<Object>) value).stream()
+                      .map(potentialForKey -> {
+                        if (potentialForKey instanceof String) {
+                          return new Potential((String) potentialForKey);
+                        }
+
+                        if (potentialForKey instanceof Map) {
+                          Map<String, Object> potentialToImplications = (Map) potentialForKey;
+
+                          if (potentialToImplications.size() > 1) {
+                            throw new IllegalArgumentException("Expected 1 key for potential " +
+                                "with implied values.");
+                          }
+
+                          Map.Entry<String, Object> potentialAndImplications =
+                              potentialToImplications.entrySet().iterator().next();
+                          Object implications = potentialAndImplications.getValue();
+
+                          if (implications instanceof Map) {
+                            return new Potential(
+                                potentialAndImplications.getKey(),
+                                (Map<String, String>) implications);
+                          }
+
+                          if (implications == null) {
+                            return new Potential(potentialAndImplications.getKey());
+                          }
+
+                          throw new IllegalArgumentException("Expected implications to be a map");
+                        }
+
+                        throw new IllegalArgumentException("Expected potential to be either a string or map");
+                      })
+                      .collect(Collectors.toList());
+                }
+
+                if (value instanceof Map) {
+                  return ((Map<String, Object>) value).entrySet().stream()
+                      .map(valueEntry -> {
+                        String potentialKey = valueEntry.getKey();
+                        Map<String, String> implicationsForPotential = (Map) valueEntry.getValue();
+                        if (implicationsForPotential == null) {
+                          return new Potential(potentialKey);
+                        }
+
+                        return new Potential(potentialKey, implicationsForPotential);
+                      })
+                      .collect(Collectors.toList());
+                }
+
+                throw new IllegalArgumentException("Expected potentials to be either a list or a map.");
+              }));
+
 
           return fromDynamicSourceExpressions(sources, potentials);
         }
@@ -37,12 +97,12 @@ public interface Hierarchy {
   }
 
   static DynamicHierarchy fromDynamicSources(List<DynamicNode> sources,
-      Map<String, List<String>> potentials) {
+      Map<String, List<Potential>> potentials) {
     return new DynamicHierarchy(sources, potentials);
   }
 
   static DynamicHierarchy fromDynamicSourceExpressions(List<String> sourceExpressions,
-      Map<String, List<String>> potentials) {
+      Map<String, List<Potential>> potentials) {
     return fromDynamicSources(DynamicNode.fromInterpolated(sourceExpressions), potentials);
   }
 

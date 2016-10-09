@@ -34,10 +34,10 @@ public interface DynamicNode {
 
   List<String> variables();
 
-  List<RenderedNode> render(Map<String, String> variables, Map<String, List<String>> potentials);
+  List<RenderedNode> render(Map<String, String> variables, Map<String, List<Potential>> potentials);
 
   default Optional<Map<String, String>> variablesFor(String source,
-      Map<String, List<String>> potentials, Map<String, String> variables) {
+      Map<String, List<Potential>> potentials, Map<String, String> variables) {
     return render(variables, potentials).stream()
         .filter(s -> s.path().equals(source))
         .map(RenderedNode::variablesUsed)

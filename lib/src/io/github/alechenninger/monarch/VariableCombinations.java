@@ -23,14 +23,32 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class VariableCombinations {
   static Stream<Map<String, String>> stream(List<String> variableNames,
-      Map<String, String> variables, Map<String, List<String>> potentials) {
-    Map<String, String> usedVars = variables.entrySet().stream()
+      Map<String, String> variables, Map<String, List<Potential>> potentials) {
+    Map<String, String> variablesPlusImplied = new HashMap<>(variables);
+    variables.keySet().forEach(key ->
+        potentials.get(key).forEach(potential ->
+          potential.getImpliedValues().forEach((impliedKey, impliedValue) -> {
+            if (variablesPlusImplied.containsKey(impliedKey)) {
+              String currentValue = variablesPlusImplied.get(impliedKey);
+              if (!Objects.equals(currentValue, impliedValue)) {
+                throw new IllegalStateException("Conflicting implied values for variable. " +
+                    "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
+                    "conflicts with '" + currentValue + "'");
+              }
+            } else {
+              variablesPlusImplied.put(impliedKey, impliedValue);
+            }
+          })
+        ));
+
+    Map<String, String> usedVars = variablesPlusImplied.entrySet().stream()
         .filter(entry -> variableNames.contains(entry.getKey()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
@@ -41,9 +59,15 @@ class VariableCombinations {
     VariableCombinations combos = new VariableCombinations(usedVars);
 
     for (String missingVar : missingVars) {
-      for (String potential :
-          Optional.ofNullable(potentials.get(missingVar)).orElse(Collections.emptyList())) {
-        combos.put(missingVar, potential);
+      List<Potential> potentialsForVar = potentials.get(missingVar);
+
+      if (potentialsForVar == null || potentialsForVar.isEmpty()) {
+        throw new IllegalStateException("No potentials found for missing variable '" +
+            missingVar + "'.");
+      }
+
+      for (Potential potential : potentialsForVar) {
+        combos.put(missingVar, potential.getValue());
       }
     }
 

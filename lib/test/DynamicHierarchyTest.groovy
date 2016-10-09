@@ -1,26 +1,55 @@
 import io.github.alechenninger.monarch.DynamicHierarchy
 import io.github.alechenninger.monarch.DynamicNode
 import io.github.alechenninger.monarch.Hierarchy
+import io.github.alechenninger.monarch.Potential
 import org.junit.Test
+import org.yaml.snakeyaml.Yaml
 
 class DynamicHierarchyTest {
-  def hierarchy = new DynamicHierarchy(
-      DynamicNode.fromInterpolated([
-          "common",
-          "%{os}",
-          "environment/%{environment}",
-          "teams/%{team}/%{environment}",
-          "teams/%{team}/%{environment}/%{app}",
-          "nodes/%{hostname}",
-      ]),
-      [
-          "hostname": ["foo.com", "bar.com"],
-          "team": ["teamA", "teamB"],
-          "environment": ["qa", "prod"],
-          "app": ["store", "blog"],
-          "os": ["rhel"],
-      ]
-  )
+//  def hierarchy = new DynamicHierarchy(
+//      DynamicNode.fromInterpolated([
+//          "common",
+//          "%{os}",
+//          "environment/%{environment}",
+//          "teams/%{team}/%{environment}",
+//          "teams/%{team}/%{environment}/%{app}",
+//          "nodes/%{hostname}",
+//      ]),
+//      [
+//          "hostname": [Potential.of("foo.com"), Potential.of("bar.com")],
+//          "team": [Potential.of("teamA"), Potential.of("teamB")],
+//          "environment": [Potential.of("qa"), Potential.of("prod")],
+//          "app": [Potential.of("store"), Potential.of("blog")],
+//          "os": [Potential.of("rhel")],
+//      ]
+//  )
+
+  def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - common
+  - "%{os}"
+  - environment/%{environment}
+  - teams/%{team}/%{environment}
+  - teams/%{team}/%{environment}/%{app}
+  - nodes/%{hostname}
+potentials:
+  hostname:
+    foo.com:
+      team: teamA
+      environment: prod
+    bar.com:
+  team:
+  - teamA
+  - teamB
+  environment:
+  - qa
+  - prod
+  app:
+  - store
+  - blog
+  os:
+  - rhel
+'''))
 
   @Test
   void shouldCalculateDescendantsFromPotentialValues() {
@@ -122,8 +151,8 @@ class DynamicHierarchyTest {
         "foo/%{foo}",
         "bar/%{bar}",
     ], [
-        "foo": ["baz"],
-        "bar": ["baz"],
+        "foo": [Potential.of("baz")],
+        "bar": [Potential.of("baz")],
     ])
 
     assert hierarchy.sourceFor("baz") == Optional.empty()
@@ -138,8 +167,8 @@ class DynamicHierarchyTest {
         "constant",
         "bar/%{bar}",
     ], [
-        "foo": ["baz"],
-        "bar": ["baz"],
+        "foo": [Potential.of("baz")],
+        "bar": [Potential.of("baz")],
     ])
 
     assert hierarchy.sourceFor(["bar": "baz"]).get()

@@ -65,7 +65,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
 
   @Override
   public List<RenderedNode> render(Map<String, String> variables,
-      Map<String, List<String>> potentials) {
+      Map<String, List<Potential>> potentials) {
     return VariableCombinations.stream(variableNames, variables, potentials)
         .map(combination -> {
           Map<String, String> variablesUsed = new HashMap<>();
