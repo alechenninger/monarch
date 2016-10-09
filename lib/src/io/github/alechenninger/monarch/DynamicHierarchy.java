@@ -42,11 +42,12 @@ public class DynamicHierarchy implements Hierarchy {
 
     for (int i = 0; i < sources.size(); i++) {
       DynamicNode source = sources.get(i);
-      List<String> sourceParameters = source.variables();
+      List<String> sourceVariables = source.variables();
 
-      if (sourceParameters.containsAll(variableKeys) &&
-          variableKeys.containsAll(sourceParameters)) {
-        return Optional.of(new RenderedSource(variables, sources, potentials, i));
+      if (sourceVariables.containsAll(variableKeys) &&
+          variableKeys.containsAll(sourceVariables)) {
+        Map<String, String> variablesPlusImplied = withImpliedVariables(variables);
+        return Optional.of(new RenderedSource(variablesPlusImplied, sources, potentials, i));
       }
     }
 
@@ -69,7 +70,8 @@ public class DynamicHierarchy implements Hierarchy {
 
   private Optional<Map<String, String>> variablesFor(String source) {
     List<Map<String, String>> satisfyingVars = sources.stream()
-        .flatMap(s -> s.variablesFor(source, potentials, Collections.emptyMap()).map(Stream::of).orElse(Stream.empty()))
+        .flatMap(s -> s.variablesFor(source, potentials, Collections.emptyMap())
+            .map(Stream::of).orElse(Stream.empty()))
         .collect(Collectors.toList());
 
     if (satisfyingVars.isEmpty()) {
@@ -81,6 +83,39 @@ public class DynamicHierarchy implements Hierarchy {
     return Optional.of(allVariables);
   }
 
+  private Map<String, String> withImpliedVariables(Map<String, String> variables) {
+    Map<String, String> variablesPlusImplied = new HashMap<>(variables);
+    Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
+
+    while (!varsToExamine.isEmpty()) {
+      String var = varsToExamine.poll();
+      for (Potential potential : potentials.get(var)) {
+        if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
+          continue;
+        }
+
+        for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
+          String impliedKey = implied.getKey();
+          String impliedValue = implied.getValue();
+
+          if (variablesPlusImplied.containsKey(impliedKey)) {
+            String currentValue = variablesPlusImplied.get(impliedKey);
+            if (!Objects.equals(currentValue, impliedValue)) {
+              throw new IllegalStateException("Conflicting implied values for variable. " +
+                  "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
+                  "conflicts with '" + currentValue + "'");
+            }
+          } else {
+            variablesPlusImplied.put(impliedKey, impliedValue);
+            varsToExamine.add(impliedKey);
+          }
+        }
+      }
+    }
+
+    return variablesPlusImplied;
+  }
+
   private static class RenderedSource extends AbstractSource {
     private final Map<String, String> variables;
     private final List<DynamicNode> sources;
@@ -90,37 +125,7 @@ public class DynamicHierarchy implements Hierarchy {
 
     private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
         Map<String, List<Potential>> potentials, int index) {
-      // TODO: lazily do some of this work or move it elsewhere?
-      Map<String, String> variablesPlusImplied = new HashMap<>(variables);
-      Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
-
-      while (!varsToExamine.isEmpty()) {
-        String var = varsToExamine.poll();
-        for (Potential potential : potentials.get(var)) {
-          if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
-            continue;
-          }
-
-          for (Map.Entry<String, String> implied : potential.getImpliedValues().entrySet()) {
-            String impliedKey = implied.getKey();
-            String impliedValue = implied.getValue();
-
-            if (variablesPlusImplied.containsKey(impliedKey)) {
-              String currentValue = variablesPlusImplied.get(impliedKey);
-              if (!Objects.equals(currentValue, impliedValue)) {
-                throw new IllegalStateException("Conflicting implied values for variable. " +
-                    "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
-                    "conflicts with '" + currentValue + "'");
-              }
-            } else {
-              variablesPlusImplied.put(impliedKey, impliedValue);
-              varsToExamine.add(impliedKey);
-            }
-          }
-        }
-      }
-
-      this.variables = variablesPlusImplied;
+      this.variables = variables;
       this.sources = sources;
       this.potentials = potentials;
       this.index = index;
@@ -134,6 +139,15 @@ public class DynamicHierarchy implements Hierarchy {
       }
 
       this.rendered = renders.get(0);
+    }
+
+    private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
+        Map<String, List<Potential>> potentials, int index, DynamicNode.RenderedNode rendered) {
+      this.variables = variables;
+      this.sources = sources;
+      this.potentials = potentials;
+      this.index = index;
+      this.rendered = rendered;
     }
 
     @Override
@@ -158,16 +172,18 @@ public class DynamicHierarchy implements Hierarchy {
     public List<Source> descendants() {
       List<Source> descendants = new ArrayList<>();
 
-      for (int i = index; i < sources.size(); i++) {
+      descendants.add(this);
+
+      for (int i = index + 1; i < sources.size(); i++) {
         DynamicNode dynamicNode = sources.get(i);
 
-        if (dynamicNode.variables().containsAll(variables.keySet())) {
-          List<DynamicNode.RenderedNode> rendered = dynamicNode.render(variables, potentials);
+        if (couldBeDescendant(dynamicNode)) {
+          List<DynamicNode.RenderedNode> renders = dynamicNode.render(variables, potentials);
 
-          for (DynamicNode.RenderedNode source : rendered) {
+          for (DynamicNode.RenderedNode render : renders) {
             Map<String, String> descendantVars = new HashMap<>(variables);
-            descendantVars.putAll(source.variablesUsed());
-            descendants.add(new RenderedSource(descendantVars, sources, potentials, i));
+            descendantVars.putAll(render.variablesUsed());
+            descendants.add(new RenderedSource(descendantVars, sources, potentials, i, render));
           }
         }
       }
@@ -180,6 +196,37 @@ public class DynamicHierarchy implements Hierarchy {
       return spec.findSource(new DynamicHierarchy(sources, potentials))
           .map(this::equals)
           .orElse(false);
+    }
+
+    private boolean couldBeDescendant(DynamicNode dynamicNode) {
+      if (dynamicNode.variables().isEmpty()) {
+        return false;
+      }
+
+      if (dynamicNode.variables().containsAll(variables.keySet())) {
+        return true;
+      }
+
+      for (String variable : dynamicNode.variables()) {
+        if (!hasImpliedValuePresent(variable)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    private boolean hasImpliedValuePresent(String variable) {
+      for (Potential potential : potentials.get(variable)) {
+        for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
+          if (variables.containsKey(implied.getKey()) &&
+              Objects.equals(variables.get(implied.getKey()), implied.getValue())) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     }
   }
 }

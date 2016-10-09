@@ -67,10 +67,17 @@ public class InterpolatedDynamicNode implements DynamicNode {
   @Override
   public List<RenderedNode> render(Map<String, String> variables,
       Map<String, List<Potential>> potentials) {
+    if (variableNames.isEmpty()) {
+      return Collections.singletonList(new RenderedNode(expression, Collections.emptyMap()));
+    }
+
     return VariableCombinations.stream(variableNames, variables, potentials)
         .map(combination -> {
           Map<String, String> variablesUsed = new HashMap<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {
+            if (!combination.containsKey(captured)) {
+              throw new IllegalStateException("No value defined for variable: " + captured);
+            }
             String value = combination.get(captured);
             variablesUsed.put(captured, value);
             return value;

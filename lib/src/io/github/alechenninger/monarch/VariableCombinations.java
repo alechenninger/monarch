@@ -27,11 +27,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class VariableCombinations {
+  /**
+   * Computes each possible set of variables given the predefined {@code variables} and potential
+   * values for keys which are in {@code variableNames} but not defined in {@code variables}.
+   */
   static Stream<Map<String, String>> stream(List<String> variableNames,
       Map<String, String> variables, Map<String, List<Potential>> potentials) {
-    Map<String, String> variablesPlusImplied = new HashMap<>(variables);
-
-    Map<String, String> usedVars = variablesPlusImplied.entrySet().stream()
+    Map<String, String> usedVars = variables.entrySet().stream()
         .filter(entry -> variableNames.contains(entry.getKey()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
@@ -39,7 +41,7 @@ class VariableCombinations {
         .filter(var -> !usedVars.keySet().contains(var))
         .collect(Collectors.toList());
 
-    VariableCombinations combos = new VariableCombinations(usedVars, potentials);
+    VariableCombinations combos = new VariableCombinations(usedVars, potentials, variables);
 
     for (String missingVar : missingVars) {
       List<Potential> potentialsForVar = potentials.get(missingVar);
@@ -59,37 +61,53 @@ class VariableCombinations {
 
   private final List<Map<String, String>> combos = new ArrayList<>();
   private final Map<String, List<Potential>> potentials;
+  private final Map<String, String> variables;
 
   private VariableCombinations(Map<String, String> variablesProvided,
-      Map<String, List<Potential>> potentials) {
+      Map<String, List<Potential>> potentials, Map<String, String> variables) {
     this.potentials = potentials;
+    this.variables = variables;
 
+    // TODO: What if there are no combinations actually? We are filtering empty in .stream(), but
+    // might be better way.
     combos.add(new HashMap<>(variablesProvided));
   }
 
   private void put(String variable, String value) {
     List<Map<String, String>> newCombos = new ArrayList<>();
     combos: for (Map<String, String> combo : combos) {
+      // See if this variable would imply other variables. If so, they get added to this combo
+      // automatically.
       if (potentials.containsKey(variable)) {
+        // Find the potential for this value
         for (Potential potential : potentials.get(variable)) {
           if (!potential.getValue().equals(value)) {
             continue;
           }
 
-          for (Map.Entry<String, String> implied : potential.getImpliedValues().entrySet()) {
+          Map<String, String> impliedAdditions = new HashMap<>();
+
+          for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
             String impliedKey = implied.getKey();
             String impliedValue = implied.getValue();
             if (combo.containsKey(impliedKey)) {
               String currentValue = combo.get(impliedKey);
               if (!Objects.equals(currentValue, impliedValue)) {
-                throw new IllegalStateException("Conflicting implied values for variable. " +
-                    "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
-                    "conflicts with '" + currentValue + "'");
+                continue combos;
               }
             } else {
-              combo.put(impliedKey, impliedValue);
+              if (variables.containsKey(impliedKey) &&
+                  !Objects.equals(variables.get(impliedKey), impliedValue)) {
+                return;
+              }
+
+              impliedAdditions.put(impliedKey, impliedValue);
             }
           }
+
+          // FIXME: This is wrong because implied values will be carried through to new combinations
+          // even though those variables may not imply the same things, see below
+          combo.putAll(impliedAdditions);
         }
       }
 
@@ -101,13 +119,15 @@ class VariableCombinations {
               continue;
             }
 
-            if (potential.getImpliedValues().containsKey(variable)) {
+            if (potential.getImpliedVariables().containsKey(variable)) {
               continue combos;
             }
           }
         }
 
         if (!Objects.equals(combo.get(variable), value)) {
+          // FIXME: This is where above breaks: we copy the combo here when we have a conflict.
+          // Implications in this combo may not be relevant to this conflict.
           Map<String, String> newCombo = new HashMap<>(combo);
           newCombo.put(variable, value);
           newCombos.add(newCombo);
@@ -120,6 +140,6 @@ class VariableCombinations {
   }
 
   private Stream<Map<String, String>> stream() {
-    return combos.stream();
+    return combos.stream().filter(c -> !c.isEmpty());
   }
 }

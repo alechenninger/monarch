@@ -32,8 +32,12 @@ public interface DynamicNode {
         .collect(Collectors.toList());
   }
 
+  // TODO: need clearer terminology around variables, their names, and their values
   List<String> variables();
 
+  // TODO: Add renderOne which accepts just variables that we expect to cover all of variables()
+
+  // TODO: Should this consider implied variables?
   List<RenderedNode> render(Map<String, String> variables, Map<String, List<Potential>> potentials);
 
   default Optional<Map<String, String>> variablesFor(String source,

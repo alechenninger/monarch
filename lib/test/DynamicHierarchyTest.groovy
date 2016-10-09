@@ -155,7 +155,7 @@ potentials:
   }
 
   @Test
-  void shouldUseImpliedValuesForHierarchy() {
+  void shouldUseImpliedValuesForLineage() {
     assert hierarchy.sourceFor(['hostname': 'foo.com']).get().lineage().collect { it.path() } == [
         "nodes/foo.com",
         "teams/teamA/prod/store",
@@ -163,6 +163,58 @@ potentials:
         "environment/prod",
         "rhel",
         "common",
+    ]
+  }
+
+  @Test
+  void shouldUseImpliedValuesForDescendants() {
+    assert hierarchy.sourceFor(['environment': 'prod']).get().descendants().collect { it.path() } == [
+        "environment/prod",
+        "teams/teamA/prod",
+        "teams/teamB/prod",
+        "teams/teamA/prod/store",
+        "teams/teamB/prod/store",
+        "teams/teamB/prod/blog",
+        "nodes/foo.com",
+    ]
+  }
+
+  @Test
+  void shouldExcludeDescendantsWhichHaveConflictingImpliedValues() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - common
+  - "%{os}"
+  - app/%{app}
+  - environment/%{environment}
+  - teams/%{team}/%{environment}
+  - teams/%{team}/%{environment}/%{app}
+  - nodes/%{hostname}
+potentials:
+  hostname:
+    - foo.com:
+        team: teamA
+        environment: prod
+        os: rhel
+    - bar.com
+  team:
+  - teamA:
+      app: store
+  - teamB
+  environment:
+  - qa
+  - prod
+  app:
+  - store
+  - blog
+  os:
+  - rhel
+'''))
+
+    assert hierarchy.sourceFor(['app': 'blog']).get().descendants().collect { it.path() } == [
+        "app/blog",
+        "teams/teamB/qa/blog",
+        "teams/teamB/prod/blog",
     ]
   }
 }

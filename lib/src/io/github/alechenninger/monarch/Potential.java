@@ -25,24 +25,24 @@ import java.util.Objects;
 
 public class Potential {
   private final String value;
-  private final Map<String, String> impliedValues;
+  private final Map<String, String> impliedVariables;
 
   public Potential(String value) {
     this.value = value;
-    this.impliedValues = Collections.emptyMap();
+    this.impliedVariables = Collections.emptyMap();
   }
 
-  public Potential(String value, Map<String, String> impliedValues) {
+  public Potential(String value, Map<String, String> impliedVariables) {
     this.value = value;
-    this.impliedValues = Collections.unmodifiableMap(new HashMap<>(impliedValues));
+    this.impliedVariables = Collections.unmodifiableMap(new HashMap<>(impliedVariables));
   }
 
   public static Potential of(String value) {
     return new Potential(value);
   }
 
-  public Map<String, String> getImpliedValues() {
-    return impliedValues;
+  public Map<String, String> getImpliedVariables() {
+    return impliedVariables;
   }
 
   public String getValue() {
@@ -55,19 +55,19 @@ public class Potential {
     if (o == null || getClass() != o.getClass()) return false;
     Potential potential = (Potential) o;
     return Objects.equals(value, potential.value) &&
-        Objects.equals(impliedValues, potential.impliedValues);
+        Objects.equals(impliedVariables, potential.impliedVariables);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(value, impliedValues);
+    return Objects.hash(value, impliedVariables);
   }
 
   @Override
   public String toString() {
     return "Potential{" +
         "value='" + value + '\'' +
-        ", impliedValues=" + impliedValues +
+        ", impliedVariables=" + impliedVariables +
         '}';
   }
 }
