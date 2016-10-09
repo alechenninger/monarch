@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,7 +60,7 @@ class VariableCombinations {
     return combos.stream();
   }
 
-  private final List<Map<String, String>> combos = new ArrayList<>();
+  private final List<Combination> combos = new ArrayList<>();
   private final Map<String, List<Potential>> potentials;
   private final Map<String, String> variables;
 
@@ -70,14 +71,69 @@ class VariableCombinations {
 
     // TODO: What if there are no combinations actually? We are filtering empty in .stream(), but
     // might be better way.
-    combos.add(new HashMap<>(variablesProvided));
+    combos.add(new Combination(variablesProvided));
   }
 
   private void put(String variable, String value) {
-    List<Map<String, String>> newCombos = new ArrayList<>();
-    combos: for (Map<String, String> combo : combos) {
-      // See if this variable would imply other variables. If so, they get added to this combo
-      // automatically.
+    List<Combination> newCombos = new ArrayList<>();
+
+    for (Combination combo : combos) {
+      combo.put(variable, value).ifPresent(newCombos::add);
+    }
+    combos.addAll(newCombos);
+  }
+
+  private Stream<Map<String, String>> stream() {
+    return combos.stream().map(Combination::toMap).filter(c -> !c.isEmpty());
+  }
+
+  private class Combination {
+    final Map<String, String> explicit;
+    final Map<String, String> implied = new HashMap<>();
+
+    Combination() {
+      this.explicit = new HashMap<>();
+    }
+
+    /**
+     * @param explicit Expected to already include all implied variables as these can be computed in
+     *                 advance and shared.
+     */
+    Combination(Map<String, String> explicit) {
+      this.explicit = new HashMap<>(explicit);
+    }
+
+    Combination startNewCombinationWith(String variable, String value) {
+      Combination combination = new Combination(explicit);
+      combination.explicit.put(variable, value);
+      return combination;
+    }
+
+    Map<String, String> toMap() {
+      Map<String, String> combo = new HashMap<>(explicit.size() + implied.size());
+      combo.putAll(explicit);
+      combo.putAll(implied);
+      return combo;
+    }
+
+    boolean containsKey(String key) {
+      return explicit.containsKey(key) || implied.containsKey(key);
+    }
+
+    String get(String key) {
+      if (explicit.containsKey(key)) {
+        return explicit.get(key);
+      }
+
+      return implied.get(key);
+    }
+
+    boolean canPut(String variable, String value) {
+      
+    }
+
+    Optional<Combination> put(String variable, String value) {
+      // See if this variable would imply other variables.
       if (potentials.containsKey(variable)) {
         // Find the potential for this value
         for (Potential potential : potentials.get(variable)) {
@@ -87,59 +143,56 @@ class VariableCombinations {
 
           Map<String, String> impliedAdditions = new HashMap<>();
 
+          // Loop through all implied variables for this value.
           for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
             String impliedKey = implied.getKey();
             String impliedValue = implied.getValue();
-            if (combo.containsKey(impliedKey)) {
-              String currentValue = combo.get(impliedKey);
+
+            // If already included as something else, then don't add this value or its implications.
+            if (containsKey(impliedKey)) {
+              String currentValue = get(impliedKey);
               if (!Objects.equals(currentValue, impliedValue)) {
-                continue combos;
+                return Optional.empty();
               }
             } else {
+              // Not part of the combination, but can still be already included in variables.
+              // TODO: Maybe just include variables to start, making this check not needed
               if (variables.containsKey(impliedKey) &&
                   !Objects.equals(variables.get(impliedKey), impliedValue)) {
-                return;
+                return Optional.empty();
               }
 
+              // Nothing conflicts with this implication; store it and keeping checking.
               impliedAdditions.put(impliedKey, impliedValue);
             }
           }
 
-          // FIXME: This is wrong because implied values will be carried through to new combinations
-          // even though those variables may not imply the same things, see below
-          combo.putAll(impliedAdditions);
+          // Nothing conflicted with any implications, store them for good.
+          implied.putAll(impliedAdditions);
         }
       }
 
-      if (combo.containsKey(variable)) {
-        // Is it already implied in this combo?
-        for (Map.Entry<String, String> comboEntry : combo.entrySet()) {
-          for (Potential potential : potentials.get(comboEntry.getKey())) {
-            if (!potential.getValue().equals(comboEntry.getValue())) {
-              continue;
-            }
-
-            if (potential.getImpliedVariables().containsKey(variable)) {
-              continue combos;
-            }
-          }
+      if (explicit.containsKey(variable)) {
+        if (containsKeyAndValue(variable, value)) {
+          return Optional.empty();
         }
 
-        if (!Objects.equals(combo.get(variable), value)) {
-          // FIXME: This is where above breaks: we copy the combo here when we have a conflict.
-          // Implications in this combo may not be relevant to this conflict.
-          Map<String, String> newCombo = new HashMap<>(combo);
-          newCombo.put(variable, value);
-          newCombos.add(newCombo);
-        }
-      } else {
-        combo.put(variable, value);
+        return Optional.of(startNewCombinationWith(variable, value));
+      }
+
+      explicit.put(variable, value);
+
+      return Optional.empty();
+    }
+
+    boolean containsKeyAndValue(String variable, String value) {
+      if (explicit.containsKey(variable)) {
+        return Objects.equals(explicit.get(variable), value);
+      }
+
+      if (implied.containsKey(variable)) {
+        return Objects.equals(implied.get(variable), value);
       }
     }
-    combos.addAll(newCombos);
-  }
-
-  private Stream<Map<String, String>> stream() {
-    return combos.stream().filter(c -> !c.isEmpty());
   }
 }
