@@ -37,7 +37,8 @@ public interface DynamicNode {
 
   // TODO: Add renderOne which accepts just variables that we expect to cover all of variables()
 
-  // TODO: Should this consider implied variables?
+  /** Expects variables to already include implied. */
+  // TODO: Make variable implied inclusion more explicit
   List<RenderedNode> render(Map<String, String> variables, Map<String, List<Potential>> potentials);
 
   default Optional<Map<String, String>> variablesFor(String source,

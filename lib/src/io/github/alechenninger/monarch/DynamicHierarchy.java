@@ -46,7 +46,10 @@ public class DynamicHierarchy implements Hierarchy {
 
       if (sourceVariables.containsAll(variableKeys) &&
           variableKeys.containsAll(sourceVariables)) {
+        // TODO: consider first class type for this constructs
+        // Variables vars = new Variables(variables, potentials);
         Map<String, String> variablesPlusImplied = withImpliedVariables(variables);
+        // TODO: also refine potentials based on variables
         return Optional.of(new RenderedSource(variablesPlusImplied, sources, potentials, i));
       }
     }
@@ -56,12 +59,18 @@ public class DynamicHierarchy implements Hierarchy {
 
   @Override
   public List<Source> descendants() {
+    if (sources.isEmpty()) {
+      return Collections.emptyList();
+    }
+
     List<Source> descendants = new ArrayList<>();
 
     for (int i = 0; i < sources.size(); i++) {
       DynamicNode dynamicNode = sources.get(i);
-      for (DynamicNode.RenderedNode rendered : dynamicNode.render(Collections.emptyMap(), potentials)) {
-        descendants.add(new RenderedSource(rendered.variablesUsed(), sources, potentials, i));
+      for (DynamicNode.RenderedNode rendered :
+          dynamicNode.render(Collections.emptyMap(), potentials)) {
+        Map<String, String> variables = rendered.variablesUsed();
+        descendants.add(new RenderedSource(variables, sources, potentials, i, rendered));
       }
     }
 
@@ -148,6 +157,7 @@ public class DynamicHierarchy implements Hierarchy {
       this.potentials = potentials;
       this.index = index;
       this.rendered = rendered;
+      // TODO if (!variables.containsAll(rendered.variablesUsed()) throw
     }
 
     @Override
@@ -177,13 +187,38 @@ public class DynamicHierarchy implements Hierarchy {
       for (int i = index + 1; i < sources.size(); i++) {
         DynamicNode dynamicNode = sources.get(i);
 
-        if (couldBeDescendant(dynamicNode)) {
+        if (dynamicNode.variables().containsAll(variables.keySet())) {
           List<DynamicNode.RenderedNode> renders = dynamicNode.render(variables, potentials);
 
           for (DynamicNode.RenderedNode render : renders) {
             Map<String, String> descendantVars = new HashMap<>(variables);
             descendantVars.putAll(render.variablesUsed());
             descendants.add(new RenderedSource(descendantVars, sources, potentials, i, render));
+          }
+        } else {
+          // See if any variables used in source have implied values that match what are defined
+          // So if host/foo.com implies environment=prod
+          // And we have environment=prod
+          // Which means that we know this would be a descendant
+          // What about other variables?
+          // host/{area}/{host}
+          // host/vary/foo.com with implied environment=prod area=vary
+          // Given environment=prod
+          // For area, none of the implied are included (it could in some scenarios)
+          // For host, foo.com implies environment=prod
+          // So what would be a descendant?
+          // host/vary/foo.com what about other areas (if area=vary wasn't implied)?
+          // host/phx2/foo.com if foo.com implies prod, and we don't have an area,
+          // then this is fair game. So we'd expect both.
+          // It's basically as if host=foo.com was defined.
+
+          // Go through each variable, find potentials which have implied values matching defined
+          // Use them as variables.
+          // If multiple potentials, we need to treat each case.
+          Map<String, String> variablesPlusImplied = new HashMap<>(variables);
+
+          for (String variableInNode : dynamicNode.variables()) {
+            
           }
         }
       }
@@ -198,13 +233,10 @@ public class DynamicHierarchy implements Hierarchy {
           .orElse(false);
     }
 
-    private boolean couldBeDescendant(DynamicNode dynamicNode) {
+    private boolean allImpliedValuesMatchSuppliedVariables(DynamicNode dynamicNode) {
+      // TODO: should this be here?
       if (dynamicNode.variables().isEmpty()) {
         return false;
-      }
-
-      if (dynamicNode.variables().containsAll(variables.keySet())) {
-        return true;
       }
 
       for (String variable : dynamicNode.variables()) {

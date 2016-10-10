@@ -48,6 +48,7 @@ potentials:
         "teams/teamB/qa/store",
         "teams/teamA/prod/store",
         "teams/teamB/prod/store",
+        // Since teamA implies app: store, there are no /team/teamA/*/blog descendants
         "teams/teamB/qa/blog",
         "teams/teamB/prod/blog",
         "nodes/foo.com",
