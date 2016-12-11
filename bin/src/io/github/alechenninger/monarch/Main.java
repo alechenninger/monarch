@@ -148,7 +148,8 @@ public class Main {
         Map<String, SourceData> currentData =
             configuredFormats.parseDataSourcesInHierarchy(dataDir, hierarchy);
         Source target = hierarchy.sourceFor(targetSpec).orElseThrow(
-            () -> new IllegalArgumentException("Target source not found in hierarchy: " + targetSpec));
+            () -> new IllegalArgumentException("No source found in hierarchy which satisfies: " +
+                targetSpec));
 
         applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, target);
       } catch (Exception e) {

@@ -200,6 +200,7 @@ public class DynamicHierarchy implements Hierarchy {
           // So if host/foo.com implies environment=prod
           // And we have environment=prod
           // Which means that we know this would be a descendant
+          // (in other words, host/foo.com has environment=prod in its lineage)
           // What about other variables?
           // host/{area}/{host}
           // host/vary/foo.com with implied environment=prod area=vary
@@ -215,6 +216,8 @@ public class DynamicHierarchy implements Hierarchy {
           // Go through each variable, find potentials which have implied values matching defined
           // Use them as variables.
           // If multiple potentials, we need to treat each case.
+
+
           Map<String, String> variablesPlusImplied = new HashMap<>(variables);
 
           for (String variableInNode : dynamicNode.variables()) {
