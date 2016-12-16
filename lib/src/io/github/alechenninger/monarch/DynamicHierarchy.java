@@ -37,11 +37,7 @@ public class DynamicHierarchy implements Hierarchy {
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode source = nodes.get(i);
 
-      // if (source.isTargetedBy(assignments)) {
-      if (source.isTargetedBy(assignments)) {
-        // TODO: consider first class type for this constructs
-        // Variables vars = new Variables(variables, potentials);
-        // TODO: also refine potentials based on variables
+      if (assignments.assignsOnly(source.variables())) {
         return Optional.of(new RenderedSource(assignments, nodes, inventory, i));
       }
     }
@@ -152,7 +148,7 @@ public class DynamicHierarchy implements Hierarchy {
 
         // is a test of specificity
         // dynamicNode.mayDescend(variables)
-        if (dynamicNode.covers(assignments)) {
+        if (assignments.assignsSubsetOf(dynamicNode.variables())) {
           List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments, inventory);
 
           for (DynamicNode.RenderedNode render : renders) {
@@ -185,11 +181,6 @@ public class DynamicHierarchy implements Hierarchy {
           // variable.assignmentsThatImply(var, value);
           // assignment
 
-          Map<String, String> variablesPlusImplied = new HashMap<>(variables);
-
-          for (String variableInNode : dynamicNode.variables()) {
-
-          }
         }
       }
 

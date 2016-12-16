@@ -20,9 +20,11 @@ package io.github.alechenninger.monarch;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class Assignments implements Iterable<Assignment> {
   private final Set<Assignment> set = new HashSet<>();
@@ -47,11 +49,81 @@ public class Assignments implements Iterable<Assignment> {
     return combination;
   }
 
-  public Inventory inventory() {
-    return inventory;
+  public boolean isAssigned(String variable) {
+    return set.stream().anyMatch(a -> a.variable().name().equals(variable));
   }
 
-  public void add(Assignment assignment) {
+  public Assignment forVariable(String variable) {
+    return set.stream()
+        .filter(a -> a.variable().name().equals(variable))
+        .findFirst()
+        .orElseThrow(NoSuchElementException::new);
+  }
+
+  public boolean containsAll(Assignments assignments) {
+    return assignments.set.containsAll(this.set);
+  }
+
+  public boolean conflictsWith(Assignment assignment) {
+    throw new UnsupportedOperationException();
+  }
+
+  public boolean assignsOnly(List<String> variables) {
+    Assignments assignments = new Assignments(inventory);
+    for (String variable : variables) {
+      if (!isAssigned(variable)) {
+        return false;
+      }
+      assignments.add(forVariable(variable));
+    }
+    return equals(assignments);
+  }
+
+  public boolean assignsSupersetOf(List<String> variables) {
+    Assignments assignments = new Assignments(inventory);
+    for (String variable : variables) {
+      if (!isAssigned(variable)) {
+        return false;
+      }
+      assignments.add(forVariable(variable));
+    }
+    return containsAll(assignments);
+  }
+
+  public boolean assignsSubsetOf(List<String> variables) {
+    Assignments assignments = new Assignments(inventory);
+    for (String variable : variables) {
+      if (!isAssigned(variable)) {
+        return false;
+      }
+      assignments.add(forVariable(variable));
+    }
+    return assignments.containsAll(this);
+  }
+
+  public Stream<Assignment> stream() {
+    return set.stream();
+  }
+
+  @Override
+  public Iterator<Assignment> iterator() {
+    return set.iterator();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Assignments that = (Assignments) o;
+    return Objects.equals(set, that.set);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(set);
+  }
+
+  private void add(Assignment assignment) {
     Variable variable = assignment.variable();
 
     if (!inventory.hasVariable(variable)) {
@@ -75,40 +147,7 @@ public class Assignments implements Iterable<Assignment> {
     }
   }
 
-  public void addAll(Assignments assignments) {
+  private void addAll(Assignments assignments) {
     assignments.forEach(this::add);
-  }
-
-  public boolean isAssigned(String variable) {
-    return set.stream().anyMatch(a -> a.variable().name().equals(variable));
-  }
-
-  public Assignment forVariable(String variable) {
-    return set.stream()
-        .filter(a -> a.variable().name().equals(variable))
-        .findFirst()
-        .orElseThrow(NoSuchElementException::new);
-  }
-
-  public boolean containsAll(Assignments assignments) {
-    return assignments.set.containsAll(this.set);
-  }
-
-  @Override
-  public Iterator<Assignment> iterator() {
-    return set.iterator();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    Assignments that = (Assignments) o;
-    return Objects.equals(set, that.set);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(set);
   }
 }

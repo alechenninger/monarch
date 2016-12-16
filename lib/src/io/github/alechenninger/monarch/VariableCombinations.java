@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,33 +38,35 @@ class VariableCombinations {
    * Variables is a function of implications and user input.
    */
   static Stream<Map<String, String>> stream(List<String> variableNames,
-      Map<String, String> variables, Map<String, List<Potential>> potentials) {
-    Map<String, String> usedVars = variables.entrySet().stream()
-        .filter(entry -> variableNames.contains(entry.getKey()))
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+      Assignments assignments, Inventory inventory) {
+    Set<Assignment> usedAssignments = assignments.stream()
+        .filter(a -> variableNames.contains(a.variable().name()))
+        .collect(Collectors.toSet());
 
     List<String> missingVars = variableNames.stream()
-        .filter(var -> !usedVars.keySet().contains(var))
+        .filter(var -> !usedAssignments.contains(assignments.forVariable(var)))
         .collect(Collectors.toList());
 
-    VariableCombinations combos = new VariableCombinations(usedVars, potentials);
+    VariableCombinations combos = new VariableCombinations(usedAssignments, inventory);
 
     for (String missingVar : missingVars) {
-      List<Potential> potentialsForVar = potentials.get(missingVar);
+      Set<String> potentialsForVar = inventory.variableByName(missingVar)
+          .orElseThrow(NoSuchElementException::new)
+          .values();
 
       if (potentialsForVar == null || potentialsForVar.isEmpty()) {
         throw new IllegalStateException("No potentials found for missing variable '" +
             missingVar + "'.");
       }
 
-      for (Potential potential : potentialsForVar) {
+      for (String potential : potentialsForVar) {
         // A potential which implies variables that conflict with know variables is not a potential
         // in this context.
         // TODO: Maybe generalize this idea since it likely is useful in more places
         // Once we have variables, we can refine potentials based on implications
         // Ex: if environment=prod, a value that implies environment=qa is not a potential value.
         // Note though we have to continue to do this within each combination.
-        if (mapsConflict(potential.getImpliedVariables(), variables)) {
+        if (mapsConflict(potential.getImpliedVariables(), assignments)) {
           continue;
         }
 
@@ -87,8 +91,8 @@ class VariableCombinations {
   private final List<Map<String, String>> combos = new ArrayList<>();
   private final Map<String, List<Potential>> potentials;
 
-  private VariableCombinations(Map<String, String> variablesProvided,
-      Map<String, List<Potential>> potentials) {
+  private VariableCombinations(Set<Assignment> variablesProvided,
+      Inventory potentials) {
     this.potentials = potentials;
 
     // TODO: What if there are no combinations actually? We are filtering empty in .stream(), but

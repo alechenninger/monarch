@@ -18,9 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,49 +48,17 @@ public interface DynamicNode {
         .findFirst();
   }
 
-  default boolean isTargetedBy(Assignments assignments) {
-    Assignments nodeAssigns = assignments.inventory().newAssignments();
-    for (String variable : variables()) {
-      if (!assignments.isAssigned(variable)) {
-        return false;
-      }
-      nodeAssigns.add(assignments.forVariable(variable));
-    }
-    assignments.assignsOnly(variables())
-    return nodeAssigns.equals(assignments);
-  }
-
   default boolean isCoveredBy(Assignments assignments) {
-    Assignments nodeAssigns = assignments.inventory().newAssignments();
-    for (String variable : variables()) {
-      if (!assignments.isAssigned(variable)) {
-        return false;
-      }
-      nodeAssigns.add(assignments.forVariable(variable));
-    }
-    assignments.assignsAllOf(variables());
-    return assignments.containsAll(nodeAssigns);
-  }
-
-  default boolean covers(Assignments assignments) {
-    Assignments nodeAssigns = assignments.inventory().newAssignments();
-    for (String variable : variables()) {
-      if (!assignments.isAssigned(variable)) {
-        return false;
-      }
-      nodeAssigns.add(assignments.forVariable(variable));
-    }
-    return assignments.assignsSubsetOf(variables()):
-    return nodeAssigns.containsAll(assignments);
+    return assignments.assignsSupersetOf(variables());
   }
 
   final class RenderedNode {
     private final String path;
-    private final Map<String, String> variablesUsed;
+    private final Assignments variablesUsed;
 
-    public RenderedNode(String path, Map<String, String> variablesUsed) {
+    public RenderedNode(String path, Assignments assignments) {
       this.path = Objects.requireNonNull(path);
-      this.variablesUsed = Collections.unmodifiableMap(variablesUsed);
+      this.variablesUsed = assignments;
     }
 
     public String path() {
