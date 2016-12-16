@@ -18,45 +18,24 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.Objects;
 import java.util.Set;
 
-public final class Variable {
-  private final String name;
-  private final Set<Assignment> potentials;
-
-  public Variable(String name, Set<Assignment> potentials) {
-    this.name = name;
-    this.potentials = potentials;
-  }
+public class Variable {
+  private String name;
 
   public String name() {
     return name;
   }
 
-  public Set<Assignment> potentials() {
-    return potentials;
+  public Set<String> values() {
+    throw new UnsupportedOperationException();
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    Variable variable = (Variable) o;
-    return Objects.equals(name, variable.name) &&
-        Objects.equals(potentials, variable.potentials);
+  public Set<String> valuesThatImply(Assignment assignment) {
+    throw new UnsupportedOperationException();
   }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(name, potentials);
-  }
-
-  @Override
-  public String toString() {
-    return "Variable{" +
-        "name='" + name + '\'' +
-        ", potentials=" + potentials +
-        '}';
+  public Assignment assign(String value) {
+    throw new UnsupportedOperationException();
   }
 }

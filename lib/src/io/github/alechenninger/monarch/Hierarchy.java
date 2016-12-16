@@ -83,7 +83,7 @@ public interface Hierarchy {
               }));
 
 
-          return fromDynamicSourceExpressions(sources, potentials);
+          return fromDynamicSourceExpressions(sources, Inventory.from(potentials));
         }
       }
 
@@ -98,13 +98,13 @@ public interface Hierarchy {
   }
 
   static DynamicHierarchy fromDynamicSources(List<DynamicNode> sources,
-      Map<String, List<Potential>> potentials) {
-    return new DynamicHierarchy(sources, potentials);
+      Inventory inventory) {
+    return new DynamicHierarchy(sources, inventory);
   }
 
   static DynamicHierarchy fromDynamicSourceExpressions(List<String> sourceExpressions,
-      Map<String, List<Potential>> potentials) {
-    return fromDynamicSources(DynamicNode.fromInterpolated(sourceExpressions), potentials);
+      Inventory inventory) {
+    return fromDynamicSources(DynamicNode.fromInterpolated(sourceExpressions), inventory);
   }
 
   default Optional<Source> sourceFor(SourceSpec spec) {
@@ -113,7 +113,7 @@ public interface Hierarchy {
 
   Optional<Source> sourceFor(String source);
 
-  Optional<Source> sourceFor(Map<String, String> variables);
+  Optional<Source> sourceFor(Assignments assignments);
 
   List<Source> descendants();
 }

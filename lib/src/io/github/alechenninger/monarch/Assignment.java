@@ -18,56 +18,20 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-
-public final class Assignment {
-  private final Variable variable;
-  private final String value;
-  private final Map<Variable, Assignment> implications;
-
-  // TODO: better factory
-  public Assignment(Variable variable, String value, Map<Variable, Assignment> implications) {
-    this.variable = variable;
-    this.value = value;
-    this.implications = Collections.unmodifiableMap(new HashMap<>(implications));
-  }
-
+public class Assignment {
   public Variable variable() {
-    return variable;
+    throw new UnsupportedOperationException();
   }
 
   public String value() {
-    return value;
+    throw new UnsupportedOperationException();
   }
 
-  public Map<Variable, Assignment> implications() {
-    return implications;
+  public boolean implies(Assignment assignment) {
+    throw new UnsupportedOperationException();
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    Assignment that = (Assignment) o;
-    return Objects.equals(variable, that.variable) &&
-        Objects.equals(value, that.value) &&
-        Objects.equals(implications, that.implications);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(variable, value, implications);
-  }
-
-  @Override
-  public String toString() {
-    return "Assignment{" +
-        "variable=" + variable +
-        ", value='" + value + '\'' +
-        ", implications=" + implications +
-        '}';
+  public Assignments implied() {
+    throw new UnsupportedOperationException();
   }
 }

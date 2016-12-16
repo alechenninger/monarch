@@ -39,15 +39,51 @@ public interface DynamicNode {
 
   /** Expects variables to already include implied. */
   // TODO: Make variable implied inclusion more explicit
-  List<RenderedNode> render(Map<String, String> variables, Map<String, List<Potential>> potentials);
+  List<RenderedNode> render(Assignments assignments, Inventory inventory);
 
-  default Optional<Map<String, String>> variablesFor(String source,
-      Map<String, List<Potential>> potentials, Map<String, String> variables) {
+  default Optional<Assignments> assignmentsFor(String source,
+      Inventory potentials, Assignments variables) {
     return render(variables, potentials).stream()
         .filter(s -> s.path().equals(source))
         .map(RenderedNode::variablesUsed)
         // TODO validate only one found?
         .findFirst();
+  }
+
+  default boolean isTargetedBy(Assignments assignments) {
+    Assignments nodeAssigns = assignments.inventory().newAssignments();
+    for (String variable : variables()) {
+      if (!assignments.isAssigned(variable)) {
+        return false;
+      }
+      nodeAssigns.add(assignments.forVariable(variable));
+    }
+    assignments.assignsOnly(variables())
+    return nodeAssigns.equals(assignments);
+  }
+
+  default boolean isCoveredBy(Assignments assignments) {
+    Assignments nodeAssigns = assignments.inventory().newAssignments();
+    for (String variable : variables()) {
+      if (!assignments.isAssigned(variable)) {
+        return false;
+      }
+      nodeAssigns.add(assignments.forVariable(variable));
+    }
+    assignments.assignsAllOf(variables());
+    return assignments.containsAll(nodeAssigns);
+  }
+
+  default boolean covers(Assignments assignments) {
+    Assignments nodeAssigns = assignments.inventory().newAssignments();
+    for (String variable : variables()) {
+      if (!assignments.isAssigned(variable)) {
+        return false;
+      }
+      nodeAssigns.add(assignments.forVariable(variable));
+    }
+    return assignments.assignsSubsetOf(variables()):
+    return nodeAssigns.containsAll(assignments);
   }
 
   final class RenderedNode {
@@ -63,7 +99,7 @@ public interface DynamicNode {
       return path;
     }
 
-    public Map<String, String> variablesUsed() {
+    public Assignments variablesUsed() {
       return variablesUsed;
     }
 

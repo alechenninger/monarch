@@ -1,15 +1,11 @@
 package io.github.alechenninger.monarch;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,18 +13,18 @@ import java.util.stream.Stream;
 // Ex: we know qa.foo.com has "environment" of "qa", so if you target host=qa.foo.com you should see
 // environment=qa in ancestry.
 public class DynamicHierarchy implements Hierarchy {
-  private final List<DynamicNode> sources;
-  private final Map<String, List<Potential>> potentials;
+  private final List<DynamicNode> nodes;
+  private final Inventory inventory;
 
   /**
    *
-   * @param sources Ancestors first, descendants last.
-   * @param potentials For each variable, a List of known possible values. When a variable is found
-   *                   but not supplied, all possible values are used if needed.
+   * @param nodes Ancestors first, descendants last.
+   * @param inventory For each variable, a List of known possible values. When a variable is found
+   *                  but not supplied, all possible values are used if needed.
    */
-  public DynamicHierarchy(List<DynamicNode> sources, Map<String, List<Potential>> potentials) {
-    this.sources = sources;
-    this.potentials = potentials;
+  public DynamicHierarchy(List<DynamicNode> nodes, Inventory inventory) {
+    this.nodes = nodes;
+    this.inventory = inventory;
   }
 
   @Override
@@ -37,20 +33,16 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
-  public Optional<Source> sourceFor(Map<String, String> variables) {
-    Set<String> variableKeys = variables.keySet();
+  public Optional<Source> sourceFor(Assignments assignments) {
+    for (int i = 0; i < nodes.size(); i++) {
+      DynamicNode source = nodes.get(i);
 
-    for (int i = 0; i < sources.size(); i++) {
-      DynamicNode source = sources.get(i);
-      List<String> sourceVariables = source.variables();
-
-      if (sourceVariables.containsAll(variableKeys) &&
-          variableKeys.containsAll(sourceVariables)) {
+      // if (source.isTargetedBy(assignments)) {
+      if (source.isTargetedBy(assignments)) {
         // TODO: consider first class type for this constructs
         // Variables vars = new Variables(variables, potentials);
-        Map<String, String> variablesPlusImplied = withImpliedVariables(variables);
         // TODO: also refine potentials based on variables
-        return Optional.of(new RenderedSource(variablesPlusImplied, sources, potentials, i));
+        return Optional.of(new RenderedSource(assignments, nodes, inventory, i));
       }
     }
 
@@ -59,27 +51,27 @@ public class DynamicHierarchy implements Hierarchy {
 
   @Override
   public List<Source> descendants() {
-    if (sources.isEmpty()) {
+    if (nodes.isEmpty()) {
       return Collections.emptyList();
     }
 
     List<Source> descendants = new ArrayList<>();
 
-    for (int i = 0; i < sources.size(); i++) {
-      DynamicNode dynamicNode = sources.get(i);
+    for (int i = 0; i < nodes.size(); i++) {
+      DynamicNode dynamicNode = nodes.get(i);
       for (DynamicNode.RenderedNode rendered :
-          dynamicNode.render(Collections.emptyMap(), potentials)) {
-        Map<String, String> variables = rendered.variablesUsed();
-        descendants.add(new RenderedSource(variables, sources, potentials, i, rendered));
+          dynamicNode.render(Assignments.none(), inventory)) {
+        Assignments variables = rendered.variablesUsed();
+        descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
       }
     }
 
     return descendants;
   }
 
-  private Optional<Map<String, String>> variablesFor(String source) {
-    List<Map<String, String>> satisfyingVars = sources.stream()
-        .flatMap(s -> s.variablesFor(source, potentials, Collections.emptyMap())
+  private Optional<Assignments> variablesFor(String source) {
+    List<Assignments> satisfyingVars = nodes.stream()
+        .flatMap(s -> s.assignmentsFor(source, inventory, Assignments.none())
             .map(Stream::of).orElse(Stream.empty()))
         .collect(Collectors.toList());
 
@@ -87,60 +79,30 @@ public class DynamicHierarchy implements Hierarchy {
       return Optional.empty();
     }
 
-    Map<String, String> allVariables = new HashMap<>();
-    satisfyingVars.forEach(allVariables::putAll);
+    Assignments allVariables = new Assignments(inventory);
+    // TODO: Instead, we can do this in loop over nodes
+    for (Assignments assignments : satisfyingVars) {
+      allVariables = allVariables.with(assignments);
+    }
     return Optional.of(allVariables);
   }
 
-  private Map<String, String> withImpliedVariables(Map<String, String> variables) {
-    Map<String, String> variablesPlusImplied = new HashMap<>(variables);
-    Queue<String> varsToExamine = new ArrayDeque<>(variables.keySet());
-
-    while (!varsToExamine.isEmpty()) {
-      String var = varsToExamine.poll();
-      for (Potential potential : potentials.get(var)) {
-        if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
-          continue;
-        }
-
-        for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
-          String impliedKey = implied.getKey();
-          String impliedValue = implied.getValue();
-
-          if (variablesPlusImplied.containsKey(impliedKey)) {
-            String currentValue = variablesPlusImplied.get(impliedKey);
-            if (!Objects.equals(currentValue, impliedValue)) {
-              throw new IllegalStateException("Conflicting implied values for variable. " +
-                  "Variable '" + impliedKey + "' with implied value of '" + impliedValue + "' " +
-                  "conflicts with '" + currentValue + "'");
-            }
-          } else {
-            variablesPlusImplied.put(impliedKey, impliedValue);
-            varsToExamine.add(impliedKey);
-          }
-        }
-      }
-    }
-
-    return variablesPlusImplied;
-  }
-
   private static class RenderedSource extends AbstractSource {
-    private final Map<String, String> variables;
-    private final List<DynamicNode> sources;
-    private final Map<String, List<Potential>> potentials;
+    private final Assignments assignments;
+    private final List<DynamicNode> nodes;
+    private final Inventory inventory;
     private final int index;
     private final DynamicNode.RenderedNode rendered;
 
-    private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
-        Map<String, List<Potential>> potentials, int index) {
-      this.variables = variables;
-      this.sources = sources;
-      this.potentials = potentials;
+    private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
+        Inventory inventory, int index) {
+      this.assignments = assignments;
+      this.nodes = nodes;
+      this.inventory = inventory;
       this.index = index;
 
-      DynamicNode dynamicNode = sources.get(index);
-      List<DynamicNode.RenderedNode> renders = dynamicNode.render(this.variables, potentials);
+      DynamicNode dynamicNode = nodes.get(index);
+      List<DynamicNode.RenderedNode> renders = dynamicNode.render(this.assignments, inventory);
 
       if (renders.size() != 1) {
         throw new IllegalArgumentException("Expected source with all variables provided to " +
@@ -150,11 +112,11 @@ public class DynamicHierarchy implements Hierarchy {
       this.rendered = renders.get(0);
     }
 
-    private RenderedSource(Map<String, String> variables, List<DynamicNode> sources,
-        Map<String, List<Potential>> potentials, int index, DynamicNode.RenderedNode rendered) {
-      this.variables = variables;
-      this.sources = sources;
-      this.potentials = potentials;
+    private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
+        Inventory inventory, int index, DynamicNode.RenderedNode rendered) {
+      this.assignments = assignments;
+      this.nodes = nodes;
+      this.inventory = inventory;
       this.index = index;
       this.rendered = rendered;
       // TODO if (!variables.containsAll(rendered.variablesUsed()) throw
@@ -170,8 +132,9 @@ public class DynamicHierarchy implements Hierarchy {
       List<Source> lineage = new ArrayList<>(index);
 
       for (int i = index; i >= 0; i--) {
-        if (variables.keySet().containsAll(sources.get(i).variables())) {
-          lineage.add(new RenderedSource(variables, sources, potentials, i));
+        // if (nodes.get(i).renderOne(assignments).ifPresent(....)
+        if (nodes.get(i).isCoveredBy(assignments)) {
+          lineage.add(new RenderedSource(assignments, nodes, inventory, i));
         }
       }
 
@@ -184,16 +147,18 @@ public class DynamicHierarchy implements Hierarchy {
 
       descendants.add(this);
 
-      for (int i = index + 1; i < sources.size(); i++) {
-        DynamicNode dynamicNode = sources.get(i);
+      for (int i = index + 1; i < nodes.size(); i++) {
+        DynamicNode dynamicNode = nodes.get(i);
 
-        if (dynamicNode.variables().containsAll(variables.keySet())) {
-          List<DynamicNode.RenderedNode> renders = dynamicNode.render(variables, potentials);
+        // is a test of specificity
+        // dynamicNode.mayDescend(variables)
+        if (dynamicNode.covers(assignments)) {
+          List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments, inventory);
 
           for (DynamicNode.RenderedNode render : renders) {
-            Map<String, String> descendantVars = new HashMap<>(variables);
-            descendantVars.putAll(render.variablesUsed());
-            descendants.add(new RenderedSource(descendantVars, sources, potentials, i, render));
+            Assignments descendantAssigns = render.variablesUsed();
+            // Necessary? descendantAssigns.addAll(assignments);
+            descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));
           }
         } else {
           // See if any variables used in source have implied values that match what are defined
@@ -217,11 +182,13 @@ public class DynamicHierarchy implements Hierarchy {
           // Use them as variables.
           // If multiple potentials, we need to treat each case.
 
+          // variable.assignmentsThatImply(var, value);
+          // assignment
 
           Map<String, String> variablesPlusImplied = new HashMap<>(variables);
 
           for (String variableInNode : dynamicNode.variables()) {
-            
+
           }
         }
       }
@@ -231,37 +198,9 @@ public class DynamicHierarchy implements Hierarchy {
 
     @Override
     public boolean isTargetedBy(SourceSpec spec) {
-      return spec.findSource(new DynamicHierarchy(sources, potentials))
+      return spec.findSource(new DynamicHierarchy(nodes, inventory))
           .map(this::equals)
           .orElse(false);
-    }
-
-    private boolean allImpliedValuesMatchSuppliedVariables(DynamicNode dynamicNode) {
-      // TODO: should this be here?
-      if (dynamicNode.variables().isEmpty()) {
-        return false;
-      }
-
-      for (String variable : dynamicNode.variables()) {
-        if (!hasImpliedValuePresent(variable)) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    private boolean hasImpliedValuePresent(String variable) {
-      for (Potential potential : potentials.get(variable)) {
-        for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
-          if (variables.containsKey(implied.getKey()) &&
-              Objects.equals(variables.get(implied.getKey()), implied.getValue())) {
-            return true;
-          }
-        }
-      }
-
-      return false;
     }
   }
 }

@@ -18,22 +18,26 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 
-public class Variables {
-  private final Map<String, Variable> variablesByName;
+public class Inventory {
+  private Map<String, List<Potential>> map;
 
-  public Variables(Map<String, Variable> variablesByName) {
-    this.variablesByName = new HashMap<>(variablesByName);
+  public Assignments newAssignments() {
+    return new Assignments(this);
   }
 
-  public Variable byName(String name) {
-    if (!variablesByName.containsKey(name)) {
-      throw new NoSuchElementException(name);
-    }
+  public boolean hasVariable(Variable variable) {
+    throw new UnsupportedOperationException();
+  }
 
-    return variablesByName.get(name);
+  public Optional<Variable> variableByName(String name) {
+    throw new UnsupportedOperationException();
+  }
+
+  public static Inventory from(Map<String, List<Potential>> potentials) {
+    return null;
   }
 }

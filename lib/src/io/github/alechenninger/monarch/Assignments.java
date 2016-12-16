@@ -18,27 +18,97 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
 
-public class Assignments {
-  private final Map<String, Assignment> assignmentsByVariableName;
+public class Assignments implements Iterable<Assignment> {
+  private final Set<Assignment> set = new HashSet<>();
+  private final Inventory inventory;
 
-  // TODO: ctor with collection of assignments
-  public Assignments(Map<String, Assignment> assignmentsByVariableName) {
-    this.assignmentsByVariableName = new HashMap<>(assignmentsByVariableName);
+  // TODO: Think on being per-inventory a bit...
+  public Assignments(Inventory inventory) {
+    this.inventory = Objects.requireNonNull(inventory, "inventory");
   }
 
-  public Assignment forVariableNamed(String name) {
-    if (!assignmentsByVariableName.containsKey(name)) {
-      throw new NoSuchElementException(name);
+  // TODO: Should this use empty inventory?
+  public static Assignments none() { return new Assignments(new Inventory()); }
+
+  public Assignments with(Assignments assignments) {
+    if (!assignments.inventory.equals(inventory)) {
+      throw new IllegalArgumentException("Assignments for different inventories cannot be combined.");
     }
 
-    return assignmentsByVariableName.get(name);
+    Assignments combination = new Assignments(inventory);
+    combination.addAll(this);
+    combination.addAll(assignments);
+    return combination;
   }
 
-  public Assignment forVariable(Variable variable) {
-    return forVariableNamed(variable.name());
+  public Inventory inventory() {
+    return inventory;
+  }
+
+  public void add(Assignment assignment) {
+    Variable variable = assignment.variable();
+
+    if (!inventory.hasVariable(variable)) {
+      throw new IllegalArgumentException("Assignment must be within same inventory. Expected " +
+          "assignment's variable to be configured the same as in known inventory. " +
+          "Inventory's copy: " + inventory.variableByName(variable.name()) + " " +
+          "Got: " + variable);
+    }
+
+    if (isAssigned(variable.name())) {
+      if (forVariable(variable.name()).equals(assignment)) {
+        return;
+      }
+
+      // TODO: Improve exception
+      throw new IllegalStateException("Conflicting assignment: " + assignment);
+    }
+
+    if (set.add(assignment)) {
+      addAll(assignment.implied());
+    }
+  }
+
+  public void addAll(Assignments assignments) {
+    assignments.forEach(this::add);
+  }
+
+  public boolean isAssigned(String variable) {
+    return set.stream().anyMatch(a -> a.variable().name().equals(variable));
+  }
+
+  public Assignment forVariable(String variable) {
+    return set.stream()
+        .filter(a -> a.variable().name().equals(variable))
+        .findFirst()
+        .orElseThrow(NoSuchElementException::new);
+  }
+
+  public boolean containsAll(Assignments assignments) {
+    return assignments.set.containsAll(this.set);
+  }
+
+  @Override
+  public Iterator<Assignment> iterator() {
+    return set.iterator();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Assignments that = (Assignments) o;
+    return Objects.equals(set, that.set);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(set);
   }
 }
