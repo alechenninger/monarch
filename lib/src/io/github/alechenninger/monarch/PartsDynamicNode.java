@@ -20,8 +20,10 @@ package io.github.alechenninger.monarch;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class PartsDynamicNode implements DynamicNode {
@@ -66,7 +68,7 @@ public class PartsDynamicNode implements DynamicNode {
   public List<RenderedNode> render(Assignments variables, Inventory inventory) {
     return VariableCombinations.stream(variables(), variables)
         .map(combination -> {
-          List<Assignment> usedAssignments = new ArrayList<>();
+          Set<Assignment> usedAssignments = new HashSet<>();
           StringBuilder path = new StringBuilder();
 
           for (Part part : parts) {
@@ -85,7 +87,7 @@ public class PartsDynamicNode implements DynamicNode {
             }
           }
 
-          return new RenderedNode(path.toString(), combination);
+          return new RenderedNode(path.toString(), usedAssignments);
         })
         .collect(Collectors.toList());
   }

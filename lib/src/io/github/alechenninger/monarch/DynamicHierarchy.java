@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -63,7 +64,7 @@ public class DynamicHierarchy implements Hierarchy {
       DynamicNode dynamicNode = nodes.get(i);
       for (DynamicNode.RenderedNode rendered :
           dynamicNode.render(Assignments.none(inventory), inventory)) {
-        Assignments variables = rendered.variablesUsed();
+        Assignments variables = inventory.assignAll(rendered.variablesUsed());
         descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
       }
     }
@@ -153,12 +154,14 @@ public class DynamicHierarchy implements Hierarchy {
         DynamicNode dynamicNode = nodes.get(i);
         List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments, inventory);
         for (DynamicNode.RenderedNode render : renders) {
-          Assignments renderAssigns = render.variablesUsed();
+          Assignments renderAssigns = inventory.assignAll(render.variablesUsed());
           // TODO: Figure out this condition
           // Want the assignments used to either use one of our assigns or implications as a variable
           // Or one of the additional assigns to imply one of our assigns
           //if (assignments.containsSomeOf(renderAssigns)) {
-            descendants.add(new RenderedSource(renderAssigns, nodes, inventory, i, render));
+          if (assignments.isEmpty() || renderAssigns.stream().anyMatch(assignments::contains)) {
+            descendants.add(new RenderedSource(assignments.with(renderAssigns), nodes, inventory, i, render));
+          }
           //}
         }
 

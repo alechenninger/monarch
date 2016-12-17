@@ -68,12 +68,10 @@ class VariableCombinations {
     List<Assignments> newCombos = new ArrayList<>();
     for (Assignments combo : combos) {
       if (combo.isAssigned(variable)) {
-        if (combo.conflictsWith(variable, value)) {
-          if (combo.canFork(variable, value)) {
-            Assignments newCombo = combo.fork(variable, value);
-            newCombos.add(combo);
-            newCombos.add(newCombo);
-          }
+        if (combo.conflictsWith(variable, value) && combo.canFork(variable, value)) {
+          Assignments newCombo = combo.fork(variable, value);
+          newCombos.add(combo);
+          newCombos.add(newCombo);
         } else {
           newCombos.add(combo);
         }

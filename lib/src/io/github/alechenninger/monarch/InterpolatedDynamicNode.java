@@ -23,10 +23,12 @@ import org.bigtesting.interpolatd.Substitutor;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class InterpolatedDynamicNode implements DynamicNode {
@@ -66,12 +68,12 @@ public class InterpolatedDynamicNode implements DynamicNode {
   @Override
   public List<RenderedNode> render(Assignments assignments, Inventory inventory) {
     if (variableNames.isEmpty()) {
-      return Collections.singletonList(new RenderedNode(expression, assignments));
+      return Collections.singletonList(new RenderedNode(expression, Collections.emptySet()));
     }
 
     return VariableCombinations.stream(variableNames, assignments)
         .map(combination -> {
-          List<Assignment> usedAssignments = new ArrayList<>();
+          Set<Assignment> usedAssignments = new HashSet<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {
             if (!combination.isAssigned(captured)) {
               throw new IllegalStateException("No value defined for variable: " + captured);
@@ -84,7 +86,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
           String path = interpolator.interpolate(expression, combination.toMap());
 
           // TODO: Using combination here not the same thing as variables used I think
-          return new RenderedNode(path, combination);
+          return new RenderedNode(path, usedAssignments);
         })
         .collect(Collectors.toList());
   }

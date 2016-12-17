@@ -21,6 +21,7 @@ package io.github.alechenninger.monarch;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public interface DynamicNode {
@@ -45,14 +46,15 @@ public interface DynamicNode {
         .filter(s -> s.path().equals(source))
         .map(RenderedNode::variablesUsed)
         // TODO validate only one found?
-        .findFirst();
+        .findFirst()
+        .map(potentials::assignAll);
   }
 
   final class RenderedNode {
     private final String path;
-    private final Assignments variablesUsed;
+    private final Set<Assignment> variablesUsed;
 
-    public RenderedNode(String path, Assignments assignments) {
+    public RenderedNode(String path, Set<Assignment> assignments) {
       this.path = Objects.requireNonNull(path);
       this.variablesUsed = assignments;
     }
@@ -61,7 +63,7 @@ public interface DynamicNode {
       return path;
     }
 
-    public Assignments variablesUsed() {
+    public Set<Assignment> variablesUsed() {
       return variablesUsed;
     }
 

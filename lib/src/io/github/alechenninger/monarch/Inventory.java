@@ -69,6 +69,10 @@ public class Inventory {
     return new Assignment(this, variable, potential.get());
   }
 
+  public Assignments assignAll(Iterable<Assignment> assignments) {
+    return new Assignments(this, assignments);
+  }
+
   public Assignments assignAll(Map<String, String> variablesToValues) {
     Set<Assignment> assignments = variablesToValues.entrySet().stream()
         .map(entry -> assign(entry.getKey(), entry.getValue()))

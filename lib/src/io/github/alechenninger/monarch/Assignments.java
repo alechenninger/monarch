@@ -134,6 +134,10 @@ public class Assignments implements Iterable<Assignment> {
     return inventory.variableByName(variable).get().values(this);
   }
 
+  public boolean contains(Assignment assignment) {
+    return stream().collect(Collectors.toSet()).contains(assignment);
+  }
+
   public boolean containsAll(Assignments assignments) {
     return stream().collect(Collectors.toSet())
         .containsAll(assignments.stream().collect(Collectors.toSet()));
