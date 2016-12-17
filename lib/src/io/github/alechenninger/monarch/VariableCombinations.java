@@ -19,9 +19,7 @@
 package io.github.alechenninger.monarch;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -70,7 +68,7 @@ class VariableCombinations {
     List<Assignments> newCombos = new ArrayList<>();
     for (Assignments combo : combos) {
       if (combo.isAssigned(variable)) {
-        if (combo.conflictsWith(variable, value)) {
+        if (combo.conflictsWith(variable, value) && combo.canFork(variable, value)) {
           Assignments newCombo = combo.fork(variable, value);
           newCombos.add(combo);
           newCombos.add(newCombo);

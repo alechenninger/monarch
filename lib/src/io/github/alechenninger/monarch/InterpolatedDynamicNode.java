@@ -74,17 +74,18 @@ public class InterpolatedDynamicNode implements DynamicNode {
         .map(combination -> {
           Map<String, String> variablesUsed = new HashMap<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {
-            if (!combination.containsKey(captured)) {
+            if (!combination.isAssigned(captured)) {
               throw new IllegalStateException("No value defined for variable: " + captured);
             }
-            String value = combination.get(captured);
+            String value = combination.forVariable(captured).value();
             variablesUsed.put(captured, value);
             return value;
           });
 
-          String path = interpolator.interpolate(expression, combination);
+          String path = interpolator.interpolate(expression, combination.toMap());
 
-          return new RenderedNode(path, variablesUsed);
+          // TODO: Using combination here not the same thing as variables used I think
+          return new RenderedNode(path, combination);
         })
         .collect(Collectors.toList());
   }
