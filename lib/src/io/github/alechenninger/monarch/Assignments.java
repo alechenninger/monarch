@@ -30,7 +30,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Assignments implements Iterable<Assignment> {
-  private final Set<Assignment> set = new HashSet<>();
+  private final Set<Assignment> explicit = new HashSet<>();
+  private final Set<Assignment> implicit = new HashSet<>();
   private final Inventory inventory;
 
   public Assignments(Inventory inventory) {
@@ -48,7 +49,7 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   // TODO: Should this use empty inventory?
-  public static Assignments none() { return new Assignments(new Inventory()); }
+  public static Assignments none(Inventory inventory) { return new Assignments(inventory); }
 
   public Assignments with(Assignments assignments) {
     if (!assignments.inventory.equals(inventory)) {
@@ -62,7 +63,11 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public Assignments with(Iterable<Assignment> assignments) {
-    throw new UnsupportedOperationException();
+    Assignments arg = inventory.newAssignments();
+    for (Assignment assignment : assignments) {
+      arg.add(assignment);
+    }
+    return with(arg);
   }
 
   public Assignments with(Assignment assignment) {
@@ -78,15 +83,30 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public boolean canFork(String variable, String value) {
-    // Check if variable is implied, if not cant fork without forking at implier first
+    // Check if variable is implied, if so cant fork without forking at implier first
     // Also check that this assignment wouldn't conflict with other assignments
-    throw new UnsupportedOperationException();
+    Assignment assignment = inventory.assign(variable, value);
+    if (implicit.stream().map(i -> i.variable().name()).anyMatch(variable::equals)) return false;
+    Assignments fork = forkAt(variable);
+    return !fork.conflictsWith(assignment);
+  }
+
+  public Assignments forkAt(String variable) {
+    Assignments fork = new Assignments(inventory);
+    for (Assignment assignment : explicit) {
+      if (assignment.variable().name().equals(variable)) {
+        continue;
+      }
+
+      fork.add(assignment);
+    }
+    return fork;
   }
 
   public Assignments fork(String variable, String value) {
     Assignments fork = new Assignments(inventory);
-    for (Assignment assignment : this) {
-      if (assignment.variable().name().equals(value)) {
+    for (Assignment assignment : explicit) {
+      if (assignment.variable().name().equals(variable)) {
         continue;
       }
 
@@ -97,12 +117,11 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public boolean isAssigned(String variable) {
-    return set.stream().anyMatch(a -> a.variable().name().equals(variable));
+    return stream().anyMatch(a -> a.variable().name().equals(variable));
   }
 
   public Assignment forVariable(String variable) {
-    return set.stream()
-        .filter(a -> a.variable().name().equals(variable))
+    return stream().filter(a -> a.variable().name().equals(variable))
         .findFirst()
         .orElseThrow(NoSuchElementException::new);
   }
@@ -116,15 +135,28 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public boolean containsAll(Assignments assignments) {
-    return assignments.set.containsAll(this.set);
+    return stream().collect(Collectors.toSet())
+        .containsAll(assignments.stream().collect(Collectors.toSet()));
   }
 
+  // TODO: Test this a lot
   public boolean conflictsWith(Assignment assignment) {
-    throw new UnsupportedOperationException();
+    Variable variable = assignment.variable();
+    if (isAssigned(variable.name()) && !forVariable(variable.name()).equals(assignment)) {
+      return true;
+    }
+
+    for (Assignment implied : assignment.implied()) {
+      if (conflictsWith(implied)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public boolean conflictsWith(String variable, String value) {
-    return false;
+    return conflictsWith(inventory.assign(variable, value));
   }
 
   /**
@@ -169,20 +201,41 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public boolean isEmpty() {
-    return set.isEmpty();
+    return !iterator().hasNext();
   }
 
   public Map<String, String> toMap() {
-    return set.stream().collect(Collectors.toMap(a -> a.variable().name(), Assignment::value));
+    return stream().collect(Collectors.toMap(a -> a.variable().name(), Assignment::value));
   }
 
   public Stream<Assignment> stream() {
-    return set.stream();
+    return Stream.concat(explicit.stream(), implicit.stream());
   }
 
   @Override
   public Iterator<Assignment> iterator() {
-    return set.iterator();
+    return new Iterator<Assignment>() {
+      Iterator<Assignment> explicit = Assignments.this.explicit.iterator();
+      Iterator<Assignment> implicit = Assignments.this.implicit.iterator();
+
+      @Override
+      public boolean hasNext() {
+        return explicit.hasNext() || implicit.hasNext();
+      }
+
+      @Override
+      public Assignment next() {
+        if (explicit.hasNext()) {
+          return explicit.next();
+        }
+
+        if (implicit.hasNext()) {
+          return implicit.next();
+        }
+
+        throw new NoSuchElementException();
+      }
+    };
   }
 
   @Override
@@ -190,12 +243,22 @@ public class Assignments implements Iterable<Assignment> {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     Assignments that = (Assignments) o;
-    return Objects.equals(set, that.set);
+    return Objects.equals(explicit, that.explicit) &&
+        Objects.equals(implicit, that.implicit) &&
+        Objects.equals(inventory, that.inventory);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(set);
+    return Objects.hash(explicit, implicit, inventory);
+  }
+
+  @Override
+  public String toString() {
+    return "Assignments{" +
+        "explicit=" + explicit +
+        ", implicit=" + implicit +
+        '}';
   }
 
   private void add(Assignment assignment) {
@@ -208,25 +271,45 @@ public class Assignments implements Iterable<Assignment> {
           "Got: " + variable);
     }
 
-    if (isAssigned(variable.name())) {
-      if (forVariable(variable.name()).equals(assignment)) {
-        return;
-      }
-
-      // TODO: Improve exception
-      throw new IllegalStateException("Conflicting assignment: " + assignment);
-    }
-
-
     if (conflictsWith(assignment)) {
       // TODO: improve exception
       throw new IllegalArgumentException("Conflicting assignment: " + assignment);
     }
 
-    set.add(assignment);
+    if (implicit.contains(assignment)) {
+      removeImplicit(assignment);
+    }
+
+    if (explicit.contains(assignment)) {
+      return;
+    }
+
+    explicit.add(assignment);
+    assignment.implied().forEach(this::addImplicit);
+  }
+
+  private void addImplicit(Assignment assignment) {
+    if (conflictsWith(assignment)) {
+      // TODO: improve exception
+      throw new IllegalArgumentException("Conflicting implicit assignment: " + assignment);
+    }
+
+    if (isAssigned(assignment.variable().name())) {
+      return;
+    }
+
+    this.implicit.add(assignment);
+    assignment.implied().forEach(this::addImplicit);
+  }
+
+  private void removeImplicit(Assignment assignment) {
+    if (implicit.contains(assignment)) {
+      assignment.implied().forEach(this::removeImplicit);
+      implicit.remove(assignment);
+    }
   }
 
   private void addAll(Assignments assignments) {
-    assignments.forEach(this::add);
+    assignments.explicit.forEach(this::add);
   }
 }

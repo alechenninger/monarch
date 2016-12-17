@@ -3,6 +3,7 @@ package io.github.alechenninger.monarch;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,6 +32,13 @@ public class DynamicHierarchy implements Hierarchy {
   }
 
   @Override
+  public Optional<Source> sourceFor(Map<String, String> assignments) {
+    return sourceFor(inventory.newAssignments().with(assignments.entrySet().stream()
+        .map(entry -> inventory.assign(entry.getKey(), entry.getValue()))
+        .collect(Collectors.toSet())));
+  }
+
+  @Override
   public Optional<Source> sourceFor(Assignments assignments) {
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode source = nodes.get(i);
@@ -54,7 +62,7 @@ public class DynamicHierarchy implements Hierarchy {
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode dynamicNode = nodes.get(i);
       for (DynamicNode.RenderedNode rendered :
-          dynamicNode.render(Assignments.none(), inventory)) {
+          dynamicNode.render(Assignments.none(inventory), inventory)) {
         Assignments variables = rendered.variablesUsed();
         descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
       }
@@ -65,7 +73,7 @@ public class DynamicHierarchy implements Hierarchy {
 
   private Optional<Assignments> variablesFor(String source) {
     List<Assignments> satisfyingVars = nodes.stream()
-        .flatMap(s -> s.assignmentsFor(source, inventory, Assignments.none())
+        .flatMap(s -> s.assignmentsFor(source, inventory, Assignments.none(inventory))
             .map(Stream::of).orElse(Stream.empty()))
         .collect(Collectors.toList());
 

@@ -20,11 +20,20 @@ package io.github.alechenninger.monarch;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class Variable {
-  private String name;
-  private Set<String> potentials;
+  private final String name;
+  private final List<Potential> potentials;
+  private final Inventory inventory;
+
+  public Variable(String name, List<Potential> potentials, Inventory inventory) {
+    this.name = name;
+    this.potentials = potentials;
+    this.inventory = inventory;
+  }
 
   public String name() {
     return name;
@@ -37,8 +46,8 @@ public class Variable {
 
     Set<String> values = new HashSet<>();
 
-    for (String potential : potentials) {
-      Assignment assignment = assign(potential);
+    for (Potential potential : potentials) {
+      Assignment assignment = assign(potential.value());
       if (assignment.conflictsWith(assignments)) continue;
       values.add(assignment.value());
     }
@@ -46,11 +55,31 @@ public class Variable {
     return values;
   }
 
-  public Set<String> valuesThatImply(Assignment assignment) {
-    throw new UnsupportedOperationException();
+  public Assignment assign(String value) {
+    return inventory.assign(name, value);
   }
 
-  public Assignment assign(String value) {
-    throw new UnsupportedOperationException();
+  @Override
+  public String toString() {
+    return "Variable{" +
+        "name='" + name + '\'' +
+        ", potentials=" + potentials +
+        ", inventory=" + inventory +
+        '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Variable variable = (Variable) o;
+    return Objects.equals(name, variable.name) &&
+        Objects.equals(potentials, variable.potentials) &&
+        Objects.equals(inventory, variable.inventory);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name, potentials, inventory);
   }
 }

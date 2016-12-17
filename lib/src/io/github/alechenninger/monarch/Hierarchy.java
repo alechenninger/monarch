@@ -113,6 +113,8 @@ public interface Hierarchy {
 
   Optional<Source> sourceFor(String source);
 
+  Optional<Source> sourceFor(Map<String, String> assignments);
+
   Optional<Source> sourceFor(Assignments assignments);
 
   List<Source> descendants();

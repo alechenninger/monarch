@@ -1,5 +1,7 @@
 import io.github.alechenninger.monarch.Hierarchy
+import io.github.alechenninger.monarch.Inventory
 import io.github.alechenninger.monarch.Potential
+import org.junit.Ignore
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
@@ -58,8 +60,9 @@ potentials:
 
   @Test
   void shouldCalculateAncestorsByExactSource() {
-    assert hierarchy.sourceFor("teams/teamA/qa").get().lineage().collect { it.path() } == [
-        "teams/teamA/qa",
+    // There is no source for teams/teamA/qa because teamA implies app=store
+    assert hierarchy.sourceFor("teams/teamB/qa").get().lineage().collect { it.path() } == [
+        "teams/teamB/qa",
         "environment/qa",
         "common",
     ]
@@ -130,10 +133,10 @@ potentials:
         "%{bar}",
         "foo/%{foo}",
         "bar/%{bar}",
-    ], [
+    ], Inventory.from([
         "foo": [Potential.of("baz")],
         "bar": [Potential.of("baz")],
-    ])
+    ]))
 
     assert hierarchy.sourceFor("baz") == Optional.empty()
   }
@@ -146,10 +149,10 @@ potentials:
         "foo/%{foo}",
         "constant",
         "bar/%{bar}",
-    ], [
+    ], Inventory.from([
         "foo": [Potential.of("baz")],
         "bar": [Potential.of("baz")],
-    ])
+    ]))
 
     assert hierarchy.sourceFor(["bar": "baz"]).get()
         .descendants().collect { it.path() } == ["baz", "bar/baz"]
@@ -181,6 +184,7 @@ potentials:
   }
 
   @Test
+  @Ignore
   void shouldIncludeAllDescendantsWhichImplyAVariableUsedInSource() {
 
   }

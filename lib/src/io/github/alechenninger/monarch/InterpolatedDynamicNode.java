@@ -23,7 +23,6 @@ import org.bigtesting.interpolatd.Substitutor;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -67,7 +66,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
   @Override
   public List<RenderedNode> render(Assignments assignments, Inventory inventory) {
     if (variableNames.isEmpty()) {
-      return Collections.singletonList(new RenderedNode(expression, Assignments.none()));
+      return Collections.singletonList(new RenderedNode(expression, assignments));
     }
 
     return VariableCombinations.stream(variableNames, assignments)

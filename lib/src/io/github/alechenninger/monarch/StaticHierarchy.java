@@ -60,6 +60,12 @@ class StaticHierarchy implements Hierarchy {
         "identifying a source via variables.");
   }
 
+  @Override
+  public Optional<Source> sourceFor(Assignments assignments) {
+    throw new UnsupportedOperationException("Statically defined hierarchies do not support " +
+        "identifying a source via variables.");
+  }
+
   public List<Source> descendants() {
     return DescendantsIterator.asStream(rootNodes)
         .map(StaticSource::new)

@@ -68,13 +68,21 @@ class VariableCombinations {
     List<Assignments> newCombos = new ArrayList<>();
     for (Assignments combo : combos) {
       if (combo.isAssigned(variable)) {
-        if (combo.conflictsWith(variable, value) && combo.canFork(variable, value)) {
-          Assignments newCombo = combo.fork(variable, value);
+        if (combo.conflictsWith(variable, value)) {
+          if (combo.canFork(variable, value)) {
+            Assignments newCombo = combo.fork(variable, value);
+            newCombos.add(combo);
+            newCombos.add(newCombo);
+          }
+        } else {
           newCombos.add(combo);
-          newCombos.add(newCombo);
         }
       } else {
-        newCombos.add(combo.with(variable, value));
+        if (combo.conflictsWith(variable, value)) {
+          newCombos.add(combo);
+        } else {
+          newCombos.add(combo.with(variable, value));
+        }
       }
     }
     combos = newCombos;
@@ -84,4 +92,10 @@ class VariableCombinations {
     return combos.stream().filter(c -> !c.isEmpty());
   }
 
+  @Override
+  public String toString() {
+    return "VariableCombinations{" +
+        "combos=" + combos +
+        '}';
+  }
 }

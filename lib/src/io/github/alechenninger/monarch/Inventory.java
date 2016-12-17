@@ -18,34 +18,94 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Inventory {
-  private Map<String, List<Potential>> map;
+  private final Map<String, List<Potential>> map;
+
+  public static Inventory from(Map<String, List<Potential>> potentials) {
+    return new Inventory(potentials);
+  }
+
+  public static Inventory empty() {
+    return new Inventory(Collections.emptyMap());
+  }
+
+  private Inventory(Map<String, List<Potential>> map) {
+    // TODO: Validate same value doesn't appear twice in potentials
+    this.map = map;
+  }
 
   public Assignments newAssignments() {
     return new Assignments(this);
   }
 
   public Assignment assign(String variable, String value) {
-    return new Assignment(this, variable, value);
+    if (!map.containsKey(variable)) {
+      throw new IllegalArgumentException("Variable not found in inventory: " + variable);
+    }
+
+    List<Potential> potentials = map.get(variable);
+
+    if (potentials == null) {
+      throw new IllegalStateException("No potential values defined for variable: " + variable);
+    }
+
+    Optional<Potential> potential = potentials.stream()
+        .filter(p -> p.value().equals(value))
+        .findFirst();
+
+    if (!potential.isPresent()) {
+      throw new IllegalArgumentException("Cannot assign value to variable: value is not in " +
+          "inventory. variable=" + variable + " value=" + value);
+    }
+
+    return new Assignment(this, variable, potential.get());
+  }
+
+  public Assignments assignAll(Map<String, String> variablesToValues) {
+    Set<Assignment> assignments = variablesToValues.entrySet().stream()
+        .map(entry -> assign(entry.getKey(), entry.getValue()))
+        .collect(Collectors.toSet());
+    return new Assignments(this, assignments);
   }
 
   public boolean hasVariable(Variable variable) {
-    throw new UnsupportedOperationException();
+    return variableByName(variable.name())
+        .map(variable::equals)
+        .orElse(false);
   }
 
   public Optional<Variable> variableByName(String name) {
-    throw new UnsupportedOperationException();
-  }
-
-  public static Inventory from(Map<String, List<Potential>> potentials) {
-    return null;
+    return Optional.ofNullable(map.get(name))
+        .map(potentials -> new Variable(name, potentials, this));
   }
 
   public boolean isAssignable(String variable, String value) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Inventory inventory = (Inventory) o;
+    return Objects.equals(map, inventory.map);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(map);
+  }
+
+  @Override
+  public String toString() {
+    return "Inventory{" + map + '}';
   }
 }

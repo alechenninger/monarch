@@ -39,11 +39,11 @@ public interface Potentials {
     while (!varsToExamine.isEmpty()) {
       String var = varsToExamine.poll();
       for (Potential potential : allPotentials.get(var).asList()) {
-        if (!potential.getValue().equals(variablesPlusImplied.get(var))) {
+        if (!potential.value().equals(variablesPlusImplied.get(var))) {
           continue;
         }
 
-        for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
+        for (Map.Entry<String, String> implied : potential.impliedAssignments().entrySet()) {
           String impliedKey = implied.getKey();
           String impliedValue = implied.getValue();
 

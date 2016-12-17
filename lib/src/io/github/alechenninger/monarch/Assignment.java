@@ -18,18 +18,17 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Objects;
+
 public class Assignment {
   private final Inventory inventory;
   private final String variable;
-  private final String value;
+  private final Potential potential;
 
-  public Assignment(Inventory inventory, String variable, String value) {
+  public Assignment(Inventory inventory, String variable, Potential potential) {
     this.inventory = inventory;
     this.variable = variable;
-    this.value = value;
-    if (!inventory.isAssignable(variable, value)) {
-      throw new IllegalArgumentException();
-    }
+    this.potential = potential;
   }
 
   public Variable variable() {
@@ -37,18 +36,38 @@ public class Assignment {
   }
 
   public String value() {
-    return value;
-  }
-
-  public boolean implies(Assignment assignment) {
-    throw new UnsupportedOperationException();
+    return potential.value();
   }
 
   public boolean conflictsWith(Assignments assignments) {
     return assignments.conflictsWith(this);
   }
 
+  // TODO: Think about explicit / implicit distinction in Assignments some more
   public Assignments implied() {
-    throw new UnsupportedOperationException();
+    return inventory.assignAll(potential.impliedAssignments());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Assignment that = (Assignment) o;
+    return Objects.equals(inventory, that.inventory) &&
+        Objects.equals(variable, that.variable) &&
+        Objects.equals(potential, that.potential);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(inventory, variable, potential);
+  }
+
+  @Override
+  public String toString() {
+    return "Assignment{" +
+        "variable='" + variable + '\'' +
+        ", potential=" + potential +
+        '}';
   }
 }
