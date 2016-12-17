@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -63,7 +62,7 @@ public class DynamicHierarchy implements Hierarchy {
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode dynamicNode = nodes.get(i);
       for (DynamicNode.RenderedNode rendered :
-          dynamicNode.render(Assignments.none(inventory), inventory)) {
+          dynamicNode.render(Assignments.none(inventory))) {
         Assignments variables = inventory.assignAll(rendered.variablesUsed());
         descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
       }
@@ -105,7 +104,7 @@ public class DynamicHierarchy implements Hierarchy {
       this.index = index;
 
       DynamicNode dynamicNode = nodes.get(index);
-      List<DynamicNode.RenderedNode> renders = dynamicNode.render(this.assignments, inventory);
+      List<DynamicNode.RenderedNode> renders = dynamicNode.render(this.assignments);
 
       if (renders.size() != 1) {
         throw new IllegalArgumentException("Expected source with all variables provided to " +
@@ -152,7 +151,7 @@ public class DynamicHierarchy implements Hierarchy {
 
       for (int i = index + 1; i < nodes.size(); i++) {
         DynamicNode dynamicNode = nodes.get(i);
-        List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments, inventory);
+        List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments);
         for (DynamicNode.RenderedNode render : renders) {
           Assignments renderAssigns = inventory.assignAll(render.variablesUsed());
           // TODO: Figure out this condition

@@ -38,11 +38,11 @@ public interface DynamicNode {
 
   /** Expects variables to already include implied. */
   // TODO: Make variable implied inclusion more explicit
-  List<RenderedNode> render(Assignments assignments, Inventory inventory);
+  List<RenderedNode> render(Assignments assignments);
 
   default Optional<Assignments> assignmentsFor(String source,
       Inventory potentials, Assignments variables) {
-    return render(variables, potentials).stream()
+    return render(variables).stream()
         .filter(s -> s.path().equals(source))
         .map(RenderedNode::variablesUsed)
         // TODO validate only one found?

@@ -66,7 +66,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
   }
 
   @Override
-  public List<RenderedNode> render(Assignments assignments, Inventory inventory) {
+  public List<RenderedNode> render(Assignments assignments) {
     if (variableNames.isEmpty()) {
       return Collections.singletonList(new RenderedNode(expression, Collections.emptySet()));
     }
@@ -78,9 +78,9 @@ public class InterpolatedDynamicNode implements DynamicNode {
             if (!combination.isAssigned(captured)) {
               throw new IllegalStateException("No value defined for variable: " + captured);
             }
-            String value = combination.forVariable(captured).value();
-            usedAssignments.add(inventory.assign(captured, value));
-            return value;
+            Assignment assignment = combination.forVariable(captured);
+            usedAssignments.add(assignment);
+            return assignment.value();
           });
 
           String path = interpolator.interpolate(expression, combination.toMap());

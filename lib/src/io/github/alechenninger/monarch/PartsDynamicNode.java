@@ -18,11 +18,8 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,7 +62,7 @@ public class PartsDynamicNode implements DynamicNode {
   }
 
   @Override
-  public List<RenderedNode> render(Assignments variables, Inventory inventory) {
+  public List<RenderedNode> render(Assignments variables) {
     return VariableCombinations.stream(variables(), variables)
         .map(combination -> {
           Set<Assignment> usedAssignments = new HashSet<>();
@@ -78,10 +75,9 @@ public class PartsDynamicNode implements DynamicNode {
                     part.string);
               }
 
-              String value = combination.forVariable(part.string).value();
-
-              usedAssignments.add(inventory.assign(part.string, value));
-              path.append(value);
+              Assignment assignment = combination.forVariable(part.string);
+              usedAssignments.add(assignment);
+              path.append(assignment.value());
             } else {
               path.append(part.string);
             }
