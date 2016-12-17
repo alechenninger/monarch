@@ -71,6 +71,19 @@ public class Assignments implements Iterable<Assignment> {
     return with(assignment);
   }
 
+  public Assignments fork(String variable, String value) {
+    Assignments fork = new Assignments(inventory);
+    for (Assignment assignment : this) {
+      if (assignment.variable().name().equals(value)) {
+        continue;
+      }
+
+      fork.add(assignment);
+    }
+
+    return fork.with(variable, value);
+  }
+
   public boolean isAssigned(String variable) {
     return set.stream().anyMatch(a -> a.variable().name().equals(variable));
   }
@@ -96,6 +109,10 @@ public class Assignments implements Iterable<Assignment> {
 
   public boolean conflictsWith(Assignment assignment) {
     throw new UnsupportedOperationException();
+  }
+
+  public boolean conflictsWith(String variable, String value) {
+    return false;
   }
 
   public boolean assignsOnly(List<String> variables) {
@@ -129,6 +146,10 @@ public class Assignments implements Iterable<Assignment> {
       assignments.add(forVariable(variable));
     }
     return assignments.containsAll(this);
+  }
+
+  public boolean isEmpty() {
+    return set.isEmpty();
   }
 
   public Stream<Assignment> stream() {
@@ -172,11 +193,13 @@ public class Assignments implements Iterable<Assignment> {
       throw new IllegalStateException("Conflicting assignment: " + assignment);
     }
 
-    if (set.add(assignment)) {
-      // TODO: potentials are a function of all assignments
-      // And a potential has implications
-      addAll(assignment.implied());
+
+    if (conflictsWith(assignment)) {
+      // TODO: improve exception
+      throw new IllegalArgumentException("Conflicting assignment: " + assignment);
     }
+
+    set.add(assignment);
   }
 
   private void addAll(Assignments assignments) {

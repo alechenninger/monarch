@@ -62,9 +62,8 @@ public class PartsDynamicNode implements DynamicNode {
   }
 
   @Override
-  public List<RenderedNode> render(Map<String, String> variables,
-      Map<String, List<Potential>> potentials) {
-    return VariableCombinations.stream(variables(), variables, potentials)
+  public List<RenderedNode> render(Map<String, String> variables) {
+    return VariableCombinations.stream(variables(), variables)
         .map(combination -> {
           Map<String, String> variablesUsed = new HashMap<>();
           StringBuilder path = new StringBuilder();

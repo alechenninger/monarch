@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -37,17 +35,12 @@ class VariableCombinations {
    * TODO: make whether or not variables includes implied more explicit
    * Variables is a function of implications and user input.
    */
-  static Stream<Map<String, String>> stream(List<String> variableNames,
-      Assignments assignments, Inventory inventory) {
-    Set<Assignment> usedAssignments = assignments.stream()
-        .filter(a -> variableNames.contains(a.variable().name()))
-        .collect(Collectors.toSet());
-
+  static Stream<Assignments> stream(List<String> variableNames, Assignments assignments) {
     List<String> missingVars = variableNames.stream()
-        .filter(var -> !usedAssignments.contains(assignments.forVariable(var)))
+        .filter(var -> !assignments.isAssigned(var))
         .collect(Collectors.toList());
 
-    VariableCombinations combos = new VariableCombinations(usedAssignments, inventory);
+    VariableCombinations combos = new VariableCombinations(assignments);
 
     for (String missingVar : missingVars) {
       Set<String> potentialsForVar = assignments.possibleValues(missingVar);
@@ -65,100 +58,32 @@ class VariableCombinations {
     return combos.stream();
   }
 
-  private final List<Map<String, String>> combos = new ArrayList<>();
-  private final Map<String, List<Potential>> potentials;
+  private List<Assignments> combos = new ArrayList<>();
 
-  private VariableCombinations(Set<Assignment> variablesProvided,
-      Inventory potentials) {
-    this.potentials = potentials;
-
+  private VariableCombinations(Assignments variablesProvided) {
     // TODO: What if there are no combinations actually? We are filtering empty in .stream(), but
     // might be better way.
-    combos.add(new HashMap<>(variablesProvided));
+    combos.add(variablesProvided);
   }
 
   private void put(String variable, String value) {
-    List<Map<String, String>> newCombos = new ArrayList<>();
-    combos: for (Map<String, String> combo : combos) {
-      // See if this variable would imply other variables. If so, they get added to this combo
-      // automatically.
-      if (potentials.containsKey(variable)) {
-        // Find the potential for this value
-        for (Potential potential : potentials.get(variable)) {
-          if (!potential.getValue().equals(value)) {
-            continue;
-          }
-
-          Map<String, String> impliedAdditions = new HashMap<>();
-
-          for (Map.Entry<String, String> implied : potential.getImpliedVariables().entrySet()) {
-            String impliedKey = implied.getKey();
-            String impliedValue = implied.getValue();
-            if (combo.containsKey(impliedKey)) {
-              String currentValue = combo.get(impliedKey);
-              if (!Objects.equals(currentValue, impliedValue)) {
-                continue combos;
-              }
-            } else {
-              impliedAdditions.put(impliedKey, impliedValue);
-            }
-          }
-
-          // FIXME: This is wrong because implied values will be carried through to new combinations
-          // even though those variables may not imply the same things, see below
-          combo.putAll(impliedAdditions);
-        }
-      }
-
-      if (combo.containsKey(variable)) {
-        // Is it already implied in this combo?
-        for (Map.Entry<String, String> comboEntry : combo.entrySet()) {
-          for (Potential potential : potentials.get(comboEntry.getKey())) {
-            if (!potential.getValue().equals(comboEntry.getValue())) {
-              continue;
-            }
-
-            if (potential.getImpliedVariables().containsKey(variable)) {
-              continue combos;
-            }
-          }
-        }
-
-        if (!Objects.equals(combo.get(variable), value)) {
-          // FIXME: This is where above breaks: we copy the combo here when we have a conflict.
-          // Implications in this combo may not be relevant to this conflict.
-          Map<String, String> newCombo = new HashMap<>(combo);
-          newCombo.put(variable, value);
+    List<Assignments> newCombos = new ArrayList<>();
+    for (Assignments combo : combos) {
+      if (combo.isAssigned(variable)) {
+        if (combo.conflictsWith(variable, value)) {
+          Assignments newCombo = combo.fork(variable, value);
+          newCombos.add(combo);
           newCombos.add(newCombo);
         }
       } else {
-        combo.put(variable, value);
+        newCombos.add(combo.with(variable, value));
       }
     }
-    combos.addAll(newCombos);
+    combos = newCombos;
   }
 
-  private Stream<Map<String, String>> stream() {
+  private Stream<Assignments> stream() {
     return combos.stream().filter(c -> !c.isEmpty());
   }
 
-  private class Combination {
-    final Map<String, String> explicit;
-    final Map<String, String> implicit = new HashMap<>();
-
-    Combination(Map<String, String> explicit) {
-      this.explicit = new HashMap<>(explicit);
-    }
-
-    Map<String, String> toMap() {
-      Map<String, String> combo = new HashMap<>(explicit.size() + implicit.size());
-      combo.putAll(implicit);
-      combo.putAll(explicit);
-      return combo;
-    }
-
-    boolean put(String variable, String value) {
-      return false;
-    }
-  }
 }
