@@ -18,14 +18,17 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -131,7 +134,52 @@ public class Assignments implements Iterable<Assignment> {
       return Collections.singleton(forVariable(variable).value());
     }
 
-    return inventory.variableByName(variable).get().values(this);
+    return inventory.variableByName(variable)
+        .map(v -> v.values(this))
+        .orElse(Collections.emptySet());
+  }
+
+  public Set<Assignments> possibleAssignments(Collection<String> variables) {
+    List<String> missingVars = variables.stream()
+        .filter(var -> !isAssigned(var))
+        .collect(Collectors.toList());
+
+    Set<Assignments> possibilities = new LinkedHashSet<>();
+    possibilities.add(this);
+
+    for (String missingVar : missingVars) {
+      Set<String> potentialsForVar = possibleValues(missingVar);
+
+      if (potentialsForVar.isEmpty()) {
+        throw new IllegalStateException("No potentials found for missing variable '" +
+            missingVar + "'.");
+      }
+
+      for (String potential : potentialsForVar) {
+        Set<Assignments> newPossibilities = new LinkedHashSet<>();
+        for (Assignments possibility : possibilities) {
+          if (possibility.isAssigned(missingVar)) {
+            if (possibility.conflictsWith(missingVar, potential) &&
+                possibility.canFork(missingVar, potential)) {
+              Assignments newPossibility = possibility.fork(missingVar, potential);
+              newPossibilities.add(possibility);
+              newPossibilities.add(newPossibility);
+            } else {
+              newPossibilities.add(possibility);
+            }
+          } else {
+            if (possibility.conflictsWith(missingVar, potential)) {
+              newPossibilities.add(possibility);
+            } else {
+              newPossibilities.add(possibility.with(missingVar, potential));
+            }
+          }
+        }
+        possibilities = newPossibilities;
+      }
+    }
+
+    return possibilities;
   }
 
   public boolean contains(Assignment assignment) {

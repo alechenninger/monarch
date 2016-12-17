@@ -71,7 +71,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
       return Collections.singletonList(new RenderedNode(expression, Collections.emptySet()));
     }
 
-    return VariableCombinations.stream(variableNames, assignments)
+    return assignments.possibleAssignments(variableNames).stream()
         .map(combination -> {
           Set<Assignment> usedAssignments = new HashSet<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {

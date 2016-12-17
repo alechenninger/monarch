@@ -63,7 +63,7 @@ public class PartsDynamicNode implements DynamicNode {
 
   @Override
   public List<RenderedNode> render(Assignments variables) {
-    return VariableCombinations.stream(variables(), variables)
+    return variables.possibleAssignments(variables()).stream()
         .map(combination -> {
           Set<Assignment> usedAssignments = new HashSet<>();
           StringBuilder path = new StringBuilder();

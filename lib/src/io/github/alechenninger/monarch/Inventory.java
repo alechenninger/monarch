@@ -91,10 +91,6 @@ public class Inventory {
         .map(potentials -> new Variable(name, potentials, this));
   }
 
-  public boolean isAssignable(String variable, String value) {
-    throw new UnsupportedOperationException();
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
