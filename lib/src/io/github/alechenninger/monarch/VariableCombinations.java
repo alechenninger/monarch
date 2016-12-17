@@ -50,42 +50,19 @@ class VariableCombinations {
     VariableCombinations combos = new VariableCombinations(usedAssignments, inventory);
 
     for (String missingVar : missingVars) {
-      Set<String> potentialsForVar = inventory.variableByName(missingVar)
-          .orElseThrow(NoSuchElementException::new)
-          .values();
+      Set<String> potentialsForVar = assignments.possibleValues(missingVar);
 
-      if (potentialsForVar == null || potentialsForVar.isEmpty()) {
+      if (potentialsForVar.isEmpty()) {
         throw new IllegalStateException("No potentials found for missing variable '" +
             missingVar + "'.");
       }
 
       for (String potential : potentialsForVar) {
-        // A potential which implies variables that conflict with know variables is not a potential
-        // in this context.
-        // TODO: Maybe generalize this idea since it likely is useful in more places
-        // Once we have variables, we can refine potentials based on implications
-        // Ex: if environment=prod, a value that implies environment=qa is not a potential value.
-        // Note though we have to continue to do this within each combination.
-        if (mapsConflict(potential.getImpliedVariables(), assignments)) {
-          continue;
-        }
-
-        combos.put(missingVar, potential.getValue());
+        combos.put(missingVar, potential);
       }
     }
 
     return combos.stream();
-  }
-
-  private static boolean mapsConflict(Map<String, String> map1, Map<String, String> map2) {
-    for (Map.Entry<String, String> map1Entry : map1.entrySet()) {
-      if (map2.containsKey(map1Entry.getKey()) &&
-          !Objects.equals(map1Entry.getValue(), map2.get(map1Entry.getKey()))) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   private final List<Map<String, String>> combos = new ArrayList<>();

@@ -18,17 +18,31 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 public class Variable {
   private String name;
+  private Set<Assignment> potentials;
 
   public String name() {
     return name;
   }
 
-  public Set<String> values() {
-    throw new UnsupportedOperationException();
+  public Set<String> values(Assignments assignments) {
+    if (assignments.isAssigned(name)) {
+      return Collections.singleton(assignments.forVariable(name).value());
+    }
+
+    Set<String> values = new HashSet<>();
+
+    for (Assignment assignment : potentials) {
+      if (assignment.conflictsWith(assignments)) continue;
+      values.add(assignment.value());
+    }
+
+    return values;
   }
 
   public Set<String> valuesThatImply(Assignment assignment) {

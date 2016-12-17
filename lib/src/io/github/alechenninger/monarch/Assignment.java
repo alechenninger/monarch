@@ -31,6 +31,10 @@ public class Assignment {
     throw new UnsupportedOperationException();
   }
 
+  public boolean conflictsWith(Assignments assignments) {
+    return assignments.conflictsWith(this);
+  }
+
   public Assignments implied() {
     throw new UnsupportedOperationException();
   }

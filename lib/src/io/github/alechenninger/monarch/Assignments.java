@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -30,9 +31,18 @@ public class Assignments implements Iterable<Assignment> {
   private final Set<Assignment> set = new HashSet<>();
   private final Inventory inventory;
 
-  // TODO: Think on being per-inventory a bit...
   public Assignments(Inventory inventory) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
+  }
+
+  public Assignments(Inventory inventory, Assignment assignment) {
+    this.inventory = Objects.requireNonNull(inventory, "inventory");
+    add(assignment);
+  }
+
+  public Assignments(Inventory inventory, Iterable<Assignment> assignments) {
+    this.inventory = Objects.requireNonNull(inventory, "inventory");
+    assignments.forEach(this::add);
   }
 
   // TODO: Should this use empty inventory?
@@ -49,6 +59,18 @@ public class Assignments implements Iterable<Assignment> {
     return combination;
   }
 
+  public Assignments with(Assignment assignment) {
+    return with(new Assignments(inventory, assignment));
+  }
+
+  public Assignments with(String variable, String value) {
+    Assignment assignment = inventory.variableByName(variable)
+        .orElseThrow(NoSuchElementException::new)
+        .assign(value);
+
+    return with(assignment);
+  }
+
   public boolean isAssigned(String variable) {
     return set.stream().anyMatch(a -> a.variable().name().equals(variable));
   }
@@ -58,6 +80,14 @@ public class Assignments implements Iterable<Assignment> {
         .filter(a -> a.variable().name().equals(variable))
         .findFirst()
         .orElseThrow(NoSuchElementException::new);
+  }
+
+  public Set<String> possibleValues(String variable) {
+    if (isAssigned(variable)) {
+      return Collections.singleton(forVariable(variable).value());
+    }
+
+    return inventory.variableByName(variable).get().values(this);
   }
 
   public boolean containsAll(Assignments assignments) {
@@ -143,6 +173,8 @@ public class Assignments implements Iterable<Assignment> {
     }
 
     if (set.add(assignment)) {
+      // TODO: potentials are a function of all assignments
+      // And a potential has implications
       addAll(assignment.implied());
     }
   }
