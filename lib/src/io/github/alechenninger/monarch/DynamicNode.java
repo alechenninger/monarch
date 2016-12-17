@@ -48,10 +48,6 @@ public interface DynamicNode {
         .findFirst();
   }
 
-  default boolean isCoveredBy(Assignments assignments) {
-    return assignments.assignsSupersetOf(variables());
-  }
-
   final class RenderedNode {
     private final String path;
     private final Assignments variablesUsed;

@@ -72,13 +72,13 @@ public class InterpolatedDynamicNode implements DynamicNode {
 
     return VariableCombinations.stream(variableNames, assignments)
         .map(combination -> {
-          Map<String, String> variablesUsed = new HashMap<>();
+          List<Assignment> usedAssignments = new ArrayList<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {
             if (!combination.isAssigned(captured)) {
               throw new IllegalStateException("No value defined for variable: " + captured);
             }
             String value = combination.forVariable(captured).value();
-            variablesUsed.put(captured, value);
+            usedAssignments.add(inventory.assign(captured, value));
             return value;
           });
 

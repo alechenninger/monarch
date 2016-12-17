@@ -24,7 +24,7 @@ import java.util.Set;
 
 public class Variable {
   private String name;
-  private Set<Assignment> potentials;
+  private Set<String> potentials;
 
   public String name() {
     return name;
@@ -37,7 +37,8 @@ public class Variable {
 
     Set<String> values = new HashSet<>();
 
-    for (Assignment assignment : potentials) {
+    for (String potential : potentials) {
+      Assignment assignment = assign(potential);
       if (assignment.conflictsWith(assignments)) continue;
       values.add(assignment.value());
     }

@@ -61,6 +61,10 @@ public class Assignments implements Iterable<Assignment> {
     return combination;
   }
 
+  public Assignments with(Iterable<Assignment> assignments) {
+    throw new UnsupportedOperationException();
+  }
+
   public Assignments with(Assignment assignment) {
     return with(new Assignments(inventory, assignment));
   }
@@ -123,6 +127,9 @@ public class Assignments implements Iterable<Assignment> {
     return false;
   }
 
+  /**
+   * Returns true if only the provided variables are assigned and no others.
+   */
   public boolean assignsOnly(List<String> variables) {
     Assignments assignments = new Assignments(inventory);
     for (String variable : variables) {
@@ -134,6 +141,9 @@ public class Assignments implements Iterable<Assignment> {
     return equals(assignments);
   }
 
+  /**
+   * Returns true if at least the provided variables are all assigned.
+   */
   public boolean assignsSupersetOf(List<String> variables) {
     Assignments assignments = new Assignments(inventory);
     for (String variable : variables) {
@@ -145,12 +155,14 @@ public class Assignments implements Iterable<Assignment> {
     return containsAll(assignments);
   }
 
+  /**
+   * Returns true if variables contains a superset of all of the assigned variables.
+   * @param variables
+   * @return
+   */
   public boolean assignsSubsetOf(List<String> variables) {
     Assignments assignments = new Assignments(inventory);
     for (String variable : variables) {
-      if (!isAssigned(variable)) {
-        return false;
-      }
       assignments.add(forVariable(variable));
     }
     return assignments.containsAll(this);

@@ -29,6 +29,10 @@ public class Inventory {
     return new Assignments(this);
   }
 
+  public Assignment assign(String variable, String value) {
+    return new Assignment(this, variable, value);
+  }
+
   public boolean hasVariable(Variable variable) {
     throw new UnsupportedOperationException();
   }
@@ -39,5 +43,9 @@ public class Inventory {
 
   public static Inventory from(Map<String, List<Potential>> potentials) {
     return null;
+  }
+
+  public boolean isAssignable(String variable, String value) {
+    throw new UnsupportedOperationException();
   }
 }

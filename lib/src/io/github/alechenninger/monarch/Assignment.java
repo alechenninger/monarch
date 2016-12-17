@@ -19,12 +19,25 @@
 package io.github.alechenninger.monarch;
 
 public class Assignment {
+  private final Inventory inventory;
+  private final String variable;
+  private final String value;
+
+  public Assignment(Inventory inventory, String variable, String value) {
+    this.inventory = inventory;
+    this.variable = variable;
+    this.value = value;
+    if (!inventory.isAssignable(variable, value)) {
+      throw new IllegalArgumentException();
+    }
+  }
+
   public Variable variable() {
-    throw new UnsupportedOperationException();
+    return inventory.variableByName(variable).get();
   }
 
   public String value() {
-    throw new UnsupportedOperationException();
+    return value;
   }
 
   public boolean implies(Assignment assignment) {
