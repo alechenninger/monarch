@@ -61,7 +61,7 @@ class DynamicHierarchy implements Hierarchy {
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode dynamicNode = nodes.get(i);
       for (RenderedNode rendered : dynamicNode.render(Assignments.none(inventory))) {
-        Assignments variables = inventory.assignAll(rendered.variablesUsed());
+        Assignments variables = inventory.assignAll(rendered.usedAssignments());
         descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
       }
     }
@@ -119,7 +119,7 @@ class DynamicHierarchy implements Hierarchy {
       this.inventory = inventory;
       this.index = index;
       this.rendered = rendered;
-      // TODO if (!variables.containsAll(rendered.variablesUsed()) throw
+      // TODO if (!variables.containsAll(rendered.usedAssignments()) throw
     }
 
     @Override
@@ -151,7 +151,7 @@ class DynamicHierarchy implements Hierarchy {
         DynamicNode dynamicNode = nodes.get(i);
         List<RenderedNode> renders = dynamicNode.render(assignments);
         for (RenderedNode render : renders) {
-          Assignments renderAssigns = inventory.assignAll(render.variablesUsed());
+          Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
           if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
             Assignments descendantAssigns = assignments.with(renderAssigns);
             descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));

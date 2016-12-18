@@ -41,7 +41,7 @@ public interface DynamicNode {
       Inventory potentials, Assignments variables) {
     return render(variables).stream()
         .filter(s -> s.path().equals(source))
-        .map(RenderedNode::variablesUsed)
+        .map(RenderedNode::usedAssignments)
         // TODO validate only one found?
         .findFirst()
         .map(potentials::assignAll);
@@ -49,26 +49,26 @@ public interface DynamicNode {
 
   final class RenderedNode {
     private final String path;
-    private final Set<Assignment> variablesUsed;
+    private final Set<Assignment> usedAssignments;
 
-    public RenderedNode(String path, Set<Assignment> assignments) {
-      this.path = Objects.requireNonNull(path);
-      this.variablesUsed = assignments;
+    public RenderedNode(String path, Set<Assignment> usedAssignments) {
+      this.path = Objects.requireNonNull(path, "path");
+      this.usedAssignments = Objects.requireNonNull(usedAssignments, "usedAssignments");
     }
 
     public String path() {
       return path;
     }
 
-    public Set<Assignment> variablesUsed() {
-      return variablesUsed;
+    public Set<Assignment> usedAssignments() {
+      return usedAssignments;
     }
 
     @Override
     public String toString() {
       return "RenderedNode{" +
           "path='" + path + '\'' +
-          ", variablesUsed=" + variablesUsed +
+          ", usedAssignments=" + usedAssignments +
           '}';
     }
 
@@ -78,12 +78,12 @@ public interface DynamicNode {
       if (o == null || getClass() != o.getClass()) return false;
       RenderedNode that = (RenderedNode) o;
       return Objects.equals(path, that.path) &&
-          Objects.equals(variablesUsed, that.variablesUsed);
+          Objects.equals(usedAssignments, that.usedAssignments);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(path, variablesUsed);
+      return Objects.hash(path, usedAssignments);
     }
   }
 }
