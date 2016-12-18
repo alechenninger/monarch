@@ -31,13 +31,10 @@ public interface DynamicNode {
         .collect(Collectors.toList());
   }
 
-  // TODO: need clearer terminology around variables, their names, and their values
   List<String> variables();
 
   // TODO: Add renderOne which accepts just variables that we expect to cover all of variables()
 
-  /** Expects variables to already include implied. */
-  // TODO: Make variable implied inclusion more explicit
   List<RenderedNode> render(Assignments assignments);
 
   default Optional<Assignments> assignmentsFor(String source,

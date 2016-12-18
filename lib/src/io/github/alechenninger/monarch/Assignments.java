@@ -341,9 +341,10 @@ public class Assignments implements Iterable<Assignment> {
           "Got: " + variable);
     }
 
-    if (conflictsWith(assignment)) {
-      // TODO: improve exception
-      throw new IllegalArgumentException("Conflicting assignment: " + assignment);
+    Optional<Assignment> conflict = conflictOf(assignment);
+    if (conflict.isPresent()) {
+      throw new IllegalArgumentException("Assignment " + assignment + " conflicts with " +
+          conflict.get());
     }
 
     if (implicit.contains(assignment)) {
@@ -359,10 +360,10 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   private void addImplicit(Assignment assignment) {
-    if (conflictsWith(assignment)) {
-      // TODO: improve exception
-      throw new IllegalArgumentException("Implicit assignment: " + assignment + " " +
-          "conflicts with: " + conflictOf(assignment));
+    Optional<Assignment> conflict = conflictOf(assignment);
+    if (conflict.isPresent()) {
+      throw new IllegalArgumentException("Implicit assignment " + assignment + " conflicts with " +
+          conflict.get());
     }
 
     if (isAssigned(assignment.variable().name())) {

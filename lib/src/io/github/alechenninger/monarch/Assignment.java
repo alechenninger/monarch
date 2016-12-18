@@ -43,7 +43,6 @@ public class Assignment {
     return assignments.conflictsWith(this);
   }
 
-  // TODO: Think about explicit / implicit distinction in Assignments some more
   public Assignments implied() {
     return inventory.assignAll(assignable.impliedAssignments());
   }
@@ -66,7 +65,7 @@ public class Assignment {
   @Override
   public String toString() {
     return "Assignment{" +
-        "variable='" + variable + '\'' +
+        "variable='" + variable.name() + '\'' +
         ", assignable=" + assignable +
         '}';
   }

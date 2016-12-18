@@ -10,9 +10,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-// TODO consider supporting implied args or arg groups or something of the sort
-// Ex: we know qa.foo.com has "environment" of "qa", so if you target host=qa.foo.com you should see
-// environment=qa in ancestry.
 class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> nodes;
   private final Inventory inventory;
@@ -155,7 +152,7 @@ class DynamicHierarchy implements Hierarchy {
         List<RenderedNode> renders = dynamicNode.render(assignments);
         for (RenderedNode render : renders) {
           Assignments renderAssigns = inventory.assignAll(render.variablesUsed());
-          if (assignments.isEmpty() || renderAssigns.stream().anyMatch(assignments::contains)) {
+          if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
             Assignments descendantAssigns = assignments.with(renderAssigns);
             descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));
           }

@@ -1,7 +1,6 @@
+import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
-import io.github.alechenninger.monarch.Assignable
-import org.junit.Ignore
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
@@ -179,6 +178,41 @@ potentials:
         "teams/teamB/prod/store",
         "teams/teamB/prod/blog",
         "nodes/foo.com",
+    ]
+  }
+
+  @Test
+  void shouldNotIncludeDescendantsWhichDoNotImplyEnoughToBeIncluded() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - environment/%{environment}
+  - teams/%{team}/%{environment}
+  - teams/%{team}/%{environment}/%{app}
+  - nodes/%{team}/%{hostname}
+potentials:
+  hostname:
+    - foo.com:
+        team: teamA
+        environment: prod
+    - bar.com
+  team:
+  - teamA:
+      app: store
+  - teamB
+  environment:
+  - qa
+  - prod
+  app:
+  - store
+  - blog
+'''))
+
+    assert hierarchy.sourceFor(['environment': 'prod', 'team': 'teamB']).get().descendants().collect { it.path() } == [
+        "teams/teamB/prod",
+        "teams/teamB/prod/store",
+        "teams/teamB/prod/blog",
+        // nodes/foo.com not included because not in teamB
+        // nodes/bar.com not included because not in prod
     ]
   }
 
