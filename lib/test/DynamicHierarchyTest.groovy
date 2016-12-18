@@ -211,8 +211,8 @@ potentials:
         "teams/teamB/prod",
         "teams/teamB/prod/store",
         "teams/teamB/prod/blog",
-        // nodes/foo.com not included because not in teamB
-        // nodes/bar.com not included because not in prod
+        // nodes/teamB/foo.com not included because foo.com not in teamB (implies teamA)
+        // nodes/teamB/bar.com not included because not in prod
     ]
   }
 
