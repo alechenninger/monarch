@@ -138,7 +138,14 @@ public class Assignments implements Iterable<Assignment> {
         .map(v -> v.values(this))
         .orElse(Collections.emptySet());
   }
-
+  /**
+   * Computes the entire <em>possible</em> set of assignments where all of the provided variables
+   * can be assigned, where each set starts from our existing assignments.
+   *
+   * <p>"Possible" is the operative word: we'll try to use each value of unassigned variables such
+   * that those values and their corresponding implications aren't ruled out by other assignments,
+   * implied or otherwise.
+   */
   public Set<Assignments> possibleAssignments(Collection<String> variables) {
     List<String> missingVars = variables.stream()
         .filter(var -> !isAssigned(var))
@@ -156,6 +163,7 @@ public class Assignments implements Iterable<Assignment> {
       }
 
       for (String potential : potentialsForVar) {
+        // TODO: Can use iterator with .remove instead
         Set<Assignments> newPossibilities = new LinkedHashSet<>();
         for (Assignments possibility : possibilities) {
           if (possibility.isAssigned(missingVar)) {
