@@ -28,9 +28,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Inventory {
-  private final Map<String, List<Potential>> map;
+  private final Map<String, List<Assignable>> map;
 
-  public static Inventory from(Map<String, List<Potential>> potentials) {
+  public static Inventory from(Map<String, List<Assignable>> potentials) {
     return new Inventory(potentials);
   }
 
@@ -38,7 +38,7 @@ public class Inventory {
     return new Inventory(Collections.emptyMap());
   }
 
-  private Inventory(Map<String, List<Potential>> map) {
+  private Inventory(Map<String, List<Assignable>> map) {
     // TODO: Validate same value doesn't appear twice in potentials
     // TODO: Validate there are no conflicting implied values
     // e.g. foo=bar implies foo=baz (either directly or transitively)
@@ -50,13 +50,13 @@ public class Inventory {
       throw new IllegalArgumentException("Variable not found in inventory: " + variable);
     }
 
-    List<Potential> potentials = map.get(variable);
+    List<Assignable> assignables = map.get(variable);
 
-    if (potentials == null) {
+    if (assignables == null) {
       throw new IllegalStateException("No potential values defined for variable: " + variable);
     }
 
-    Optional<Potential> potential = potentials.stream()
+    Optional<Assignable> potential = assignables.stream()
         .filter(p -> p.value().equals(value))
         .findFirst();
 

@@ -26,12 +26,12 @@ import java.util.Set;
 
 public class Variable {
   private final String name;
-  private final List<Potential> potentials;
+  private final List<Assignable> assignables;
   private final Inventory inventory;
 
-  public Variable(String name, List<Potential> potentials, Inventory inventory) {
+  public Variable(String name, List<Assignable> assignables, Inventory inventory) {
     this.name = name;
-    this.potentials = potentials;
+    this.assignables = assignables;
     this.inventory = inventory;
   }
 
@@ -44,10 +44,10 @@ public class Variable {
       return Collections.singleton(assignments.forVariable(name).value());
     }
 
-    Set<String> values = new HashSet<>(potentials.size());
+    Set<String> values = new HashSet<>(assignables.size());
 
-    for (Potential potential : potentials) {
-      Assignment assignment = assign(potential.value());
+    for (Assignable assignable : assignables) {
+      Assignment assignment = assign(assignable.value());
       if (assignment.conflictsWith(assignments)) continue;
       values.add(assignment.value());
     }
@@ -63,7 +63,7 @@ public class Variable {
   public String toString() {
     return "Variable{" +
         "name='" + name + '\'' +
-        ", potentials=" + potentials +
+        ", assignables=" + assignables +
         ", inventory=" + inventory +
         '}';
   }
@@ -74,12 +74,12 @@ public class Variable {
     if (o == null || getClass() != o.getClass()) return false;
     Variable variable = (Variable) o;
     return Objects.equals(name, variable.name) &&
-        Objects.equals(potentials, variable.potentials) &&
+        Objects.equals(assignables, variable.assignables) &&
         Objects.equals(inventory, variable.inventory);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, potentials, inventory);
+    return Objects.hash(name, assignables, inventory);
   }
 }

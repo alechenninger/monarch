@@ -1,6 +1,6 @@
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
-import io.github.alechenninger.monarch.Potential
+import io.github.alechenninger.monarch.Assignable
 import org.junit.Ignore
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
@@ -84,8 +84,8 @@ potentials:
   }
 
   @Test
-  // TODO: Not sure if this should include dynamic source with only one potential value
-  // Question of: is potentials expected to be comprehensive WRT when a variable may be potentially
+  // TODO: Not sure if this should include dynamic source with only one assignable value
+  // Question of: is assignables expected to be comprehensive WRT when a variable may be potentially
   // absent or not? I'm thinking if it's not absent, then you should supply the variable.
   void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
     assert hierarchy.sourceFor(["hostname": "bar.com"]).get()
@@ -133,8 +133,8 @@ potentials:
         "foo/%{foo}",
         "bar/%{bar}",
     ], Inventory.from([
-        "foo": [Potential.of("baz")],
-        "bar": [Potential.of("baz")],
+        "foo": [Assignable.of("baz")],
+        "bar": [Assignable.of("baz")],
     ]))
 
     assert hierarchy.sourceFor("baz") == Optional.empty()
@@ -149,8 +149,8 @@ potentials:
         "constant",
         "bar/%{bar}",
     ], Inventory.from([
-        "foo": [Potential.of("baz")],
-        "bar": [Potential.of("baz")],
+        "foo": [Assignable.of("baz")],
+        "bar": [Assignable.of("baz")],
     ]))
 
     assert hierarchy.sourceFor(["bar": "baz"]).get()

@@ -23,12 +23,12 @@ import java.util.Objects;
 public class Assignment {
   private final Inventory inventory;
   private final String variable;
-  private final Potential potential;
+  private final Assignable assignable;
 
-  Assignment(Inventory inventory, String variable, Potential potential) {
+  Assignment(Inventory inventory, String variable, Assignable assignable) {
     this.inventory = inventory;
     this.variable = variable;
-    this.potential = potential;
+    this.assignable = assignable;
   }
 
   public Variable variable() {
@@ -36,7 +36,7 @@ public class Assignment {
   }
 
   public String value() {
-    return potential.value();
+    return assignable.value();
   }
 
   public boolean conflictsWith(Assignments assignments) {
@@ -45,7 +45,7 @@ public class Assignment {
 
   // TODO: Think about explicit / implicit distinction in Assignments some more
   public Assignments implied() {
-    return inventory.assignAll(potential.impliedAssignments());
+    return inventory.assignAll(assignable.impliedAssignments());
   }
 
   @Override
@@ -55,19 +55,19 @@ public class Assignment {
     Assignment that = (Assignment) o;
     return Objects.equals(inventory, that.inventory) &&
         Objects.equals(variable, that.variable) &&
-        Objects.equals(potential, that.potential);
+        Objects.equals(assignable, that.assignable);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(inventory, variable, potential);
+    return Objects.hash(inventory, variable, assignable);
   }
 
   @Override
   public String toString() {
     return "Assignment{" +
         "variable='" + variable + '\'' +
-        ", potential=" + potential +
+        ", assignable=" + assignable +
         '}';
   }
 }

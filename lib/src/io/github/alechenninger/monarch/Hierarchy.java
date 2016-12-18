@@ -19,7 +19,7 @@ public interface Hierarchy {
       if (map.containsKey("sources")) {
         if ((map.size() == 2 && map.containsKey("potentials")) || map.size() == 1) {
           List<String> sources = (List<String>) map.get("sources");
-          Map<String, List<Potential>> potentials = Optional
+          Map<String, List<Assignable>> potentials = Optional
               .ofNullable((Map<String, Object>) map.get("potentials"))
               .orElse(Collections.emptyMap())
               .entrySet()
@@ -30,7 +30,7 @@ public interface Hierarchy {
                   return ((List<Object>) value).stream()
                       .map(potentialForKey -> {
                         if (potentialForKey instanceof String) {
-                          return new Potential((String) potentialForKey);
+                          return new Assignable((String) potentialForKey);
                         }
 
                         if (potentialForKey instanceof Map) {
@@ -48,13 +48,13 @@ public interface Hierarchy {
                           Object implications = potentialAndImplications.getValue();
 
                           if (implications instanceof Map) {
-                            return new Potential(
+                            return new Assignable(
                                 potentialAndImplications.getKey(),
                                 (Map<String, String>) implications);
                           }
 
                           if (implications == null) {
-                            return new Potential(potentialAndImplications.getKey());
+                            return new Assignable(potentialAndImplications.getKey());
                           }
 
                           throw new IllegalArgumentException("Expected implications to be a map");
@@ -71,10 +71,10 @@ public interface Hierarchy {
                         String potentialKey = valueEntry.getKey();
                         Map<String, String> implicationsForPotential = (Map) valueEntry.getValue();
                         if (implicationsForPotential == null) {
-                          return new Potential(potentialKey);
+                          return new Assignable(potentialKey);
                         }
 
-                        return new Potential(potentialKey, implicationsForPotential);
+                        return new Assignable(potentialKey, implicationsForPotential);
                       })
                       .collect(Collectors.toList());
                 }

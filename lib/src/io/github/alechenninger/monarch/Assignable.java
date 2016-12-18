@@ -23,22 +23,22 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class Potential {
+public class Assignable {
   private final String value;
   private final Map<String, String> impliedAssignments;
 
-  public Potential(String value) {
+  public Assignable(String value) {
     this.value = value;
     this.impliedAssignments = Collections.emptyMap();
   }
 
-  public Potential(String value, Map<String, String> impliedAssignments) {
+  public Assignable(String value, Map<String, String> impliedAssignments) {
     this.value = value;
     this.impliedAssignments = Collections.unmodifiableMap(new HashMap<>(impliedAssignments));
   }
 
-  public static Potential of(String value) {
-    return new Potential(value);
+  public static Assignable of(String value) {
+    return new Assignable(value);
   }
 
   public Map<String, String> impliedAssignments() {
@@ -53,9 +53,9 @@ public class Potential {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    Potential potential = (Potential) o;
-    return Objects.equals(value, potential.value) &&
-        Objects.equals(impliedAssignments, potential.impliedAssignments);
+    Assignable assignable = (Assignable) o;
+    return Objects.equals(value, assignable.value) &&
+        Objects.equals(impliedAssignments, assignable.impliedAssignments);
   }
 
   @Override
@@ -65,7 +65,7 @@ public class Potential {
 
   @Override
   public String toString() {
-    return "Potential{" +
+    return "Assignable{" +
         "value='" + value + '\'' +
         ", impliedAssignments=" + impliedAssignments +
         '}';
