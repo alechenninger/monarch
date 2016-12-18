@@ -53,19 +53,19 @@ public class Inventory {
     List<Assignable> assignables = map.get(variable);
 
     if (assignables == null) {
-      throw new IllegalStateException("No potential values defined for variable: " + variable);
+      throw new IllegalStateException("No assignable values defined for variable: " + variable);
     }
 
-    Optional<Assignable> potential = assignables.stream()
+    Optional<Assignable> assignable = assignables.stream()
         .filter(p -> p.value().equals(value))
         .findFirst();
 
-    if (!potential.isPresent()) {
+    if (!assignable.isPresent()) {
       throw new IllegalArgumentException("Cannot assign value to variable: value is not in " +
           "inventory. variable=" + variable + " value=" + value);
     }
 
-    return new Assignment(this, variable, potential.get());
+    return new Assignment(this, variable, assignable.get());
   }
 
   public Assignments assignAll(Iterable<Assignment> assignments) {
@@ -87,7 +87,7 @@ public class Inventory {
 
   public Optional<Variable> variableByName(String name) {
     return Optional.ofNullable(map.get(name))
-        .map(potentials -> new Variable(name, potentials, this));
+        .map(assignables -> new Variable(name, assignables, this));
   }
 
   @Override

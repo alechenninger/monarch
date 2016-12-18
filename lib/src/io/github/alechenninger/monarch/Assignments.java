@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -78,11 +79,13 @@ public class Assignments implements Iterable<Assignment> {
     return with(assignment);
   }
 
-  public boolean canFork(String variable, String value) {
+  public boolean canForkAt(String variable) {
     // Check if variable is implied, if so cant fork without forking at implier first
-    // Also check that this assignment wouldn't conflict with other assignments
     if (implicit.stream().map(i -> i.variable().name()).anyMatch(variable::equals)) return false;
-    Assignments fork = new Assignments(inventory);
+
+    // Implicit may not contain all actually implicit assignments if that assignment is also
+    // explicit. So checking the implicits of our explicits too makes us sure.
+    // We can't *just* do this without recursion.
     for (Assignment assignment : explicit) {
       if (assignment.variable().name().equals(variable)) {
         continue;
@@ -91,10 +94,8 @@ public class Assignments implements Iterable<Assignment> {
       if (assignment.implied().isAssigned(variable)) {
         return false;
       }
-
-      fork.add(assignment);
     }
-    return !fork.conflictsWith(variable, value);
+    return true;
   }
 
   public Assignments forkAt(String variable) {
@@ -116,20 +117,15 @@ public class Assignments implements Iterable<Assignment> {
     return fork;
   }
 
-  public Assignments fork(String variable, String value) {
-    return forkAt(variable).with(variable, value);
-  }
-
   public boolean isAssigned(String variable) {
     return stream().anyMatch(a -> a.variable().name().equals(variable));
   }
 
   public Assignment forVariable(String variable) {
     return stream().filter(a -> a.variable().name().equals(variable))
-        .findFirst()
+        .findAny()
         .orElseThrow(NoSuchElementException::new);
   }
-
   public Set<String> possibleValues(String variable) {
     if (isAssigned(variable)) {
       return Collections.singleton(forVariable(variable).value());
@@ -139,6 +135,7 @@ public class Assignments implements Iterable<Assignment> {
         .map(v -> v.values(this))
         .orElse(Collections.emptySet());
   }
+
   /**
    * Computes the entire <em>possible</em> set of assignments where all of the provided variables
    * can be assigned, where each set starts from our existing assignments.
@@ -156,31 +153,34 @@ public class Assignments implements Iterable<Assignment> {
     possibilities.add(this);
 
     for (String missingVar : missingVars) {
-      Set<String> potentialsForVar = possibleValues(missingVar);
+      Set<String> values = possibleValues(missingVar);
 
-      if (potentialsForVar.isEmpty()) {
-        throw new IllegalStateException("No potentials found for missing variable '" +
+      if (values.isEmpty()) {
+        throw new IllegalStateException("No possible values found for missing variable '" +
             missingVar + "'.");
       }
 
-      for (String potential : potentialsForVar) {
+      for (String value : values) {
         // TODO: Can use iterator with .remove instead
         Set<Assignments> newPossibilities = new LinkedHashSet<>();
         for (Assignments possibility : possibilities) {
           if (possibility.isAssigned(missingVar)) {
-            if (possibility.conflictsWith(missingVar, potential) &&
-                possibility.canFork(missingVar, potential)) {
-              Assignments newPossibility = possibility.fork(missingVar, potential);
+            if (possibility.conflictsWith(missingVar, value) &&
+                possibility.canForkAt(missingVar)) {
               newPossibilities.add(possibility);
-              newPossibilities.add(newPossibility);
+
+              Assignments newPossibility = possibility.forkAt(missingVar);
+              if (!newPossibility.conflictsWith(missingVar, value)) {
+                newPossibilities.add(newPossibility.with(missingVar, value));
+              }
             } else {
               newPossibilities.add(possibility);
             }
           } else {
-            if (possibility.conflictsWith(missingVar, potential)) {
+            if (possibility.conflictsWith(missingVar, value)) {
               newPossibilities.add(possibility);
             } else {
-              newPossibilities.add(possibility.with(missingVar, potential));
+              newPossibilities.add(possibility.with(missingVar, value));
             }
           }
         }
@@ -200,24 +200,29 @@ public class Assignments implements Iterable<Assignment> {
         .containsAll(assignments.stream().collect(Collectors.toSet()));
   }
 
-  // TODO: Test this a lot
   public boolean conflictsWith(Assignment assignment) {
-    Variable variable = assignment.variable();
-    if (isAssigned(variable.name()) && !forVariable(variable.name()).equals(assignment)) {
-      return true;
-    }
-
-    for (Assignment implied : assignment.implied()) {
-      if (conflictsWith(implied)) {
-        return true;
-      }
-    }
-
-    return false;
+    return conflictOf(assignment).isPresent();
   }
 
   public boolean conflictsWith(String variable, String value) {
     return conflictsWith(inventory.assign(variable, value));
+  }
+
+  public Optional<Assignment> conflictOf(Assignment assignment) {
+    Variable variable = assignment.variable();
+
+    if (isAssigned(variable.name()) && !forVariable(variable.name()).equals(assignment)) {
+      return Optional.of(forVariable(variable.name()));
+    }
+
+    for (Assignment implied : assignment.implied()) {
+      Optional<Assignment> conflict = conflictOf(implied);
+      if (conflict.isPresent()) {
+        return conflict;
+      }
+    }
+
+    return Optional.empty();
   }
 
   /**
@@ -356,7 +361,8 @@ public class Assignments implements Iterable<Assignment> {
   private void addImplicit(Assignment assignment) {
     if (conflictsWith(assignment)) {
       // TODO: improve exception
-      throw new IllegalArgumentException("Conflicting implicit assignment: " + assignment);
+      throw new IllegalArgumentException("Implicit assignment: " + assignment + " " +
+          "conflicts with: " + conflictOf(assignment));
     }
 
     if (isAssigned(assignment.variable().name())) {

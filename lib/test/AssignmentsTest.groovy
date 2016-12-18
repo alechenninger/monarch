@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Inventory
 import org.junit.Test
@@ -25,17 +24,74 @@ import org.junit.runner.RunWith
 
 @RunWith(Enclosed.class)
 class AssignmentsTest {
-  static class WithRedundantExplicitAndImplicitAssignment {
+  static class ShouldConflictWhenAssignment {
+    @Test(expected = IllegalArgumentException.class)
+    void impliesTransitivelyAConflictWithItsImplication() {
+      def inventory = Inventory.from([
+          'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
+          'drink': [Assignable.of('milk'), Assignable.of('coffee', ['dessert': 'cookie'])],
+      ])
+
+      inventory.assignAll(['drink': 'coffee'])
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    void impliesConflictWithItself() {
+      def inventory = Inventory.from([
+          'drink': [Assignable.of('milk', ['drink': 'coffee']), Assignable.of('coffee')],
+      ])
+
+      inventory.assignAll(['drink': 'milk'])
+    }
+  }
+
+  static class WithImplicitAssignments {
     def inventory = Inventory.from([
-        'food': [Assignable.of('cookie', ['drink': 'milk'])],
+        'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
         'drink': [Assignable.of('milk'), Assignable.of('coffee')],
     ])
 
-    def assignments = inventory.assignAll(['food': 'cookie', 'drink': 'milk'])
+    def assignments = inventory.assignAll(['dessert': 'cookie'])
+
+    @Test
+    void shouldIncludeImplicitAssignment() {
+      assert 2 == assignments.size()
+      assert assignments.toMap() == ['dessert': 'cookie', 'drink': 'milk']
+      assert assignments.forVariable('drink').value() == 'milk'
+    }
+
+    @Test
+    void shouldShouldNotBeAbleToAssignConflictWithImplicitAssignment() {
+      assert assignments.conflictsWith('drink', 'coffee')
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    void shouldFailToAssignConflictWithImplicitAssignment() {
+      assignments.with('drink', 'coffee')
+    }
+
+    @Test
+    void shouldNotBeAbleToForkAtImplicitAssignment() {
+      assert !assignments.canForkAt('drink')
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    void shouldFailToForkAtImplicitAssignment() {
+      assignments.forkAt('drink')
+    }
+  }
+
+  static class WithRedundantExplicitAndImplicitAssignment {
+    def inventory = Inventory.from([
+        'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
+        'drink': [Assignable.of('milk'), Assignable.of('coffee')],
+    ])
+
+    def assignments = inventory.assignAll(['dessert': 'cookie', 'drink': 'milk'])
 
     @Test
     void shouldNotBeAbleToForkAtRedundantAssignment() {
-      assert !assignments.canFork('drink', 'coffee')
+      assert !assignments.canForkAt('drink')
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -43,15 +99,10 @@ class AssignmentsTest {
       assignments.forkAt('drink')
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    void shouldFailToForkRedundantAssignment() {
-      assignments.fork('drink', 'coffee')
-    }
-
     @Test
     void shouldNotIncludeRedundantAssignmentTwice() {
       assert 2 == assignments.size()
-      assert assignments*.variable().name == ['food', 'drink']
+      assert assignments*.variable().name.sort() == ['dessert', 'drink']
     }
   }
 }

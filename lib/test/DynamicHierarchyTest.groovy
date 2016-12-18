@@ -37,7 +37,7 @@ potentials:
 
   @Test
   void shouldCalculateDescendantsFromPotentialValues() {
-    assert hierarchy.sourceFor(Collections.emptyMap()).get().descendants().collect { it.path() } == [
+    assert hierarchy.descendants().collect { it.path() } == [
         "common",
         "rhel",
         "environment/qa",
