@@ -20,7 +20,6 @@ package io.github.alechenninger.monarch;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,8 +31,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Assignments implements Iterable<Assignment> {
-  private final Set<Assignment> explicit = new HashSet<>();
-  private final Set<Assignment> implicit = new HashSet<>();
+  private final Set<Assignment> explicit = new LinkedHashSet<>();
+  private final Set<Assignment> implicit = new LinkedHashSet<>();
   private final Inventory inventory;
 
   Assignments(Inventory inventory) {
