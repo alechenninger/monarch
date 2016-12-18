@@ -25,7 +25,7 @@ public class Assignment {
   private final String variable;
   private final Potential potential;
 
-  public Assignment(Inventory inventory, String variable, Potential potential) {
+  Assignment(Inventory inventory, String variable, Potential potential) {
     this.inventory = inventory;
     this.variable = variable;
     this.potential = potential;

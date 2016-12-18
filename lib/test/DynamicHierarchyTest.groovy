@@ -60,9 +60,8 @@ potentials:
 
   @Test
   void shouldCalculateAncestorsByExactSource() {
-    // There is no source for teams/teamA/qa because teamA implies app=store
-    assert hierarchy.sourceFor("teams/teamB/qa").get().lineage().collect { it.path() } == [
-        "teams/teamB/qa",
+    assert hierarchy.sourceFor("teams/teamA/qa").get().lineage().collect { it.path() } == [
+        "teams/teamA/qa",
         "environment/qa",
         "common",
     ]

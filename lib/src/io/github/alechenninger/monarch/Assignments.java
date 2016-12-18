@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -37,21 +36,20 @@ public class Assignments implements Iterable<Assignment> {
   private final Set<Assignment> implicit = new HashSet<>();
   private final Inventory inventory;
 
-  public Assignments(Inventory inventory) {
+  Assignments(Inventory inventory) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
   }
 
-  public Assignments(Inventory inventory, Assignment assignment) {
+  Assignments(Inventory inventory, Assignment assignment) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
     add(assignment);
   }
 
-  public Assignments(Inventory inventory, Iterable<Assignment> assignments) {
+  Assignments(Inventory inventory, Iterable<Assignment> assignments) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
     assignments.forEach(this::add);
   }
 
-  // TODO: Should this use empty inventory?
   public static Assignments none(Inventory inventory) { return new Assignments(inventory); }
 
   public Assignments with(Assignments assignments) {

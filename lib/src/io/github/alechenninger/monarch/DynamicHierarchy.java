@@ -1,5 +1,7 @@
 package io.github.alechenninger.monarch;
 
+import io.github.alechenninger.monarch.DynamicNode.RenderedNode;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -61,8 +63,7 @@ public class DynamicHierarchy implements Hierarchy {
 
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode dynamicNode = nodes.get(i);
-      for (DynamicNode.RenderedNode rendered :
-          dynamicNode.render(Assignments.none(inventory))) {
+      for (RenderedNode rendered : dynamicNode.render(Assignments.none(inventory))) {
         Assignments variables = inventory.assignAll(rendered.variablesUsed());
         descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
       }
@@ -94,7 +95,7 @@ public class DynamicHierarchy implements Hierarchy {
     private final List<DynamicNode> nodes;
     private final Inventory inventory;
     private final int index;
-    private final DynamicNode.RenderedNode rendered;
+    private final RenderedNode rendered;
 
     private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
         Inventory inventory, int index) {
@@ -104,7 +105,7 @@ public class DynamicHierarchy implements Hierarchy {
       this.index = index;
 
       DynamicNode dynamicNode = nodes.get(index);
-      List<DynamicNode.RenderedNode> renders = dynamicNode.render(this.assignments);
+      List<RenderedNode> renders = dynamicNode.render(this.assignments);
 
       if (renders.size() != 1) {
         throw new IllegalArgumentException("Expected source with all variables provided to " +
@@ -115,7 +116,7 @@ public class DynamicHierarchy implements Hierarchy {
     }
 
     private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
-        Inventory inventory, int index, DynamicNode.RenderedNode rendered) {
+        Inventory inventory, int index, RenderedNode rendered) {
       this.assignments = assignments;
       this.nodes = nodes;
       this.inventory = inventory;
@@ -151,69 +152,14 @@ public class DynamicHierarchy implements Hierarchy {
 
       for (int i = index + 1; i < nodes.size(); i++) {
         DynamicNode dynamicNode = nodes.get(i);
-        List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments);
-        for (DynamicNode.RenderedNode render : renders) {
+        List<RenderedNode> renders = dynamicNode.render(assignments);
+        for (RenderedNode render : renders) {
           Assignments renderAssigns = inventory.assignAll(render.variablesUsed());
-          // TODO: Figure out this condition
-          // Want the assignments used to either use one of our assigns or implications as a variable
-          // Or one of the additional assigns to imply one of our assigns
-          //if (assignments.containsSomeOf(renderAssigns)) {
           if (assignments.isEmpty() || renderAssigns.stream().anyMatch(assignments::contains)) {
-            descendants.add(new RenderedSource(assignments.with(renderAssigns), nodes, inventory, i, render));
+            Assignments descendantAssigns = assignments.with(renderAssigns);
+            descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));
           }
-          //}
         }
-
-        // is a test of specificity
-        // dynamicNode.mayDescend(variables)
-//        if (assignments.assignsSubsetOf(dynamicNode.variables())) {
-//          List<DynamicNode.RenderedNode> renders = dynamicNode.render(assignments, inventory);
-//
-//          for (DynamicNode.RenderedNode render : renders) {
-//            Assignments descendantAssigns = render.variablesUsed();
-//            // Necessary? descendantAssigns.addAll(assignments); I don't think so
-//            descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));
-//          }
-//        } else {
-//          // See if any variables used in source have implied values that match what are defined
-//          // So if host/foo.com implies environment=prod
-//          // And we have environment=prod
-//          // Which means that we know this would be a descendant
-//          // (in other words, host/foo.com has environment=prod in its lineage)
-//          // What about other variables?
-//          // host/{area}/{host}
-//          // host/vary/foo.com with implied environment=prod area=vary
-//          // Given environment=prod
-//          // For area, none of the implied are included (it could in some scenarios)
-//          // For host, foo.com implies environment=prod
-//          // So what would be a descendant?
-//          // host/vary/foo.com what about other areas (if area=vary wasn't implied)?
-//          // host/phx2/foo.com if foo.com implies prod, and we don't have an area,
-//          // then this is fair game. So we'd expect both.
-//          // It's basically as if host=foo.com was defined.
-//
-//          // Go through each unassigned variable, find potentials which have implied values matching
-//          // defined
-//          // Use them as variables.
-//          // If multiple potentials, we need to treat each case.
-//
-//          // variable.assignmentsThatImply(var, value);
-//          // assignment
-//
-//
-//          // so we have some variables that arent assigned
-//          // do any of their possible values have implications that are assigned?
-//          // fqdn has possible values prod.foo.com, stage.foo.com, bar.com
-//          // prod.foo.com implies prod
-//          // stage.foo.com implies stage
-//          // bar.com doesnt imply any env ... so it doesnt conflict, but shouldnt include it still
-//          dynamicNode.variables()
-//          if (!potentialAssignment.implications().isEmpty() &&
-//              assignments.containsSubsetOf(potentialAssignment.implications()) &&
-//              !assignments.conflictsWith(potentialAssignment.implications())) {
-//
-//          }
-//        }
       }
 
       return descendants;
