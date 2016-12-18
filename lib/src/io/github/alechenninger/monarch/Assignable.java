@@ -41,6 +41,10 @@ public class Assignable {
     return new Assignable(value);
   }
 
+  public static Assignable of(String value, Map<String, String> impliedAssignments) {
+    return new Assignable(value, impliedAssignments);
+  }
+
   public Map<String, String> impliedAssignments() {
     return impliedAssignments;
   }

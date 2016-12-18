@@ -81,10 +81,20 @@ public class Assignments implements Iterable<Assignment> {
   public boolean canFork(String variable, String value) {
     // Check if variable is implied, if so cant fork without forking at implier first
     // Also check that this assignment wouldn't conflict with other assignments
-    Assignment assignment = inventory.assign(variable, value);
     if (implicit.stream().map(i -> i.variable().name()).anyMatch(variable::equals)) return false;
-    Assignments fork = forkAt(variable);
-    return !fork.conflictsWith(assignment);
+    Assignments fork = new Assignments(inventory);
+    for (Assignment assignment : explicit) {
+      if (assignment.variable().name().equals(variable)) {
+        continue;
+      }
+
+      if (assignment.implied().isAssigned(variable)) {
+        return false;
+      }
+
+      fork.add(assignment);
+    }
+    return !fork.conflictsWith(variable, value);
   }
 
   public Assignments forkAt(String variable) {
@@ -94,8 +104,15 @@ public class Assignments implements Iterable<Assignment> {
         continue;
       }
 
+      if (assignment.implied().isAssigned(variable)) {
+        throw new IllegalArgumentException("Can't fork at variable which is implied by another " +
+            "variable's assignment. Tried to fork at: " + variable + " but conflicts with: " +
+            assignment);
+      }
+
       fork.add(assignment);
     }
+
     return fork;
   }
 
@@ -246,6 +263,10 @@ public class Assignments implements Iterable<Assignment> {
 
   public boolean isEmpty() {
     return !iterator().hasNext();
+  }
+
+  public int size() {
+    return explicit.size() + implicit.size();
   }
 
   public Map<String, String> toMap() {

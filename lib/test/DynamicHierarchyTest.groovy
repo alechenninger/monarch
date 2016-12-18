@@ -183,12 +183,6 @@ potentials:
   }
 
   @Test
-  @Ignore
-  void shouldIncludeAllDescendantsWhichImplyAVariableUsedInSource() {
-
-  }
-
-  @Test
   void shouldExcludeDescendantsWhichHaveConflictingImpliedValues() {
     def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
 sources:
