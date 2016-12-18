@@ -22,17 +22,17 @@ import java.util.Objects;
 
 public class Assignment {
   private final Inventory inventory;
-  private final String variable;
+  private final Variable variable;
   private final Assignable assignable;
 
-  Assignment(Inventory inventory, String variable, Assignable assignable) {
+  Assignment(Inventory inventory, Variable variable, Assignable assignable) {
     this.inventory = inventory;
     this.variable = variable;
     this.assignable = assignable;
   }
 
   public Variable variable() {
-    return inventory.variableByName(variable).get();
+    return variable;
   }
 
   public String value() {

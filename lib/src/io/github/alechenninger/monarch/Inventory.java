@@ -65,7 +65,7 @@ public class Inventory {
           "inventory. variable=" + variable + " value=" + value);
     }
 
-    return new Assignment(this, variable, assignable.get());
+    return new Assignment(this, new Variable(variable, assignables, this), assignable.get());
   }
 
   public Assignments assignAll(Iterable<Assignment> assignments) {
