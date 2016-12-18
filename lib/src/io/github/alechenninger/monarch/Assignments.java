@@ -153,14 +153,7 @@ public class Assignments implements Iterable<Assignment> {
     possibilities.add(this);
 
     for (String missingVar : missingVars) {
-      Set<String> values = possibleValues(missingVar);
-
-      if (values.isEmpty()) {
-        throw new IllegalStateException("No possible values found for missing variable '" +
-            missingVar + "'.");
-      }
-
-      for (String value : values) {
+      for (String value : possibleValues(missingVar)) {
         // TODO: Can use iterator with .remove instead
         Set<Assignments> newPossibilities = new LinkedHashSet<>();
         for (Assignments possibility : possibilities) {
@@ -186,6 +179,11 @@ public class Assignments implements Iterable<Assignment> {
         }
         possibilities = newPossibilities;
       }
+
+      // Not all variables will be assignable in all possibilities
+      // TODO: Consider changing algorithm to use possible values for the assignments it is
+      // examining instead of starting from possible values for prior assignments
+      possibilities.removeIf(possibility -> !possibility.isAssigned(missingVar));
     }
 
     return possibilities;

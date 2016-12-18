@@ -133,6 +133,8 @@ class DynamicHierarchy implements Hierarchy {
 
       for (int i = index; i >= 0; i--) {
         // if (nodes.get(i).renderOne(assignments).ifPresent(....)
+        // TODO: You can have case where same source as self (by path) is in lineage... doesn't make
+        // sense.
         if (assignments.assignsSupersetOf(nodes.get(i).variables())) {
           lineage.add(new RenderedSource(assignments, nodes, inventory, i));
         }
@@ -165,7 +167,7 @@ class DynamicHierarchy implements Hierarchy {
     @Override
     public boolean isTargetedBy(SourceSpec spec) {
       return spec.findSource(new DynamicHierarchy(nodes, inventory))
-          .map(this::equals)
+          .map(source -> source.path().equals(path()))
           .orElse(false);
     }
   }
