@@ -72,20 +72,19 @@ public class InterpolatedDynamicNode implements DynamicNode {
     }
 
     return assignments.possibleAssignments(variableNames).stream()
-        .map(combination -> {
+        .map(possibility -> {
           Set<Assignment> usedAssignments = new HashSet<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {
-            if (!combination.isAssigned(captured)) {
+            if (!possibility.isAssigned(captured)) {
               throw new IllegalStateException("No value defined for variable: " + captured);
             }
-            Assignment assignment = combination.forVariable(captured);
+            Assignment assignment = possibility.forVariable(captured);
             usedAssignments.add(assignment);
             return assignment.value();
           });
 
-          String path = interpolator.interpolate(expression, combination.toMap());
+          String path = interpolator.interpolate(expression, possibility.toMap());
 
-          // TODO: Using combination here not the same thing as variables used I think
           return new RenderedNode(path, usedAssignments);
         })
         .collect(Collectors.toList());
@@ -106,7 +105,6 @@ public class InterpolatedDynamicNode implements DynamicNode {
         ", variableClosing='" + variableClosing + '\'' +
         ", escapeCharacter=" + escapeCharacter +
         ", variableNames=" + variableNames +
-        ", riables=" + variables() +
         '}';
   }
 

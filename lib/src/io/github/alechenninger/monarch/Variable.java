@@ -44,7 +44,7 @@ public class Variable {
       return Collections.singleton(assignments.forVariable(name).value());
     }
 
-    Set<String> values = new HashSet<>();
+    Set<String> values = new HashSet<>(potentials.size());
 
     for (Potential potential : potentials) {
       Assignment assignment = assign(potential.value());

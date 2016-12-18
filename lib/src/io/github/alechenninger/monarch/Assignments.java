@@ -64,11 +64,7 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public Assignments with(Iterable<Assignment> assignments) {
-    Assignments arg = inventory.newAssignments();
-    for (Assignment assignment : assignments) {
-      arg.add(assignment);
-    }
-    return with(arg);
+    return with(new Assignments(inventory, assignments));
   }
 
   public Assignments with(Assignment assignment) {
@@ -105,16 +101,7 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public Assignments fork(String variable, String value) {
-    Assignments fork = new Assignments(inventory);
-    for (Assignment assignment : explicit) {
-      if (assignment.variable().name().equals(variable)) {
-        continue;
-      }
-
-      fork.add(assignment);
-    }
-
-    return fork.with(variable, value);
+    return forkAt(variable).with(variable, value);
   }
 
   public boolean isAssigned(String variable) {

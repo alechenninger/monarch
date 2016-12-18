@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,11 +40,9 @@ public class Inventory {
 
   private Inventory(Map<String, List<Potential>> map) {
     // TODO: Validate same value doesn't appear twice in potentials
-    this.map = map;
-  }
-
-  public Assignments newAssignments() {
-    return new Assignments(this);
+    // TODO: Validate there are no conflicting implied values
+    // e.g. foo=bar implies foo=baz (either directly or transitively)
+    this.map = new HashMap<>(map);
   }
 
   public Assignment assign(String variable, String value) {

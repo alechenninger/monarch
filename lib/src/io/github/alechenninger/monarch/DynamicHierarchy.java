@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 // TODO consider supporting implied args or arg groups or something of the sort
 // Ex: we know qa.foo.com has "environment" of "qa", so if you target host=qa.foo.com you should see
 // environment=qa in ancestry.
-public class DynamicHierarchy implements Hierarchy {
+class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> nodes;
   private final Inventory inventory;
 
@@ -23,7 +23,7 @@ public class DynamicHierarchy implements Hierarchy {
    * @param inventory For each variable, a List of known possible values. When a variable is found
    *                  but not supplied, all possible values are used if needed.
    */
-  public DynamicHierarchy(List<DynamicNode> nodes, Inventory inventory) {
+  DynamicHierarchy(List<DynamicNode> nodes, Inventory inventory) {
     this.nodes = nodes;
     this.inventory = inventory;
   }
@@ -35,7 +35,7 @@ public class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Map<String, String> assignments) {
-    return sourceFor(inventory.newAssignments().with(assignments.entrySet().stream()
+    return sourceFor(inventory.assignAll(assignments.entrySet().stream()
         .map(entry -> inventory.assign(entry.getKey(), entry.getValue()))
         .collect(Collectors.toSet())));
   }
