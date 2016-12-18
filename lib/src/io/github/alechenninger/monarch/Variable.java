@@ -20,6 +20,7 @@ package io.github.alechenninger.monarch;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -44,7 +45,7 @@ public class Variable {
       return Collections.singleton(assignments.forVariable(name).value());
     }
 
-    Set<String> values = new HashSet<>(assignables.size());
+    Set<String> values = new LinkedHashSet<>(assignables.size());
 
     for (Assignable assignable : assignables) {
       Assignment assignment = assign(assignable.value());
