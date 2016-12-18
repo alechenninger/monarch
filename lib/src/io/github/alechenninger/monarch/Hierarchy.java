@@ -17,10 +17,14 @@ public interface Hierarchy {
       Map map = (Map) object;
 
       if (map.containsKey("sources")) {
-        if ((map.size() == 2 && map.containsKey("potentials")) || map.size() == 1) {
+        // TODO: Deprecate using "potentials"
+        if ((map.size() == 2 && (map.containsKey("potentials") || map.containsKey("inventory"))) ||
+            map.size() == 1) {
           List<String> sources = (List<String>) map.get("sources");
           Map<String, List<Assignable>> potentials = Optional
-              .ofNullable((Map<String, Object>) map.get("potentials"))
+              .ofNullable((Map<String, Object>) Optional
+                  .ofNullable(map.get("potentials"))
+                  .orElse(map.get("inventory")))
               .orElse(Collections.emptyMap())
               .entrySet()
               .stream()

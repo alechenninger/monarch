@@ -427,7 +427,7 @@ sources:
   - global.yaml
   - teams/%{team}.yaml
   - teams/%{team}/%{environment}.yaml
-potentials:
+inventory:
   team:
     - myteam
     - otherteam

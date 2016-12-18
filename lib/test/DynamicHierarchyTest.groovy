@@ -13,7 +13,7 @@ sources:
   - teams/%{team}/%{environment}
   - teams/%{team}/%{environment}/%{app}
   - nodes/%{hostname}
-potentials:
+inventory:
   hostname:
     - foo.com:
         team: teamA
