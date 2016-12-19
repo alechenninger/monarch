@@ -146,8 +146,7 @@ public class Assignments implements Iterable<Assignment> {
    * implied or otherwise.
    */
   public Set<Assignments> possibleAssignments(Collection<String> variables) {
-    Set<Assignments> possibilities = new LinkedHashSet<>();
-    possibilities.add(this);
+    Set<Assignments> possibilities = Collections.singleton(this);
 
     for (String variable : variables) {
       if (isAssigned(variable)) continue;
