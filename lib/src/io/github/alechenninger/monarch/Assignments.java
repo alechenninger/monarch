@@ -160,23 +160,27 @@ public class Assignments implements Iterable<Assignment> {
       for (Assignments possibility : possibilities) {
         for (String value : possibility.possibleValues(missingVar)) {
           if (possibility.isAssigned(missingVar)) {
+            // Either way, the current possibility will remain because it assigns this variable
+            survivors.add(possibility);
+
+            // If the new value is different and we can, we'll add a fork of this possibility with
+            // the alternate value.
             if (possibility.conflictsWith(missingVar, value) &&
                 possibility.canForkAt(missingVar)) {
-              survivors.add(possibility);
-
-              Assignments newPossibility = possibility.forkAt(missingVar);
-              if (!newPossibility.conflictsWith(missingVar, value)) {
-                survivors.add(newPossibility.with(missingVar, value));
+              Assignments fork = possibility.forkAt(missingVar);
+              if (!fork.conflictsWith(missingVar, value)) {
+                survivors.add(fork.with(missingVar, value));
               }
-            } else {
-              survivors.add(possibility);
             }
+          } else if (possibility.conflictsWith(missingVar, value)) {
+            // This only happens if the missing var is not assigned, but assigning it this possible
+            // value would imply a conflict. I think this may never happen since we ask this
+            // possibility for potential values already, and therefore it won't give us values we
+            // couldn't assign.
+            // TODO: consider removing this branch
+            survivors.add(possibility);
           } else {
-            if (possibility.conflictsWith(missingVar, value)) {
-              survivors.add(possibility);
-            } else {
-              survivors.add(possibility.with(missingVar, value));
-            }
+            survivors.add(possibility.with(missingVar, value));
           }
         }
       }
