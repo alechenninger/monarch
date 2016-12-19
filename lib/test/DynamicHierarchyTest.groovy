@@ -262,4 +262,25 @@ potentials:
         .lineage().get(2)
         .isTargetedBy(SourceSpec.byVariables(['team': 'teamA', 'environment': 'prod']))
   }
+
+  @Test
+  void shouldNotConfuseSourcesOfSamePathButDifferentVariables() {
+    // The theory behind this makes sense but in practice, the same path is the same file.
+    // Really, this probably shouldn't happen or something is broken.
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - '%{a}'
+  - '%{b}'
+potentials:
+  a:
+  - foo
+  b:
+  - foo
+'''))
+
+    def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
+    def bIsFoo = SourceSpec.byVariables(['b': 'foo'])
+
+    assert !hierarchy.sourceFor(aIsFoo).get().isTargetedBy(bIsFoo)
+  }
 }
