@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,7 +35,7 @@ class DynamicHierarchy implements Hierarchy {
   public Optional<Source> sourceFor(Map<String, String> assignments) {
     return sourceFor(inventory.assignAll(assignments.entrySet().stream()
         .map(entry -> inventory.assign(entry.getKey(), entry.getValue()))
-        .collect(Collectors.toSet())));
+        .collect(Collectors.toList())));
   }
 
   @Override
@@ -167,8 +168,26 @@ class DynamicHierarchy implements Hierarchy {
     @Override
     public boolean isTargetedBy(SourceSpec spec) {
       return spec.findSource(new DynamicHierarchy(nodes, inventory))
-          .map(source -> source.path().equals(path()))
+          .map(this::equals)
           .orElse(false);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      RenderedSource that = (RenderedSource) o;
+      // Assignments comparison deliberately omitted. We are not comparing the entire tree is equal,
+      // just this source within any potential tree.
+      return index == that.index &&
+          Objects.equals(nodes, that.nodes) &&
+          Objects.equals(inventory, that.inventory) &&
+          Objects.equals(rendered, that.rendered);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(nodes, inventory, index, rendered);
     }
   }
 }

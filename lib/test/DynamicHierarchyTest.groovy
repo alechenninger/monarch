@@ -1,6 +1,7 @@
 import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
+import io.github.alechenninger.monarch.SourceSpec
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
@@ -253,5 +254,12 @@ potentials:
         "teams/teamB/qa/blog",
         "teams/teamB/prod/blog",
     ]
+  }
+
+  @Test
+  void shouldTargetAncestorOfSourceWithoutAllAssignmentsOfSource() {
+    assert hierarchy.sourceFor(['hostname': 'foo.com']).get()
+        .lineage().get(2)
+        .isTargetedBy(SourceSpec.byVariables(['team': 'teamA', 'environment': 'prod']))
   }
 }

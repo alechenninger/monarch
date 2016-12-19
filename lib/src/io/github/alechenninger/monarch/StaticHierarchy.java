@@ -169,6 +169,19 @@ class StaticHierarchy implements Hierarchy {
           .map(this::equals)
           .orElse(false);
     }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      StaticSource that = (StaticSource) o;
+      return Objects.equals(source, that.source);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(source);
+    }
   }
 
   private static class DescendantsIterator implements Iterator<Node> {
