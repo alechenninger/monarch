@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -153,37 +154,33 @@ public class Assignments implements Iterable<Assignment> {
     possibilities.add(this);
 
     for (String missingVar : missingVars) {
-      for (String value : possibleValues(missingVar)) {
-        // TODO: Can use iterator with .remove instead
-        Set<Assignments> newPossibilities = new LinkedHashSet<>();
-        for (Assignments possibility : possibilities) {
+      // Only assignments which have a value that can satisfy the missing variable will survive to
+      // potentially become a viable set of assignments for all missing variables.
+      Set<Assignments> survivors = new LinkedHashSet<>();
+      for (Assignments possibility : possibilities) {
+        for (String value : possibility.possibleValues(missingVar)) {
           if (possibility.isAssigned(missingVar)) {
             if (possibility.conflictsWith(missingVar, value) &&
                 possibility.canForkAt(missingVar)) {
-              newPossibilities.add(possibility);
+              survivors.add(possibility);
 
               Assignments newPossibility = possibility.forkAt(missingVar);
               if (!newPossibility.conflictsWith(missingVar, value)) {
-                newPossibilities.add(newPossibility.with(missingVar, value));
+                survivors.add(newPossibility.with(missingVar, value));
               }
             } else {
-              newPossibilities.add(possibility);
+              survivors.add(possibility);
             }
           } else {
             if (possibility.conflictsWith(missingVar, value)) {
-              newPossibilities.add(possibility);
+              survivors.add(possibility);
             } else {
-              newPossibilities.add(possibility.with(missingVar, value));
+              survivors.add(possibility.with(missingVar, value));
             }
           }
         }
-        possibilities = newPossibilities;
       }
-
-      // Not all variables will be assignable in all possibilities
-      // TODO: Consider changing algorithm to use possible values for the assignments it is
-      // examining instead of starting from possible values for prior assignments
-      possibilities.removeIf(possibility -> !possibility.isAssigned(missingVar));
+      possibilities = survivors;
     }
 
     return possibilities;

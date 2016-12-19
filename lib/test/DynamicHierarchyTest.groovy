@@ -282,5 +282,8 @@ potentials:
     def bIsFoo = SourceSpec.byVariables(['b': 'foo'])
 
     assert !hierarchy.sourceFor(aIsFoo).get().isTargetedBy(bIsFoo)
+    assert hierarchy.sourceFor(bIsFoo).get().isTargetedBy(bIsFoo)
+    assert !hierarchy.sourceFor(bIsFoo).get().isTargetedBy(aIsFoo)
+    assert hierarchy.sourceFor(aIsFoo).get().isTargetedBy(aIsFoo)
   }
 }
