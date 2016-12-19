@@ -146,33 +146,31 @@ public class Assignments implements Iterable<Assignment> {
    * implied or otherwise.
    */
   public Set<Assignments> possibleAssignments(Collection<String> variables) {
-    List<String> missingVars = variables.stream()
-        .filter(var -> !isAssigned(var))
-        .collect(Collectors.toList());
-
     Set<Assignments> possibilities = new LinkedHashSet<>();
     possibilities.add(this);
 
-    for (String missingVar : missingVars) {
+    for (String variable : variables) {
+      if (isAssigned(variable)) continue;
+
       // Only assignments which have a value that can satisfy the missing variable will survive to
       // potentially become a viable set of assignments for all missing variables.
       Set<Assignments> survivors = new LinkedHashSet<>();
       for (Assignments possibility : possibilities) {
-        for (String value : possibility.possibleValues(missingVar)) {
-          if (possibility.isAssigned(missingVar)) {
+        for (String value : possibility.possibleValues(variable)) {
+          if (possibility.isAssigned(variable)) {
             // Either way, the current possibility will remain because it assigns this variable
             survivors.add(possibility);
 
             // If the new value is different and we can, we'll add a fork of this possibility with
             // the alternate value.
-            if (possibility.conflictsWith(missingVar, value) &&
-                possibility.canForkAt(missingVar)) {
-              Assignments fork = possibility.forkAt(missingVar);
-              if (!fork.conflictsWith(missingVar, value)) {
-                survivors.add(fork.with(missingVar, value));
+            if (possibility.conflictsWith(variable, value) &&
+                possibility.canForkAt(variable)) {
+              Assignments fork = possibility.forkAt(variable);
+              if (!fork.conflictsWith(variable, value)) {
+                survivors.add(fork.with(variable, value));
               }
             }
-          } else if (possibility.conflictsWith(missingVar, value)) {
+          } else if (possibility.conflictsWith(variable, value)) {
             // This only happens if the missing var is not assigned, but assigning it this possible
             // value would imply a conflict. I think this may never happen since we ask this
             // possibility for potential values already, and therefore it won't give us values we
@@ -180,7 +178,7 @@ public class Assignments implements Iterable<Assignment> {
             // TODO: consider removing this branch
             survivors.add(possibility);
           } else {
-            survivors.add(possibility.with(missingVar, value));
+            survivors.add(possibility.with(variable, value));
           }
         }
       }
