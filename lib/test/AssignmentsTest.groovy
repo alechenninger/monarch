@@ -29,7 +29,7 @@ class AssignmentsTest {
     void impliesTransitivelyAConflictWithItsImplication() {
       def inventory = Inventory.from([
           'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
-          'drink': [Assignable.of('milk'), Assignable.of('coffee', ['dessert': 'cookie'])],
+          'drink'  : [Assignable.of('milk'), Assignable.of('coffee', ['dessert': 'cookie'])],
       ])
 
       inventory.assignAll(['drink': 'coffee'])
@@ -48,7 +48,7 @@ class AssignmentsTest {
   static class WithImplicitAssignments {
     def inventory = Inventory.from([
         'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
-        'drink': [Assignable.of('milk'), Assignable.of('coffee')],
+        'drink'  : [Assignable.of('milk'), Assignable.of('coffee')],
     ])
 
     def assignments = inventory.assignAll(['dessert': 'cookie'])
@@ -84,7 +84,7 @@ class AssignmentsTest {
   static class WithRedundantExplicitAndImplicitAssignment {
     def inventory = Inventory.from([
         'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
-        'drink': [Assignable.of('milk'), Assignable.of('coffee')],
+        'drink'  : [Assignable.of('milk'), Assignable.of('coffee')],
     ])
 
     def assignments = inventory.assignAll(['dessert': 'cookie', 'drink': 'milk'])
@@ -103,6 +103,118 @@ class AssignmentsTest {
     void shouldNotIncludeRedundantAssignmentTwice() {
       assert 2 == assignments.size()
       assert assignments*.variable().name.sort() == ['dessert', 'drink']
+    }
+  }
+
+  static class WithManyLayersOfTransitiveImplications {
+    def inventory = Inventory.from([
+        'dessert': [Assignable.of('cookie', ['drink': 'milk'])],
+        'drink'  : [Assignable.of('milk', ['garnish': 'straw'])],
+        'garnish': [Assignable.of('straw'), Assignable.of('cherry')],
+    ])
+
+    def assignments = inventory.assignAll(['dessert': 'cookie'])
+
+    @Test
+    void shouldIncludeAllLayersOfImplicitAssignments() {
+      assert 3 == assignments.size()
+      assert assignments.toMap() == ['dessert': 'cookie', 'drink': 'milk', 'garnish': 'straw']
+      assert assignments.forVariable('drink').value() == 'milk'
+      assert assignments.forVariable('garnish').value() == 'straw'
+    }
+
+    @Test
+    void shouldShouldNotBeAbleToAssignConflictWithDeepImplicitAssignment() {
+      assert assignments.conflictsWith('garnish', 'cherry')
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    void shouldFailToAssignConflictWithDeepImplicitAssignment() {
+      assignments.with('garnish', 'cherry')
+    }
+
+    @Test
+    void shouldNotBeAbleToForkAtDeepImplication() {
+      assert !assignments.canForkAt('garnish')
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    void shouldFailToForkAtDeepImplication() {
+      assignments.forkAt('garnish')
+    }
+  }
+
+  static class PossibleAssignments {
+    def inventory = Inventory.from([
+        'dessert': [
+            Assignable.of('cookie', ['drink': 'milk']),
+            Assignable.of('cake', ['drink': 'coffee']),
+            Assignable.of('ice cream'),
+        ],
+        'drink'  : [
+            Assignable.of('milk', ['garnish': 'straw']),
+            Assignable.of('coffee'),
+        ],
+        'garnish': [
+            Assignable.of('straw'),
+            Assignable.of('cherry', ['dessert': 'ice cream']),
+        ],
+    ])
+
+    @Test
+    void shouldIncludeExistingAssignmentsInAllPossibilities() {
+      def assignments = inventory.assignAll(['dessert': 'ice cream'])
+
+      assert assignments.possibleAssignments(['dessert', 'drink', 'garnish'])*.toMap().toSet() == [
+          [
+              'dessert': 'ice cream',
+              'drink': 'milk',
+              'garnish': 'straw'
+          ],
+          [
+              'dessert': 'ice cream',
+              'drink': 'coffee',
+              'garnish': 'cherry'
+          ],
+          [
+              'dessert': 'ice cream',
+              'drink': 'coffee',
+              'garnish': 'straw'
+          ]
+      ].toSet()
+    }
+
+    @Test
+    void shouldExcludeOptionsWithConflictingImplications() {
+      def assignments = inventory.assignAll([])
+
+      assert assignments.possibleAssignments(['dessert', 'drink', 'garnish'])*.toMap().toSet() == [
+          [
+              'dessert': 'cookie',
+              'drink': 'milk',
+              'garnish': 'straw'
+          ],
+          [
+              'dessert': 'cake',
+              'drink': 'coffee',
+              'garnish': 'straw'
+          ],
+          [
+              'dessert': 'ice cream',
+              'drink': 'milk',
+              'garnish': 'straw'
+          ],
+          [
+              'dessert': 'ice cream',
+              'drink': 'coffee',
+              'garnish': 'cherry'
+          ],
+          [
+              'dessert': 'ice cream',
+              'drink': 'coffee',
+              'garnish': 'straw'
+          ]
+      ].toSet()
     }
   }
 }

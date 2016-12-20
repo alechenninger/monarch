@@ -73,20 +73,12 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public Assignments with(String variable, String value) {
-    Assignment assignment = inventory.variableByName(variable)
-        .orElseThrow(NoSuchElementException::new)
-        .assign(value);
-
-    return with(assignment);
+    return with(inventory.assign(variable, value));
   }
 
   public boolean canForkAt(String variable) {
-    // Check if variable is implied, if so cant fork without forking at implier first
-    if (implicit.stream().map(i -> i.variable().name()).anyMatch(variable::equals)) return false;
-
     // Implicit may not contain all actually implicit assignments if that assignment is also
-    // explicit. So checking the implicits of our explicits too makes us sure.
-    // We can't *just* do this without recursion.
+    // explicit. So checking the implicits of our explicits makes us sure.
     for (Assignment assignment : explicit) {
       if (assignment.variable().name().equals(variable)) {
         continue;
@@ -127,6 +119,7 @@ public class Assignments implements Iterable<Assignment> {
         .findAny()
         .orElseThrow(NoSuchElementException::new);
   }
+
   public Set<String> possibleValues(String variable) {
     if (isAssigned(variable)) {
       return Collections.singleton(forVariable(variable).value());
@@ -204,6 +197,7 @@ public class Assignments implements Iterable<Assignment> {
     return conflictsWith(inventory.assign(variable, value));
   }
 
+  // TODO: I think this should actually return a List
   public Optional<Assignment> conflictOf(Assignment assignment) {
     Variable variable = assignment.variable();
 
@@ -263,7 +257,7 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public boolean isEmpty() {
-    return !iterator().hasNext();
+    return explicit.isEmpty() && implicit.isEmpty();
   }
 
   public int size() {
