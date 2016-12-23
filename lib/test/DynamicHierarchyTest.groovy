@@ -263,27 +263,77 @@ potentials:
         .isTargetedBy(SourceSpec.byVariables(['team': 'teamA', 'environment': 'prod']))
   }
 
+  /**
+   * Any hierarchy where a=foo should only touch sources where a=foo and no others. 'bottom' in this
+   * example would also be used by other assignments of a, so we cannot alter 'bottom' without
+   * altering other hierarchies we did not target.
+   */
   @Test
-  void shouldNotConfuseSourcesOfSamePathButDifferentVariables() {
-    // The theory behind this makes sense but in practice, the same path is the same file.
-    // Really, this probably shouldn't happen or something is broken.
+  void shouldNotIncludeDescendantsWithoutVariables() {
     def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
 sources:
+  - '%{a}'
+  - bottom
+potentials:
+  a:
+  - foo
+'''))
+
+    assert hierarchy.sourceFor(['a': 'foo']).get().descendants()*.path() == ['foo']
+  }
+
+  @Test
+  void shouldTargetTheHigherSourceWhereAssignmentsAndNodeResolveToTheSamePath() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - top
   - '%{a}'
   - '%{b}'
 potentials:
   a:
   - foo
   b:
-  - foo
+  - foo:
+      a: foo
 '''))
 
     def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
     def bIsFoo = SourceSpec.byVariables(['b': 'foo'])
 
-    assert !hierarchy.sourceFor(aIsFoo).get().isTargetedBy(bIsFoo)
-    assert hierarchy.sourceFor(bIsFoo).get().isTargetedBy(bIsFoo)
-    assert !hierarchy.sourceFor(bIsFoo).get().isTargetedBy(aIsFoo)
-    assert hierarchy.sourceFor(aIsFoo).get().isTargetedBy(aIsFoo)
+    def aFoo = hierarchy.sourceFor(aIsFoo).get()
+    def bFoo = hierarchy.sourceFor(bIsFoo).get()
+
+    assert aFoo.isTargetedBy(bIsFoo)
+    assert bFoo.isTargetedBy(bIsFoo)
+    assert bFoo.isTargetedBy(aIsFoo)
+    assert aFoo.isTargetedBy(aIsFoo)
+
+    assert aFoo.lineage()*.path() == ['foo', 'top']
+    assert bFoo.lineage()*.path() == ['foo', 'top']
+  }
+
+  @Test
+  void shouldNotIncludeASourceMoreThanOnceInDescendants() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - top
+  - '%{a}'
+  - '%{b}'
+potentials:
+  a:
+  - foo
+  b:
+  - foo:
+      a: foo
+'''))
+
+    def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
+    def bIsFoo = SourceSpec.byVariables(['b': 'foo'])
+
+    def aFoo = hierarchy.sourceFor(aIsFoo).get()
+    def bFoo = hierarchy.sourceFor(bIsFoo).get()
+
+    assert aFoo.descendants()*.path() == ['foo']
+    assert bFoo.descendants()*.path() == ['foo']
   }
 }

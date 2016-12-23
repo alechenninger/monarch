@@ -30,13 +30,12 @@ class MonarchTest {
 global.yaml:
   myteam.yaml:
     myteam/stage.yaml
-''';
+'''
 
   Map generateFromYaml(String hierarchy, String changes, String sourceToChange, Map data) {
     return m.generateSources(
         Hierarchy.fromStringListOrMap(yaml.load(hierarchy)).sourceFor(sourceToChange).get(),
-        yaml.loadAll(changes).collect { Change.fromMap(it as Map) }
-        ,
+        yaml.loadAll(changes).collect { Change.fromMap(it as Map) },
         data.with {
           it.each { entry ->
             entry.setValue(this.yaml.load(entry.getValue()))
@@ -56,27 +55,27 @@ global.yaml:
   source: myteam/stage.yaml
   set:
     myapp::favorite_website: http://stage.redhat.com
-''';
+'''
 
     def rootStart = '''
 myapp::version: 1
 
 otherapp::version: 5
-''';
+'''
 
     def stageStart = '''
 myapp::version: 1
 myapp::a_stage_specific_value: "should stay here"
 
 otherapp::version: 5
-''';
+'''
 
     def result = generateFromYaml(
         hierarchy, changes, 'myteam/stage.yaml', [
         'global.yaml': '',
         'myteam.yaml': rootStart,
         'myteam/stage.yaml': stageStart
-    ]);
+    ])
 
     def expected = [
         'global.yaml': [:],
@@ -94,20 +93,20 @@ myapp::favorite_website: http://stage.redhat.com
 
 
   @Test
-  public void shouldRemoveValuesIfRemovedInClosestAncestor() {
+  void shouldRemoveValuesIfRemovedInClosestAncestor() {
     def changes = '''
 ---
   source: myteam.yaml
   remove:
     - myapp::should_have_bugs
-''';
+'''
 
     def rootStart = '''
 myapp::version: 1
 myapp::should_have_bugs: false
 
 otherapp::version: 5
-''';
+'''
 
     def stageStart = '''
 myapp::version: 1
@@ -115,14 +114,14 @@ myapp::a_stage_specific_value: "should stay here"
 myapp::should_have_bugs: true
 
 otherapp::version: 5
-''';
+'''
 
     def result = generateFromYaml(
         hierarchy, changes, 'myteam/stage.yaml', [
         'global.yaml': '',
         'myteam.yaml': rootStart,
         'myteam/stage.yaml': stageStart
-    ]);
+    ])
 
     def expected = [
         'global.yaml': [:],
@@ -138,20 +137,20 @@ otherapp::version: 5
   }
 
   @Test
-  public void shouldNotAddValueIfSameValueIsAlreadyInherited() {
+  void shouldNotAddValueIfSameValueIsAlreadyInherited() {
     def changes = '''
 ---
   source: global.yaml
   set:
     myapp::version: 2
-''';
+'''
 
     def result = generateFromYaml(
         hierarchy, changes, 'myteam/stage.yaml', [
         'global.yaml': '',
         'myteam.yaml': 'myapp::version: 2',
         'myteam/stage.yaml': ''
-    ]);
+    ])
 
     def expected = [
         'global.yaml': [:],
@@ -163,13 +162,13 @@ otherapp::version: 5
   }
 
   @Test
-  public void shouldRemoveInheritedValuesFromDescendantsIfDescendantsDoNotHaveValueExplicitlySet() {
+  void shouldRemoveInheritedValuesFromDescendantsIfDescendantsDoNotHaveValueExplicitlySet() {
     def changes = '''
 ---
   source: global.yaml
   set:
     myapp::version: 2
-''';
+'''
 
     def result = generateFromYaml(hierarchy, changes, 'global.yaml', [
         'global.yaml': '',
@@ -187,13 +186,13 @@ otherapp::version: 5
   }
 
   @Test
-  public void shouldNotAddInheritedValuesIfNotExplicitlySet() {
+  void shouldNotAddInheritedValuesIfNotExplicitlySet() {
     def changes = '''
 ---
   source: myteam.yaml
   set:
     myapp::version: 2
-''';
+'''
 
     def result = generateFromYaml(hierarchy, changes, 'myteam.yaml', [
         'global.yaml': '',
@@ -211,7 +210,7 @@ otherapp::version: 5
   }
 
   @Test
-  public void shouldNotRemoveInheritedValuesFromDescendantsIfDescendantsHaveValueExplicitlySet() {
+  void shouldNotRemoveInheritedValuesFromDescendantsIfDescendantsHaveValueExplicitlySet() {
     def changes = '''
 ---
   source: global.yaml
@@ -221,7 +220,7 @@ otherapp::version: 5
   source: myteam/stage.yaml
   set:
     myapp::version: 2
-''';
+'''
 
     def result = generateFromYaml(hierarchy, changes, 'global.yaml', [
         'global.yaml': '',
@@ -239,20 +238,20 @@ otherapp::version: 5
   }
 
   @Test
-  public void shouldDoNothingIfChangeAlreadyApplied() {
+  void shouldDoNothingIfChangeAlreadyApplied() {
     def changes = '''
 ---
   source: myteam.yaml
   set:
     myapp::version: 2
-''';
+'''
 
     def result = generateFromYaml(
         hierarchy, changes, 'myteam/stage.yaml', [
         'global.yaml': '',
         'myteam.yaml': '',
         'myteam/stage.yaml': 'myapp::version: 2'
-    ]);
+    ])
 
     def expected = [
         'global.yaml': [:],
