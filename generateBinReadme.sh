@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 monarchHelp=$(monarch -?)
 applyHelp=$(monarch apply -?)
 setHelp=$(monarch set -?)
