@@ -319,6 +319,8 @@ sources:
   - top
   - '%{a}'
   - '%{b}'
+  - etc/%{a}
+  - etc/%{b}
 potentials:
   a:
   - foo
@@ -333,7 +335,7 @@ potentials:
     def aFoo = hierarchy.sourceFor(aIsFoo).get()
     def bFoo = hierarchy.sourceFor(bIsFoo).get()
 
-    assert aFoo.descendants()*.path() == ['foo']
-    assert bFoo.descendants()*.path() == ['foo']
+    assert aFoo.descendants()*.path() == ['foo', 'etc/foo']
+    assert bFoo.descendants()*.path() == ['foo', 'etc/foo']
   }
 }

@@ -40,15 +40,24 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Assignments assignments) {
+    RenderedSource match = null;
+
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode source = nodes.get(i);
-
       if (assignments.assignsOnly(source.variables())) {
-        return Optional.of(new RenderedSource(assignments, nodes, inventory, i));
+        match = new RenderedSource(assignments, nodes, inventory, i);
+        break;
       }
     }
 
-    return Optional.empty();
+    // If we have a match, it's possible that with its implications there is a source higher in the
+    // hierarchy that has the same path. If this is the case, then we can't target the exact source
+    // since that level doesn't really exist: it is overridden by a node higher in the hierarchy
+    // that lives at the same source.
+    return Optional.ofNullable(match)
+        .flatMap(s -> ListReversed.stream(s.lineage())
+            .filter(a -> a.path().equals(s.path()))
+            .findFirst());
   }
 
   @Override
@@ -156,6 +165,11 @@ class DynamicHierarchy implements Hierarchy {
         for (RenderedNode render : renders) {
           Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
           if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
+            // Exclude source if descendants already contains a source with this path.
+            if (descendants.stream().map(Source::path).anyMatch(render.path()::equals)) {
+              continue;
+            }
+
             Assignments descendantAssigns = assignments.with(renderAssigns);
             descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));
           }
