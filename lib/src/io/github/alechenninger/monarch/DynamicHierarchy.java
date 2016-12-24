@@ -43,8 +43,8 @@ class DynamicHierarchy implements Hierarchy {
     RenderedSource match = null;
 
     for (int i = 0; i < nodes.size(); i++) {
-      DynamicNode source = nodes.get(i);
-      if (assignments.assignsOnly(source.variables())) {
+      DynamicNode node = nodes.get(i);
+      if (assignments.assignsOnly(node.variables())) {
         match = new RenderedSource(assignments, nodes, inventory, i);
         break;
       }
@@ -142,11 +142,11 @@ class DynamicHierarchy implements Hierarchy {
       List<Source> lineage = new ArrayList<>(index);
 
       for (int i = index; i >= 0; i--) {
-        // if (nodes.get(i).renderOne(assignments).ifPresent(....)
-        // TODO: You can have case where same source as self (by path) is in lineage... doesn't make
-        // sense.
         if (assignments.assignsSupersetOf(nodes.get(i).variables())) {
-          lineage.add(new RenderedSource(assignments, nodes, inventory, i));
+          RenderedSource newAncestor = new RenderedSource(assignments, nodes, inventory, i);
+          // Replace an ancestor with the same path, since this ancestor will always override it.
+          lineage.removeIf(ancestor -> ancestor.path().equals(newAncestor.path()));
+          lineage.add(newAncestor);
         }
       }
 

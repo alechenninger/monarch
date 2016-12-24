@@ -18,7 +18,6 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -226,7 +225,7 @@ public class Assignments implements Iterable<Assignment> {
       }
       assignments.add(forVariable(variable));
     }
-    return equals(assignments);
+    return toMap().equals(assignments.toMap());
   }
 
   /**

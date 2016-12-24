@@ -2,6 +2,7 @@ import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
 import io.github.alechenninger.monarch.SourceSpec
+import org.junit.Ignore
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
@@ -288,6 +289,7 @@ potentials:
 sources:
   - top
   - '%{a}'
+  - middle
   - '%{b}'
 potentials:
   a:
@@ -337,5 +339,55 @@ potentials:
 
     assert aFoo.descendants()*.path() == ['foo', 'etc/foo']
     assert bFoo.descendants()*.path() == ['foo', 'etc/foo']
+  }
+
+  @Test
+  void shouldNotIncludeDuplicatePathsInLineage() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - top
+  - '%{a}'
+  - middle
+  - '%{b}'
+  - '%{c}/%{b}'
+potentials:
+  a:
+  - foo
+  b:
+  - foo:
+      a: foo
+  c:
+  - bar:
+      b: foo
+'''))
+
+    def cBar = hierarchy.sourceFor(['c': 'bar']).get()
+
+    assert cBar.lineage()*.path() == ['bar/foo', 'middle', 'foo', 'top']
+  }
+
+  @Test
+  @Ignore("This may warrant some refactoring, currently 'foo' is not included in descendants of 'top'")
+  void ancestorsDescendantsShouldBeConsistentWithChildLineage() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - top
+  - '%{a}'
+  - '%{b}'
+  - '%{c}/%{b}'
+potentials:
+  a:
+  - foo
+  b:
+  - foo:
+      a: foo
+  c:
+  - bar:
+      b: foo
+'''))
+
+    def cBar = hierarchy.sourceFor(['c': 'bar']).get()
+
+    assert cBar.lineage().get(2).descendants()*.path() == ['top', 'foo', 'bar/foo']
   }
 }

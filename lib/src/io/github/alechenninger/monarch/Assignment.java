@@ -44,6 +44,7 @@ public class Assignment {
   }
 
   public Assignments implied() {
+    // TODO: cache this
     return inventory.assignAll(assignable.impliedAssignments());
   }
 
