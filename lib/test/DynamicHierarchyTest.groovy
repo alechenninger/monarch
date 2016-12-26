@@ -284,37 +284,6 @@ potentials:
   }
 
   @Test
-  void shouldTargetTheHigherSourceWhereAssignmentsAndNodeResolveToTheSamePath() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
-sources:
-  - top
-  - '%{a}'
-  - middle
-  - '%{b}'
-potentials:
-  a:
-  - foo
-  b:
-  - foo:
-      a: foo
-'''))
-
-    def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
-    def bIsFoo = SourceSpec.byVariables(['b': 'foo'])
-
-    def aFoo = hierarchy.sourceFor(aIsFoo).get()
-    def bFoo = hierarchy.sourceFor(bIsFoo).get()
-
-    assert aFoo.isTargetedBy(bIsFoo)
-    assert bFoo.isTargetedBy(bIsFoo)
-    assert bFoo.isTargetedBy(aIsFoo)
-    assert aFoo.isTargetedBy(aIsFoo)
-
-    assert aFoo.lineage()*.path() == ['foo', 'top']
-    assert bFoo.lineage()*.path() == ['foo', 'top']
-  }
-
-  @Test
   void shouldNotIncludeASourceMoreThanOnceInDescendants() {
     def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
 sources:
@@ -363,7 +332,7 @@ potentials:
 
     def cBar = hierarchy.sourceFor(['c': 'bar']).get()
 
-    assert cBar.lineage()*.path() == ['bar/foo', 'middle', 'foo', 'top']
+    assert cBar.lineage()*.path() == ['bar/foo', 'foo', 'middle', 'top']
   }
 
   @Test

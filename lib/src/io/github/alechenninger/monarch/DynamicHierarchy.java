@@ -1,6 +1,8 @@
 package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.DynamicNode.RenderedNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,6 +16,8 @@ import java.util.stream.Stream;
 class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> nodes;
   private final Inventory inventory;
+
+  private static final Logger log = LoggerFactory.getLogger(DynamicHierarchy.class);
 
   /**
    *
@@ -40,24 +44,14 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Assignments assignments) {
-    RenderedSource match = null;
-
     for (int i = 0; i < nodes.size(); i++) {
       DynamicNode node = nodes.get(i);
       if (assignments.assignsOnly(node.variables())) {
-        match = new RenderedSource(assignments, nodes, inventory, i);
-        break;
+        return Optional.of(new RenderedSource(assignments, nodes, inventory, i));
       }
     }
 
-    // If we have a match, it's possible that with its implications there is a source higher in the
-    // hierarchy that has the same path. If this is the case, then we can't target the exact source
-    // since that level doesn't really exist: it is overridden by a node higher in the hierarchy
-    // that lives at the same source.
-    return Optional.ofNullable(match)
-        .flatMap(s -> ListReversed.stream(s.lineage())
-            .filter(a -> a.path().equals(s.path()))
-            .findFirst());
+    return Optional.empty();
   }
 
   @Override
@@ -144,9 +138,11 @@ class DynamicHierarchy implements Hierarchy {
       for (int i = index; i >= 0; i--) {
         if (assignments.assignsSupersetOf(nodes.get(i).variables())) {
           RenderedSource newAncestor = new RenderedSource(assignments, nodes, inventory, i);
-          // Replace an ancestor with the same path, since this ancestor will always override it.
-          lineage.removeIf(ancestor -> ancestor.path().equals(newAncestor.path()));
-          lineage.add(newAncestor);
+          // Don't bother adding this ancestor if one with the same path is already in lineage.
+          // It will have been used already and no source can't have itself as an ancestor.
+          if (lineage.stream().map(Source::path).noneMatch(newAncestor.path()::equals)) {
+            lineage.add(newAncestor);
+          }
         }
       }
 

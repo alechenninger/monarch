@@ -18,6 +18,9 @@
 
 package io.github.alechenninger.monarch;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +30,8 @@ import java.util.Set;
 import java.util.stream.StreamSupport;
 
 public class Monarch {
+  private static final Logger log = LoggerFactory.getLogger(Monarch.class);
+
   /**
    * Generates new data for all known sources in the hierarchy based on the hierarchy, the data
    * changes you want applied, the existing state of the data, and a "target" source which you want
@@ -54,6 +59,10 @@ public class Monarch {
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
+    if (log.isDebugEnabled()) {
+      log.debug("Generating sources for descendants: {}", target.descendants());
+    }
+
     for (Source descendant : target.descendants()) {
       result.put(descendant.path(), generateSingleSource(descendant, changes, result, mergeKeys));
     }
@@ -84,6 +93,8 @@ public class Monarch {
         ? new HashMap<>()
         : new HashMap<>(sourceData);
 
+    log.debug("Looking for changes applicable to lineage: {}", lineage);
+
     for (Source ancestor : new ListReversed<>(lineage)) {
       Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
 
@@ -93,18 +104,27 @@ public class Monarch {
 
       Change change = maybeChange.get();
 
+      log.debug("Applying change for ancestor {} (targeted by {}) to {}.",
+          ancestor, change.sourceSpec(), target);
+
       for (Map.Entry<String, Object> setEntry : change.set().entrySet()) {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
         if (target.isNotTargetedBy(change.sourceSpec())) {
           if (targetLookup.isValueInherited(setKey, setValue)) {
+            log.debug("Desired key:value is inherited at {}: {}: {}", target, setKey, setValue);
+
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {
+                log.debug("Target {} contains value for merged key '{}', unmerging '{}'",
+                    target, setKey, setValue);
                 Merger merger = Merger.startingWith(resultSourceData.get(setKey));
                 merger.unmerge(setValue);
                 resultSourceData.put(setKey, merger.getMerged());
               } else {
+                log.debug("Target {} contains value for non-merged key {}, removing.",
+                    target, setKey);
                 resultSourceData.remove(setKey);
               }
             }
@@ -116,6 +136,9 @@ public class Monarch {
         Object currentValue = resultSourceData.get(setKey);
 
         if (mergeKeys.contains(setKey) && currentValue != null) {
+          log.debug("Target {} already contains merged key '{}', " +
+                  "merging with desired value: {}",
+              target, setKey, setValue);
           Merger merger = Merger.startingWith(currentValue);
           merger.merge(setValue);
           newValue = merger.getMerged();
@@ -123,11 +146,13 @@ public class Monarch {
           newValue = setValue;
         }
 
+        log.debug("Putting {}: {} in {}", setKey, newValue, target);
         resultSourceData.put(setKey, newValue);
       }
 
       // TODO: Support removing nested keys (keys in a hash)
       for (String key : change.remove()) {
+        // TODO: log
         resultSourceData.remove(key);
       }
     }

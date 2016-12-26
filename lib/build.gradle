@@ -24,6 +24,7 @@ version = '0.5.2'
 sourceCompatibility = 1.8
 
 dependencies {
+  compile 'org.slf4j:slf4j-api:1.7.22'
   compile 'org.bigtesting:interpolatd:1.0.0'
   testCompile 'org.codehaus.groovy:groovy:2.4.5'
   testCompile 'junit:junit:4.12'
