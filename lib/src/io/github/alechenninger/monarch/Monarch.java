@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class Monarch {
@@ -60,7 +61,8 @@ public class Monarch {
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
     if (log.isDebugEnabled()) {
-      log.debug("Generating sources for descendants: {}", target.descendants());
+      log.debug("Generating sources for descendants: {}",
+          target.descendants().stream().map(Source::path).collect(Collectors.toList()));
     }
 
     for (Source descendant : target.descendants()) {

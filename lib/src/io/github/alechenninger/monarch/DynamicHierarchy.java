@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -136,11 +137,23 @@ class DynamicHierarchy implements Hierarchy {
       List<Source> lineage = new ArrayList<>(index);
 
       for (int i = index; i >= 0; i--) {
-        if (assignments.assignsSupersetOf(nodes.get(i).variables())) {
+        DynamicNode node = nodes.get(i);
+        if (assignments.assignsSupersetOf(node.variables())) {
           RenderedSource newAncestor = new RenderedSource(assignments, nodes, inventory, i);
+
           // Don't bother adding this ancestor if one with the same path is already in lineage.
           // It will have been used already and no source can't have itself as an ancestor.
-          if (lineage.stream().map(Source::path).noneMatch(newAncestor.path()::equals)) {
+          for (Source ancestor : lineage) {
+            if (ancestor.path().equals(newAncestor.path())) {
+              log.warn("Found repeated source path in ancestry of {}. {} repeated at ancestor " +
+                      "{} using assignments {}. Ignoring ancestor.",
+                  this, ancestor, newAncestor, newAncestor.rendered.usedAssignments());
+              newAncestor = null;
+              break;
+            }
+          }
+
+          if (newAncestor != null) {
             lineage.add(newAncestor);
           }
         }
@@ -156,18 +169,29 @@ class DynamicHierarchy implements Hierarchy {
       descendants.add(this);
 
       for (int i = index + 1; i < nodes.size(); i++) {
-        DynamicNode dynamicNode = nodes.get(i);
-        List<RenderedNode> renders = dynamicNode.render(assignments);
+        DynamicNode node = nodes.get(i);
+        List<RenderedNode> renders = node.render(assignments);
         for (RenderedNode render : renders) {
           Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
           if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
+            Assignments descendantAssigns = assignments.with(renderAssigns);
+            RenderedSource newDescendant =
+                new RenderedSource(descendantAssigns, nodes, inventory, i, render);
+
             // Exclude source if descendants already contains a source with this path.
-            if (descendants.stream().map(Source::path).anyMatch(render.path()::equals)) {
-              continue;
+            for (Iterator<Source> it = descendants.iterator(); it.hasNext();) {
+              Source descendant = it.next();
+
+              if (descendant.path().equals(render.path())) {
+                log.warn("Found repeated source path in descendants of {}. {} repeated at " +
+                        "descendant {} using assignments {}. Using descendant node instead.",
+                    this, descendant, newDescendant, render.usedAssignments());
+                it.remove();
+                break;
+              }
             }
 
-            Assignments descendantAssigns = assignments.with(renderAssigns);
-            descendants.add(new RenderedSource(descendantAssigns, nodes, inventory, i, render));
+            descendants.add(newDescendant);
           }
         }
       }
@@ -198,6 +222,14 @@ class DynamicHierarchy implements Hierarchy {
     @Override
     public int hashCode() {
       return Objects.hash(nodes, inventory, index, rendered);
+    }
+
+    @Override
+    public String toString() {
+      return "RenderedSource{" +
+          "node=" + nodes.get(index) + ", " +
+          "path='" + path() + '\'' +
+          '}';
     }
   }
 }

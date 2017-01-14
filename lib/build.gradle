@@ -29,6 +29,7 @@ dependencies {
   testCompile 'org.codehaus.groovy:groovy:2.4.5'
   testCompile 'junit:junit:4.12'
   testCompile 'org.yaml:snakeyaml:1.16'
+  testCompile 'org.slf4j:slf4j-jdk14:1.7.22'
 }
 
 sourceSets {

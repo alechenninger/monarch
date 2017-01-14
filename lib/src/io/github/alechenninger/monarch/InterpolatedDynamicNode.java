@@ -99,13 +99,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
 
   @Override
   public String toString() {
-    return "InterpolatedDynamicNode{" +
-        "expression='" + expression + '\'' +
-        ", variableOpening='" + variableOpening + '\'' +
-        ", variableClosing='" + variableClosing + '\'' +
-        ", escapeCharacter=" + escapeCharacter +
-        ", variableNames=" + variableNames +
-        '}';
+    return '\'' + expression + '\'';
   }
 
   @Override
