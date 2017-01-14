@@ -65,12 +65,12 @@ class DynamicHierarchy implements Hierarchy {
     DynamicSource targetSource = null;
 
     // Build hierarchy from bottom up.
-    for (int i = nodes.size() - 1; i >= 0; i--) {
-      current = current == null
-          ? new Level()
-          : current.parent();
-      DynamicNode node = nodes.get(i);
+    for (DynamicNode node : new ListReversed<>(nodes)) {
+      current = current == null ? new Level() : current.parent();
 
+      // Adding descendants of a target has different logic than ancestors.
+      // While target source is null, it means we haven't found it yet, so we're still adding
+      // descendants.
       if (targetSource == null) {
         List<RenderedNode> renders = node.render(assignments);
 
@@ -95,7 +95,8 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     if (targetSource == null) {
-      throw new IllegalStateException("Bug! Found a target but not the source? Doesn't make sense.");
+      throw new IllegalStateException(
+          "Bug! Found a target but not the source? Doesn't make sense.");
     }
 
     return Optional.of(targetSource);
@@ -111,9 +112,7 @@ class DynamicHierarchy implements Hierarchy {
 
     for (int i = nodes.size() - 1; i >= 0; i--) {
       DynamicNode dynamicNode = nodes.get(i);
-      Level level = current == null
-          ? new Level()
-          : current.parent();
+      Level level = current == null ? new Level() : current.parent();
 
       for (RenderedNode rendered : dynamicNode.render(Assignments.none(inventory))) {
         Assignments assignments = inventory.assignAll(rendered.usedAssignments());
@@ -163,7 +162,7 @@ class DynamicHierarchy implements Hierarchy {
       this.level = level;
     }
 
-    public DynamicNode node() {
+    DynamicNode node() {
       return render.node();
     }
 
@@ -201,12 +200,15 @@ class DynamicHierarchy implements Hierarchy {
 
     @Override
     public String toString() {
-      // TODO: Better toString
-      return '\'' + render.path() + '\'';
+      return "DynamicSource{" +
+          "node=" + render.node() +
+          ", rendered=" + render.path() +
+          '}';
     }
 
+    // TODO: equals, hashCode
+
     private DynamicSource parent() {
-      // TODO: should make sure this could only ever be one or null
       for (Level ancestorLevel : level.ancestors()) {
         for (DynamicSource parent : ancestorLevel.parent()) {
           if (assignments.containsAll(parent.assignments)) {
@@ -242,22 +244,20 @@ class DynamicHierarchy implements Hierarchy {
             "non-empty parent.");
       }
 
+      DynamicSource newMember = new DynamicSource(assignments, render, this);
       Optional<DynamicSource> match = descendants().stream()
           .flatMap(l -> l.members().stream())
-          .filter(s -> s.path().equals(render.path()))
+          .filter(s -> s.path().equals(newMember.path()))
           .findAny();
 
       if (match.isPresent()) {
-        log.warn("Repeat source path at {} using assignments {}. " +
-                "Using descendant node instead.",
-            match.get(), render.usedAssignments());
+        log.warn("Repeat source path '{}' at nodes {} and descendant {}. Ignoring ancestor node.",
+            newMember.path(), newMember.node(), match.get().node());
         return Optional.empty();
       }
 
-      DynamicSource source = new DynamicSource(assignments, render, this);
-      members.add(source);
-
-      return Optional.of(source);
+      members.add(newMember);
+      return Optional.of(newMember);
     }
 
     List<DynamicSource> members() {
@@ -286,7 +286,7 @@ class DynamicHierarchy implements Hierarchy {
       return descendants;
     }
 
-    public Level parent() {
+    Level parent() {
       if (members.isEmpty()) {
         return this;
       }
@@ -298,10 +298,6 @@ class DynamicHierarchy implements Hierarchy {
       return new Level(this);
     }
 
-    public Optional<Level> child() {
-      return Optional.ofNullable(child);
-    }
-
     boolean isEmpty() {
       return members.isEmpty();
     }
@@ -309,6 +305,15 @@ class DynamicHierarchy implements Hierarchy {
     @Override
     public Iterator<DynamicSource> iterator() {
       return members().iterator();
+    }
+
+    // TODO: Better to string
+    // TODO: equals, hashCode
+    @Override
+    public String toString() {
+      return "Level{" +
+          "members=" + members +
+          '}';
     }
   }
 }
