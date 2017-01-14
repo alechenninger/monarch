@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2017 Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,36 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-apply plugin: 'java'
-apply plugin: 'groovy'
+package io.github.alechenninger.monarch;
 
-version = '0.5.2'
+import java.util.List;
+import java.util.stream.Collectors;
 
-sourceCompatibility = 1.8
-
-dependencies {
-  compile 'org.slf4j:slf4j-api:1.7.22'
-  compile 'org.bigtesting:interpolatd:1.0.0'
-  testCompile 'org.codehaus.groovy:groovy:2.4.5'
-  testCompile 'junit:junit:4.12'
-  testCompile 'org.yaml:snakeyaml:1.16'
-  testCompile 'ch.qos.logback:logback-classic:1.1.8'
-}
-
-sourceSets {
-  main {
-    java {
-      srcDirs = ['src/']
-    }
+public abstract class Sources {
+  public static List<String> pathsOf(List<Source> sources) {
+    return sources.stream()
+        .map(Source::path)
+        .collect(Collectors.toList());
   }
-
-  test {
-    groovy {
-      srcDirs = ['test/']
-    }
-  }
-}
-
-repositories {
-  mavenCentral()
 }

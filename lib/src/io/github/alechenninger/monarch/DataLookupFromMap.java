@@ -123,6 +123,13 @@ public class DataLookupFromMap implements DataLookup {
     return sourcesCount > 0;
   }
 
+  @Override
+  public String toString() {
+    return "DataLookupFromMap{" +
+        "path='" + path + '\'' +
+        '}';
+  }
+
   private List<String> sourceAncestry() {
     return source.lineage().stream().map(Source::path).collect(Collectors.toList());
   }

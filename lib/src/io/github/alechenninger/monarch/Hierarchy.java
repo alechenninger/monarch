@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public interface Hierarchy {
 
@@ -16,13 +17,77 @@ public interface Hierarchy {
       Map map = (Map) object;
 
       if (map.containsKey("sources")) {
-        if ((map.size() == 2 && map.containsKey("potentials")) || map.size() == 1) {
+        // TODO: Deprecate using "potentials"
+        if ((map.size() == 2 && (map.containsKey("potentials") || map.containsKey("inventory"))) ||
+            map.size() == 1) {
           List<String> sources = (List<String>) map.get("sources");
-          Map<String, List<String>> potentials = Optional
-              .ofNullable((Map<String, List<String>>) map.get("potentials"))
-              .orElse(Collections.emptyMap());
+          Map<String, List<Assignable>> potentials = Optional
+              .ofNullable((Map<String, Object>) Optional
+                  .ofNullable(map.get("potentials"))
+                  .orElse(map.get("inventory")))
+              .orElse(Collections.emptyMap())
+              .entrySet()
+              .stream()
+              .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+                Object value = entry.getValue();
+                if (value instanceof List) {
+                  return ((List<Object>) value).stream()
+                      .map(potentialForKey -> {
+                        if (potentialForKey instanceof String) {
+                          return new Assignable((String) potentialForKey);
+                        }
 
-          return fromDynamicSourceExpressions(sources, potentials);
+                        if (potentialForKey instanceof Map) {
+                          Map<String, Object> potentialToImplications = (Map) potentialForKey;
+
+                          if (potentialToImplications.size() > 1) {
+                            throw new IllegalArgumentException("Expected 1 key for potential " +
+                                "with implied values. You probably need to correct your YAML " +
+                                "indentation. Keys found were: " +
+                                potentialToImplications.keySet());
+                          }
+
+                          Map.Entry<String, Object> potentialAndImplications =
+                              potentialToImplications.entrySet().iterator().next();
+                          Object implications = potentialAndImplications.getValue();
+
+                          if (implications instanceof Map) {
+                            return new Assignable(
+                                potentialAndImplications.getKey(),
+                                (Map<String, String>) implications);
+                          }
+
+                          if (implications == null) {
+                            return new Assignable(potentialAndImplications.getKey());
+                          }
+
+                          throw new IllegalArgumentException("Expected implications to be a map");
+                        }
+
+                        throw new IllegalArgumentException("Expected potential to be either a string or map");
+                      })
+                      .collect(Collectors.toList());
+                }
+
+                if (value instanceof Map) {
+                  return ((Map<String, Object>) value).entrySet().stream()
+                      .map(valueEntry -> {
+                        String potentialKey = valueEntry.getKey();
+                        Map<String, String> implicationsForPotential = (Map) valueEntry.getValue();
+                        if (implicationsForPotential == null) {
+                          return new Assignable(potentialKey);
+                        }
+
+                        return new Assignable(potentialKey, implicationsForPotential);
+                      })
+                      .collect(Collectors.toList());
+                }
+
+                throw new IllegalArgumentException("Expected potentials to be either a list or a map.");
+              }));
+
+
+          return fromDynamicSourceExpressions(sources, Inventory.from(potentials));
         }
       }
 
@@ -37,13 +102,13 @@ public interface Hierarchy {
   }
 
   static DynamicHierarchy fromDynamicSources(List<DynamicNode> sources,
-      Map<String, List<String>> potentials) {
-    return new DynamicHierarchy(sources, potentials);
+      Inventory inventory) {
+    return new DynamicHierarchy(sources, inventory);
   }
 
   static DynamicHierarchy fromDynamicSourceExpressions(List<String> sourceExpressions,
-      Map<String, List<String>> potentials) {
-    return fromDynamicSources(DynamicNode.fromInterpolated(sourceExpressions), potentials);
+      Inventory inventory) {
+    return fromDynamicSources(DynamicNode.fromInterpolated(sourceExpressions), inventory);
   }
 
   default Optional<Source> sourceFor(SourceSpec spec) {
@@ -52,7 +117,9 @@ public interface Hierarchy {
 
   Optional<Source> sourceFor(String source);
 
-  Optional<Source> sourceFor(Map<String, String> variables);
+  Optional<Source> sourceFor(Map<String, String> assignments);
+
+  Optional<Source> sourceFor(Assignments assignments);
 
   List<Source> descendants();
 }

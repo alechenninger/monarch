@@ -18,11 +18,10 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public interface DynamicNode {
@@ -34,39 +33,55 @@ public interface DynamicNode {
 
   List<String> variables();
 
-  List<RenderedNode> render(Map<String, String> variables, Map<String, List<String>> potentials);
+  default RenderedNode renderOne(Assignments assignments) {
+    List<RenderedNode> rendered = render(assignments);
+    if (rendered.size() != 1) {
+      throw new IllegalArgumentException("Assignments do not cover all variables.");
+    }
+    return rendered.get(0);
+  }
 
-  default Optional<Map<String, String>> variablesFor(String source,
-      Map<String, List<String>> potentials, Map<String, String> variables) {
-    return render(variables, potentials).stream()
+  List<RenderedNode> render(Assignments assignments);
+
+  default Optional<Assignments> assignmentsFor(String source,
+      Inventory potentials, Assignments variables) {
+    return render(variables).stream()
         .filter(s -> s.path().equals(source))
-        .map(RenderedNode::variablesUsed)
+        .map(RenderedNode::usedAssignments)
         // TODO validate only one found?
-        .findFirst();
+        .findFirst()
+        .map(potentials::assignAll);
   }
 
   final class RenderedNode {
+    private final DynamicNode node;
     private final String path;
-    private final Map<String, String> variablesUsed;
+    private final Set<Assignment> usedAssignments;
 
-    public RenderedNode(String path, Map<String, String> variablesUsed) {
-      this.path = Objects.requireNonNull(path);
-      this.variablesUsed = Collections.unmodifiableMap(variablesUsed);
+    public RenderedNode(String path, Set<Assignment> usedAssignments, DynamicNode node) {
+      this.path = Objects.requireNonNull(path, "path");
+      this.usedAssignments = Objects.requireNonNull(usedAssignments, "usedAssignments");
+      this.node = Objects.requireNonNull(node, "node");
     }
 
     public String path() {
       return path;
     }
 
-    public Map<String, String> variablesUsed() {
-      return variablesUsed;
+    public Set<Assignment> usedAssignments() {
+      return usedAssignments;
+    }
+
+    public DynamicNode node() {
+      return node;
     }
 
     @Override
     public String toString() {
       return "RenderedNode{" +
-          "path='" + path + '\'' +
-          ", variablesUsed=" + variablesUsed +
+          "node=" + node +
+          ", path='" + path + '\'' +
+          ", usedAssignments=" + usedAssignments +
           '}';
     }
 
@@ -75,13 +90,14 @@ public interface DynamicNode {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       RenderedNode that = (RenderedNode) o;
-      return Objects.equals(path, that.path) &&
-          Objects.equals(variablesUsed, that.variablesUsed);
+      return Objects.equals(node, that.node) &&
+          Objects.equals(path, that.path) &&
+          Objects.equals(usedAssignments, that.usedAssignments);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(path, variablesUsed);
+      return Objects.hash(node, path, usedAssignments);
     }
   }
 }

@@ -18,9 +18,9 @@
 
 package io.github.alechenninger.monarch;
 
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class PartsDynamicNode implements DynamicNode {
@@ -62,30 +62,28 @@ public class PartsDynamicNode implements DynamicNode {
   }
 
   @Override
-  public List<RenderedNode> render(Map<String, String> variables,
-      Map<String, List<String>> potentials) {
-    return VariableCombinations.stream(variables(), variables, potentials)
+  public List<RenderedNode> render(Assignments variables) {
+    return variables.possibleAssignments(variables()).stream()
         .map(combination -> {
-          Map<String, String> variablesUsed = new HashMap<>();
+          Set<Assignment> usedAssignments = new HashSet<>();
           StringBuilder path = new StringBuilder();
 
           for (Part part : parts) {
             if (part.isVariable) {
-              if (!combination.containsKey(part.string)) {
+              if (!combination.isAssigned(part.string)) {
                 throw new IllegalArgumentException("No variable value found for variable: " +
                     part.string);
               }
 
-              String value = combination.get(part.string);
-
-              variablesUsed.put(part.string, value);
-              path.append(value);
+              Assignment assignment = combination.forVariable(part.string);
+              usedAssignments.add(assignment);
+              path.append(assignment.value());
             } else {
               path.append(part.string);
             }
           }
 
-          return new RenderedNode(path.toString(), variablesUsed);
+          return new RenderedNode(path.toString(), usedAssignments, this);
         })
         .collect(Collectors.toList());
   }

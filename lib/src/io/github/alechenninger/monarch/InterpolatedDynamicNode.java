@@ -23,10 +23,12 @@ import org.bigtesting.interpolatd.Substitutor;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class InterpolatedDynamicNode implements DynamicNode {
@@ -64,20 +66,26 @@ public class InterpolatedDynamicNode implements DynamicNode {
   }
 
   @Override
-  public List<RenderedNode> render(Map<String, String> variables,
-      Map<String, List<String>> potentials) {
-    return VariableCombinations.stream(variableNames, variables, potentials)
-        .map(combination -> {
-          Map<String, String> variablesUsed = new HashMap<>();
+  public List<RenderedNode> render(Assignments assignments) {
+    if (variableNames.isEmpty()) {
+      return Collections.singletonList(new RenderedNode(expression, Collections.emptySet(), this));
+    }
+
+    return assignments.possibleAssignments(variableNames).stream()
+        .map(possibility -> {
+          Set<Assignment> usedAssignments = new HashSet<>();
           Interpolator<Map<String, String>> interpolator = getInterpolator((captured, arg) -> {
-            String value = combination.get(captured);
-            variablesUsed.put(captured, value);
-            return value;
+            if (!possibility.isAssigned(captured)) {
+              throw new IllegalStateException("No value defined for variable: " + captured);
+            }
+            Assignment assignment = possibility.forVariable(captured);
+            usedAssignments.add(assignment);
+            return assignment.value();
           });
 
-          String path = interpolator.interpolate(expression, combination);
+          String path = interpolator.interpolate(expression, possibility.toMap());
 
-          return new RenderedNode(path, variablesUsed);
+          return new RenderedNode(path, usedAssignments, this);
         })
         .collect(Collectors.toList());
   }
@@ -89,4 +97,26 @@ public class InterpolatedDynamicNode implements DynamicNode {
     return interpolator;
   }
 
+  @Override
+  public String toString() {
+    return '\'' + expression + '\'';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    InterpolatedDynamicNode that = (InterpolatedDynamicNode) o;
+    return Objects.equals(expression, that.expression) &&
+        Objects.equals(variableOpening, that.variableOpening) &&
+        Objects.equals(variableClosing, that.variableClosing) &&
+        Objects.equals(escapeCharacter, that.escapeCharacter) &&
+        Objects.equals(variableNames, that.variableNames);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(expression, variableOpening, variableClosing, escapeCharacter,
+        variableNames);
+  }
 }
