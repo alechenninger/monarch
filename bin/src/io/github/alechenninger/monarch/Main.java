@@ -30,6 +30,8 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -322,7 +324,14 @@ public class Main {
         String levelPrefix = record.getLevel().intValue() >= Level.WARNING.intValue()
             ? record.getLevel().getLocalizedName() + ": "
             : "";
-        return levelPrefix + record.getMessage() + '\n';
+        Throwable thrown = record.getThrown();
+        String stackTrace = "";
+        if (thrown != null) {
+          StringWriter writer = new StringWriter();
+          thrown.printStackTrace(new PrintWriter(writer));
+          stackTrace = writer.toString();
+        }
+        return levelPrefix + record.getMessage() + '\n' + stackTrace;
       }
     });
     handler.setLevel(Level.ALL);
