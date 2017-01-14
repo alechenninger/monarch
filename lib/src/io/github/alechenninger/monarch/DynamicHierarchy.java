@@ -88,16 +88,16 @@ class DynamicHierarchy implements Hierarchy {
             if (maybeSource.isPresent()) {
               DynamicSource source = maybeSource.get();
               if (source.path().equals(target.path())) {
-                if (!source.render.equals(target)) {
-                  throw new IllegalStateException("Found source for assignments, but it is " +
-                      "shadowed by a descendant with a duplicate path. Impossible to refer to " +
-                      "desired position in hierarchy. Path was '" + target.path() + "'. Desired " +
-                      "target for assignments " + assignments.toMap() + " was at node " +
-                      target.node() + ". Shadowed by same path at descendant " + source.node() +
-                      ".");
+                if (source.render.equals(target)) {
+                  targetSource = source;
+                } else {
+                  log.warn("Found source for assignments, but it is shadowed by a descendant " +
+                          "with a duplicate path. Impossible to refer to desired position in " +
+                          "hierarchy. Path was '{}'. Desired target for assignments {} was at " +
+                          "node {}. Shadowed by same path at descendant {} from assignments {}.",
+                      target.path(), assignments.toMap(), target.node(), source.node(),
+                      source.assignments.toMap());
                 }
-
-                targetSource = source;
               }
             }
           }
@@ -111,8 +111,7 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     if (targetSource == null) {
-      throw new IllegalStateException(
-          "Bug! Found a target but not the source? Doesn't make sense.");
+      return Optional.empty();
     }
 
     cachedSources.put(assignments, targetSource);

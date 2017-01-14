@@ -306,8 +306,8 @@ potentials:
     assert bFoo.descendants()*.path() == ['foo', 'etc/foo']
   }
 
-  @Test(expected = IllegalStateException.class)
-  void shouldFailIfTargetIsShadowedByLowerDuplicate() {
+  @Test
+  void shouldNotFindTargetIsShadowedByLowerDuplicate() {
     def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
 sources:
   - top
@@ -325,7 +325,7 @@ potentials:
 
     def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
 
-    hierarchy.sourceFor(aIsFoo)
+    assert !hierarchy.sourceFor(aIsFoo).isPresent()
   }
 
   @Test
