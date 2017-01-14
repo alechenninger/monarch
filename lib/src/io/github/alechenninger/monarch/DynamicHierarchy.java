@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -48,8 +47,6 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Assignments assignments) {
-
-
     for (int iTarget = 0; iTarget < nodes.size(); iTarget++) {
       DynamicNode targetNode = nodes.get(iTarget);
 
@@ -59,26 +56,20 @@ class DynamicHierarchy implements Hierarchy {
         DynamicSource targetSource = null;
 
         for (int i = nodes.size() - 1; i >= 0; i--) {
+          current = current == null
+              ? new Level()
+              : current.parent();
           DynamicNode node = nodes.get(i);
 
           if (i >= iTarget) {
-            Level next = null;
             List<RenderedNode> renders = node.render(assignments);
 
             for (RenderedNode render : renders) {
               Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
               if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
-                if (current != null && current.descendants().stream()
-                    .flatMap(l -> l.members().stream())
-                    .map(Source::path)
-                    .anyMatch(render.path()::equals)) {
-                  // TODO: add details
-                  log.warn("Repeat source ignored {}", render.path());
-                } else {
-                  if (next == null) {
-                    current = next = new Level(current);
-                  }
-                  DynamicSource source = current.add(render, renderAssigns);
+                Optional<DynamicSource> maybeSource = current.addMember(render, renderAssigns);
+                if (maybeSource.isPresent()) {
+                  DynamicSource source = maybeSource.get();
                   if (source.path().equals(target.path())) {
                     targetSource = source;
                   }
@@ -88,15 +79,9 @@ class DynamicHierarchy implements Hierarchy {
           } else {
             if (assignments.assignsSupersetOf(node.variables())) {
               RenderedNode render = node.renderOne(assignments);
-              if (current != null && current.descendants().stream()
-                  .flatMap(l -> l.members().stream())
-                  .map(Source::path)
-                  .anyMatch(render.path()::equals)) {
-                // TODO: add details
-                log.warn("Repeat source ignored {}", render.path());
-              } else {
-                current = new Level(current);
-                DynamicSource source = current.add(render, assignments);
+              Optional<DynamicSource> maybeSource = current.addMember(render, assignments);
+              if (maybeSource.isPresent()) {
+                DynamicSource source = maybeSource.get();
                 if (source.path().equals(target.path())) {
                   targetSource = source;
                 }
@@ -106,8 +91,6 @@ class DynamicHierarchy implements Hierarchy {
         }
 
         return Optional.of(targetSource);
-
-        //return Optional.of(new RenderedSource(assignments, nodes, inventory, iTarget));
       }
     }
 
@@ -120,17 +103,31 @@ class DynamicHierarchy implements Hierarchy {
       return Collections.emptyList();
     }
 
-    List<Source> descendants = new ArrayList<>();
+    Level current = null;
 
-    for (int i = 0; i < nodes.size(); i++) {
+    for (int i = nodes.size() - 1; i >= 0; i--) {
       DynamicNode dynamicNode = nodes.get(i);
+      Level level = current == null
+          ? new Level()
+          : current.parent();
+
       for (RenderedNode rendered : dynamicNode.render(Assignments.none(inventory))) {
-        Assignments variables = inventory.assignAll(rendered.usedAssignments());
-        descendants.add(new RenderedSource(variables, nodes, inventory, i, rendered));
+        Assignments assignments = inventory.assignAll(rendered.usedAssignments());
+        level.addMember(rendered, assignments);
+      }
+
+      if (!level.isEmpty()) {
+        current = level;
       }
     }
 
-    return descendants;
+    if (current == null) {
+      return Collections.emptyList();
+    }
+
+    return current.descendants().stream()
+        .flatMap(l -> l.members().stream())
+        .collect(Collectors.toList());
   }
 
   private Optional<Assignments> variablesFor(String source) {
@@ -149,158 +146,6 @@ class DynamicHierarchy implements Hierarchy {
       allVariables = allVariables.with(assignments);
     }
     return Optional.of(allVariables);
-  }
-
-  private static class RenderedSource extends AbstractSource {
-    private final Assignments assignments;
-    private final List<DynamicNode> nodes;
-    private final Inventory inventory;
-    private final int index;
-    private final RenderedNode rendered;
-
-    private List<Source> lineage;
-    private List<Source> descendants;
-
-    private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
-        Inventory inventory, int index) {
-      this.assignments = assignments;
-      this.nodes = nodes;
-      this.inventory = inventory;
-      this.index = index;
-
-      DynamicNode dynamicNode = nodes.get(index);
-      List<RenderedNode> renders = dynamicNode.render(this.assignments);
-
-      if (renders.size() != 1) {
-        throw new IllegalArgumentException("Expected source with all variables provided to " +
-            "produce a single source.");
-      }
-
-      this.rendered = renders.get(0);
-    }
-
-    private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
-        Inventory inventory, int index, RenderedNode rendered) {
-      this.assignments = assignments;
-      this.nodes = nodes;
-      this.inventory = inventory;
-      this.index = index;
-      this.rendered = rendered;
-      // TODO if (!variables.containsAll(rendered.usedAssignments()) throw
-    }
-
-    @Override
-    public String path() {
-      return rendered.path();
-    }
-
-    @Override
-    public List<Source> lineage() {
-      if (lineage != null) {
-        return lineage;
-      }
-
-      lineage = new ArrayList<>(index);
-      lineage.add(this);
-
-      for (int i = index - 1; i >= 0; i--) {
-        DynamicNode node = nodes.get(i);
-        if (assignments.assignsSupersetOf(node.variables())) {
-          RenderedSource newAncestor = new RenderedSource(assignments, nodes, inventory, i);
-
-          // Don't bother adding this ancestor if one with the same path is already in lineage.
-          // It will have been used already and no source can't have itself as an ancestor.
-          for (Source ancestor : lineage) {
-            if (ancestor.path().equals(newAncestor.path())) {
-              log.warn("Repeat source path at {} and ancestor {} using assignments {}. " +
-                      "Ignoring ancestor.",
-                  ancestor, newAncestor, newAncestor.rendered.usedAssignments());
-              newAncestor = null;
-              break;
-            }
-          }
-
-          if (newAncestor != null) {
-            lineage.add(newAncestor);
-          }
-        }
-      }
-
-      return lineage;
-    }
-
-    @Override
-    public List<Source> descendants() {
-      if (descendants != null) {
-        return descendants;
-      }
-
-      descendants = new ArrayList<>();
-      descendants.add(this);
-
-      for (int i = index + 1; i < nodes.size(); i++) {
-        DynamicNode node = nodes.get(i);
-        List<RenderedNode> renders = node.render(assignments);
-        for (RenderedNode render : renders) {
-          Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
-          if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
-            Assignments descendantAssigns = assignments.with(renderAssigns);
-            RenderedSource newDescendant =
-                new RenderedSource(descendantAssigns, nodes, inventory, i, render);
-
-            // Exclude source if descendants already contains a source with this path.
-            for (Iterator<Source> it = descendants.iterator(); it.hasNext();) {
-              Source descendant = it.next();
-
-              if (descendant.path().equals(render.path())) {
-                log.warn("Repeat source path at {} and descendant {} using assignments {}. " +
-                        "Using descendant node instead.",
-                    descendant, newDescendant, render.usedAssignments());
-                it.remove();
-                break;
-              }
-            }
-
-            descendants.add(newDescendant);
-          }
-        }
-      }
-
-      return descendants;
-    }
-
-    @Override
-    public boolean isTargetedBy(SourceSpec spec) {
-      return spec.findSource(new DynamicHierarchy(nodes, inventory))
-          .map(this::equals)
-          .orElse(false);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      RenderedSource that = (RenderedSource) o;
-      // Assignments comparison deliberately omitted. We are not comparing the entire tree is equal,
-      // just this source within any potential tree.
-      return index == that.index &&
-          Objects.equals(nodes, that.nodes) &&
-          Objects.equals(inventory, that.inventory) &&
-          Objects.equals(rendered, that.rendered);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(nodes, inventory, index, rendered);
-    }
-
-    @Override
-    public String toString() {
-      return "RenderedSource{" +
-          "node=" + nodes.get(index) + ", " +
-          "path='" + path() + '\'' +
-          '}';
-    }
   }
 
   class DynamicSource implements Source {
@@ -346,10 +191,16 @@ class DynamicHierarchy implements Hierarchy {
           .orElse(false);
     }
 
+    @Override
+    public String toString() {
+      // TODO: Better toString
+      return '\'' + render.path() + '\'';
+    }
+
     private DynamicSource parent() {
       // TODO: should make sure this could only ever be one or null
       for (Level ancestorLevel : level.ancestors()) {
-        for (DynamicSource parent : ancestorLevel.parent().orElse(new Level())) {
+        for (DynamicSource parent : ancestorLevel.parent()) {
           if (assignments.containsAll(parent.assignments)) {
             return parent;
           }
@@ -370,15 +221,35 @@ class DynamicHierarchy implements Hierarchy {
       this(null);
     }
 
-    Level(Level child) {
+    private Level(Level child) {
       this.child = child;
       if (child != null) child.parent = this;
     }
 
-    DynamicSource add(RenderedNode render, Assignments assignments) {
+    Optional<DynamicSource> addMember(RenderedNode render, Assignments assignments) {
+      if (!parent().isEmpty()) {
+        // TODO: Handle this case. Would require moving members around if added a repeat at a
+        // lower level.
+        throw new IllegalStateException("Cannot add members to level once a level has a " +
+            "non-empty parent.");
+      }
+
+      Optional<DynamicSource> match = descendants().stream()
+          .flatMap(l -> l.members().stream())
+          .filter(s -> s.path().equals(render.path()))
+          .findAny();
+
+      if (match.isPresent()) {
+        log.warn("Repeat source path at {} using assignments {}. " +
+                "Using descendant node instead.",
+            match.get(), render.usedAssignments());
+        return Optional.empty();
+      }
+
       DynamicSource source = new DynamicSource(assignments, render, this);
       members.add(source);
-      return source;
+
+      return Optional.of(source);
     }
 
     List<DynamicSource> members() {
@@ -389,7 +260,7 @@ class DynamicHierarchy implements Hierarchy {
       List<Level> ancestors = new ArrayList<>();
       ancestors.add(this);
       Level ancestor = this.parent;
-      while (ancestor != null) {
+      while (ancestor != null && !ancestor.isEmpty()) {
         ancestors.add(ancestor);
         ancestor = ancestor.parent;
       }
@@ -407,12 +278,24 @@ class DynamicHierarchy implements Hierarchy {
       return descendants;
     }
 
-    public Optional<Level> parent() {
-      return Optional.ofNullable(parent);
+    public Level parent() {
+      if (members.isEmpty()) {
+        return this;
+      }
+
+      if (parent != null) {
+        return parent;
+      }
+
+      return new Level(this);
     }
 
     public Optional<Level> child() {
       return Optional.ofNullable(child);
+    }
+
+    boolean isEmpty() {
+      return members.isEmpty();
     }
 
     @Override
