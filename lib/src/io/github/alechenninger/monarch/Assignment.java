@@ -25,6 +25,8 @@ public class Assignment {
   private final Variable variable;
   private final Assignable assignable;
 
+  private Assignments implied;
+
   Assignment(Inventory inventory, Variable variable, Assignable assignable) {
     this.inventory = inventory;
     this.variable = variable;
@@ -44,8 +46,11 @@ public class Assignment {
   }
 
   public Assignments implied() {
-    // TODO: cache this
-    return inventory.assignAll(assignable.impliedAssignments());
+    if (implied != null) {
+      return implied;
+    }
+
+    return implied = inventory.assignAll(assignable.impliedAssignments());
   }
 
   @Override

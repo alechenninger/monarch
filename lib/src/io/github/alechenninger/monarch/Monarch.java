@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class Monarch {
@@ -61,8 +60,7 @@ public class Monarch {
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
     if (log.isDebugEnabled()) {
-      log.debug("Generating sources for descendants: {}",
-          target.descendants().stream().map(Source::path).collect(Collectors.toList()));
+      log.debug("Generating sources for descendants: {}", Sources.pathsOf(target.descendants()));
     }
 
     for (Source descendant : target.descendants()) {
@@ -95,7 +93,9 @@ public class Monarch {
         ? new HashMap<>()
         : new HashMap<>(sourceData);
 
-    log.debug("Looking for changes applicable to lineage: {}", lineage);
+    if (log.isDebugEnabled()) {
+      log.debug("Looking for changes applicable to lineage: {}", Sources.pathsOf(lineage));
+    }
 
     for (Source ancestor : new ListReversed<>(lineage)) {
       Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
@@ -106,8 +106,8 @@ public class Monarch {
 
       Change change = maybeChange.get();
 
-      log.debug("Applying change for ancestor {} (targeted by {}) to {}.",
-          ancestor, change.sourceSpec(), target);
+      log.debug("Applying change for ancestor '{}' (targeted by {}) to '{}'.",
+          ancestor.path(), change.sourceSpec(), target.path());
 
       for (Map.Entry<String, Object> setEntry : change.set().entrySet()) {
         String setKey = setEntry.getKey();
@@ -115,18 +115,19 @@ public class Monarch {
 
         if (target.isNotTargetedBy(change.sourceSpec())) {
           if (targetLookup.isValueInherited(setKey, setValue)) {
-            log.debug("Desired key:value is inherited at {}: {}: {}", target, setKey, setValue);
+            log.debug("Desired key:value is inherited above '{}': <{}: {}>",
+                target.path(), setKey, setValue);
 
             if (resultSourceData.containsKey(setKey)) {
               if (mergeKeys.contains(setKey)) {
-                log.debug("Target {} contains value for merged key '{}', unmerging '{}'",
-                    target, setKey, setValue);
+                log.debug("Target '{}' contains value for merged key '{}', unmerging '{}'",
+                    target.path(), setKey, setValue);
                 Merger merger = Merger.startingWith(resultSourceData.get(setKey));
                 merger.unmerge(setValue);
                 resultSourceData.put(setKey, merger.getMerged());
               } else {
-                log.debug("Target {} contains value for non-merged key {}, removing.",
-                    target, setKey);
+                log.debug("Target '{}' contains value for non-merged key {}, removing.",
+                    target.path(), setKey);
                 resultSourceData.remove(setKey);
               }
             }
@@ -138,9 +139,9 @@ public class Monarch {
         Object currentValue = resultSourceData.get(setKey);
 
         if (mergeKeys.contains(setKey) && currentValue != null) {
-          log.debug("Target {} already contains merged key '{}', " +
+          log.debug("Target '{}' already contains merged key '{}', " +
                   "merging with desired value: {}",
-              target, setKey, setValue);
+              target.path(), setKey, setValue);
           Merger merger = Merger.startingWith(currentValue);
           merger.merge(setValue);
           newValue = merger.getMerged();
@@ -148,7 +149,7 @@ public class Monarch {
           newValue = setValue;
         }
 
-        log.debug("Putting {}: {} in {}", setKey, newValue, target);
+        log.debug("Putting <{}: {}> in '{}'", setKey, newValue, target.path());
         resultSourceData.put(setKey, newValue);
       }
 

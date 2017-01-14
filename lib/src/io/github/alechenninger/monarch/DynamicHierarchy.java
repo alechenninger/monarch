@@ -99,6 +99,9 @@ class DynamicHierarchy implements Hierarchy {
     private final int index;
     private final RenderedNode rendered;
 
+    private List<Source> lineage;
+    private List<Source> descendants;
+
     private RenderedSource(Assignments assignments, List<DynamicNode> nodes,
         Inventory inventory, int index) {
       this.assignments = assignments;
@@ -134,9 +137,14 @@ class DynamicHierarchy implements Hierarchy {
 
     @Override
     public List<Source> lineage() {
-      List<Source> lineage = new ArrayList<>(index);
+      if (lineage != null) {
+        return lineage;
+      }
 
-      for (int i = index; i >= 0; i--) {
+      lineage = new ArrayList<>(index);
+      lineage.add(this);
+
+      for (int i = index - 1; i >= 0; i--) {
         DynamicNode node = nodes.get(i);
         if (assignments.assignsSupersetOf(node.variables())) {
           RenderedSource newAncestor = new RenderedSource(assignments, nodes, inventory, i);
@@ -145,9 +153,9 @@ class DynamicHierarchy implements Hierarchy {
           // It will have been used already and no source can't have itself as an ancestor.
           for (Source ancestor : lineage) {
             if (ancestor.path().equals(newAncestor.path())) {
-              log.warn("Found repeated source path in ancestry of {}. {} repeated at ancestor " +
-                      "{} using assignments {}. Ignoring ancestor.",
-                  this, ancestor, newAncestor, newAncestor.rendered.usedAssignments());
+              log.warn("Repeat source path at {} and ancestor {} using assignments {}. " +
+                      "Ignoring ancestor.",
+                  ancestor, newAncestor, newAncestor.rendered.usedAssignments());
               newAncestor = null;
               break;
             }
@@ -164,8 +172,11 @@ class DynamicHierarchy implements Hierarchy {
 
     @Override
     public List<Source> descendants() {
-      List<Source> descendants = new ArrayList<>();
+      if (descendants != null) {
+        return descendants;
+      }
 
+      descendants = new ArrayList<>();
       descendants.add(this);
 
       for (int i = index + 1; i < nodes.size(); i++) {
@@ -183,9 +194,9 @@ class DynamicHierarchy implements Hierarchy {
               Source descendant = it.next();
 
               if (descendant.path().equals(render.path())) {
-                log.warn("Found repeated source path in descendants of {}. {} repeated at " +
-                        "descendant {} using assignments {}. Using descendant node instead.",
-                    this, descendant, newDescendant, render.usedAssignments());
+                log.warn("Repeat source path at {} and descendant {} using assignments {}. " +
+                        "Using descendant node instead.",
+                    descendant, newDescendant, render.usedAssignments());
                 it.remove();
                 break;
               }
