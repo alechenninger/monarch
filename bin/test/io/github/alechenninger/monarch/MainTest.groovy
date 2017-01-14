@@ -44,7 +44,7 @@ class MainTest {
   def parsers = new DataFormats.Default(yaml)
 
   def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
-      parsers, consoleCapture)
+      parsers)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"

@@ -24,13 +24,12 @@ import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
 import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -44,6 +43,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -53,24 +58,19 @@ public class Main {
   private final Monarch monarch;
   private final DataFormats dataFormats;
   private final Yaml yaml;
-  private final PrintStream consoleOut;
-  // TODO make this configurable; maybe use a 'real' logger
-  private final boolean debugInfo = true;
 
   private final MonarchArgParser parser;
 
+  private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
+
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      DataFormats dataFormats, OutputStream consoleOut) {
+      DataFormats dataFormats) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.dataFormats = dataFormats;
-    this.consoleOut = consoleOut instanceof PrintStream
-        ? (PrintStream) consoleOut
-        : new PrintStream(consoleOut);
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
-    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo(), this.consoleOut
-    );
+    this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo());
   }
 
   public int run(String argsSpaceDelimited) {
@@ -83,23 +83,23 @@ public class Main {
     try {
       commandInput = parser.parse(args);
     } catch (MonarchArgParserException e) {
-      printError(e.getCause());
-      consoleOut.println();
-      consoleOut.print(e.getHelpMessage());
+      log.error(e.getMessage(), e);
+      log.info("");
+      log.info(e.getHelpMessage());
       return 2;
     }
 
     if (commandInput.isHelpRequested()) {
-      consoleOut.print(commandInput.getHelpMessage());
+      log.info(commandInput.getHelpMessage());
     }
 
     if (commandInput.isVersionRequested()) {
-      consoleOut.print(commandInput.getVersionMessage());
+      log.info(commandInput.getVersionMessage());
     }
 
     for (UpdateSetInput updateSetInput : commandInput.getUpdateSetCommands()) {
       if (updateSetInput.isHelpRequested()) {
-        consoleOut.print(updateSetInput.getHelpMessage());
+        log.info(updateSetInput.getHelpMessage());
         return 0;
       }
 
@@ -115,16 +115,14 @@ public class Main {
         updateSetInChange(source, outputPath, options.changes(), options.putInSet(),
             options.removeFromSet(), options.hierarchy());
       } catch (Exception e) {
-        printError(e);
-        consoleOut.println();
-        consoleOut.print(updateSetInput.getHelpMessage());
+        log.error(e.getMessage(), e);
         return 2;
       }
     }
 
     for (ApplyChangesInput applyChangesInput : commandInput.getApplyCommands()) {
       if (applyChangesInput.isHelpRequested()) {
-        consoleOut.print(applyChangesInput.getHelpMessage());
+        log.info(applyChangesInput.getHelpMessage());
         return 0;
       }
 
@@ -154,8 +152,6 @@ public class Main {
         applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, target);
       } catch (Exception e) {
         printError(e);
-        consoleOut.println();
-        consoleOut.print(applyChangesInput.getHelpMessage());
         return 2;
       }
     }
@@ -166,7 +162,7 @@ public class Main {
   private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
       Map<String, SourceData> currentSources, Source target) throws IOException {
     if (!changes.iterator().hasNext()) {
-      consoleOut.println("No changes provided. Still writing sources at and under target to " +
+      log.info("No changes provided. Still writing sources at and under target to " +
           outputDir);
     }
 
@@ -204,9 +200,7 @@ public class Main {
         ensureParentDirectories(outPath);
         Files.write(outPath, out.toByteArray());
       } catch (Exception e) {
-        // TODO: Proper logger
-        new MonarchException("Failed to write updated data source at " + path + " to " + outPath, e)
-            .printStackTrace(consoleOut);
+        log.error("Failed to write updated data source at " + path + " to " + outPath, e);
       }
     }
   }
@@ -238,6 +232,10 @@ public class Main {
       outputChanges.add(updatedSourceChange);
     }
 
+    if (hierarchy.map(h -> !h.sourceFor(source).isPresent()).orElse(false)) {
+      log.info("Warning: source not found in provided hierarchy. source=" + source);
+    }
+
     // Sort by hierarchy depth if provided, else sort alphabetically
     Comparator<Change> changeComparator = hierarchy.map(h -> {
       List<String> descendants = h.descendants().stream()
@@ -246,8 +244,8 @@ public class Main {
 
       return (Comparator<Change>) (c1, c2) -> {
         // TODO make Source Comparable
-        String c1Source = c1.sourceSpec().findSource(h).get().path();
-        String c2Source = c2.sourceSpec().findSource(h).get().path();
+        String c1Source = c1.sourceSpec().findSource(h).map(Source::path).orElse("");
+        String c2Source = c2.sourceSpec().findSource(h).map(Source::path).orElse("");
 
         int c1Index = descendants.indexOf(c1Source);
         int c2Index = descendants.indexOf(c2Source);
@@ -259,7 +257,7 @@ public class Main {
         return c1Index - c2Index;
       };
       // TODO maybe make change comparable too?
-    }).orElse((c1, c2) -> c1.toString().compareTo(c2.toString()));
+    }).orElse(Comparator.comparing(Change::toString));
 
     List<Map<String, Object>> serializableChanges = outputChanges.stream()
         .sorted(changeComparator)
@@ -281,14 +279,12 @@ public class Main {
   }
 
   private void printError(Throwable e) {
-    if (debugInfo) {
-      e.printStackTrace(consoleOut);
-    } else {
-      consoleOut.println("Error: " + e.getMessage());
-    }
+    log.error(e.getMessage(), e);
   }
 
   public static void main(String[] args) throws IOException, ArgumentParserException {
+    configureLogging();
+
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
     dumperOptions.setIndent(YamlConfiguration.DEFAULT.indent());
@@ -306,10 +302,31 @@ public class Main {
           public Optional<YamlConfiguration> yamlConfiguration() {
             return Optional.of(YamlConfiguration.DEFAULT);
           }
-        }),
-        System.out)
-        .run(args);
+        })
+    ).run(args);
 
     System.exit(exitCode);
+  }
+
+  private static void configureLogging() {
+    Logger rootLogger = Logger.getLogger("");
+
+    for (Handler handler : rootLogger.getHandlers()) {
+      rootLogger.removeHandler(handler);
+    }
+
+    // TODO: Output errors to stderr
+    StreamHandler handler = new StreamHandler(System.out, new Formatter() {
+      @Override
+      public String format(LogRecord record) {
+        String levelPrefix = record.getLevel().intValue() >= Level.WARNING.intValue()
+            ? record.getLevel().getLocalizedName() + ": "
+            : "";
+        return levelPrefix + record.getMessage() + '\n';
+      }
+    });
+    handler.setLevel(Level.ALL);
+    rootLogger.addHandler(handler);
+    rootLogger.setLevel(Level.ALL);
   }
 }

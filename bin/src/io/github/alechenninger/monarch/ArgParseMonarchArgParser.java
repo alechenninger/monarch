@@ -32,6 +32,8 @@ import net.sourceforge.argparse4j.inf.Subparser;
 import net.sourceforge.argparse4j.inf.Subparsers;
 import net.sourceforge.argparse4j.internal.UnrecognizedArgumentException;
 import net.sourceforge.argparse4j.internal.UnrecognizedCommandException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -44,16 +46,15 @@ import java.util.stream.Collectors;
 
 public class ArgParseMonarchArgParser implements MonarchArgParser {
   private final AppInfo appInfo;
-  // TODO proper logger
-  private final PrintStream consoleOut;
 
   private static final String SUBPARSER_DEST = "subparser";
   private static final String DEFAULT_COMMAND_WARNING = "WARNING: Defaulting to 'apply' command. "
       + "In the future this default will be removed";
 
-  public ArgParseMonarchArgParser(AppInfo appInfo, PrintStream consoleOut) {
+  private static final Logger log = LoggerFactory.getLogger(ArgParseMonarchArgParser.class);
+
+  public ArgParseMonarchArgParser(AppInfo appInfo) {
     this.appInfo = appInfo;
-    this.consoleOut = consoleOut;
   }
 
   @Override
