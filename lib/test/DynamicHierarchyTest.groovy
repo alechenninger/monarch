@@ -300,14 +300,32 @@ potentials:
       a: foo
 '''))
 
-    def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
     def bIsFoo = SourceSpec.byVariables(['b': 'foo'])
-
-    def aFoo = hierarchy.sourceFor(aIsFoo).get()
     def bFoo = hierarchy.sourceFor(bIsFoo).get()
 
-    assert aFoo.descendants()*.path() == ['foo', 'etc/foo']
     assert bFoo.descendants()*.path() == ['foo', 'etc/foo']
+  }
+
+  @Test(expected = IllegalStateException.class)
+  void shouldFailIfTargetIsShadowedByLowerDuplicate() {
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - top
+  - '%{a}'
+  - '%{b}'
+  - etc/%{a}
+  - etc/%{b}
+potentials:
+  a:
+  - foo
+  b:
+  - foo:
+      a: foo
+'''))
+
+    def aIsFoo = SourceSpec.byVariables(['a': 'foo'])
+
+    hierarchy.sourceFor(aIsFoo)
   }
 
   @Test
