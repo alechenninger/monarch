@@ -135,7 +135,7 @@ class StaticHierarchy implements Hierarchy {
         .collect(Collectors.joining("\n")) + '\n';
   }
 
-  private static class StaticSource extends AbstractSource {
+  private static class StaticSource implements Source {
     private final Node source;
 
     private StaticSource(Node source) {
@@ -181,6 +181,11 @@ class StaticHierarchy implements Hierarchy {
     @Override
     public int hashCode() {
       return Objects.hash(source);
+    }
+
+    @Override
+    public String toString() {
+      return "Source(" + path() + ")";
     }
   }
 
