@@ -51,7 +51,7 @@ class DynamicHierarchy implements Hierarchy {
   @Override
   public Optional<Source> sourceFor(Assignments assignments) {
     if (cachedSources.containsKey(assignments)) {
-      return Optional.of(cachedSources.get(assignments));
+      return Optional.ofNullable(cachedSources.get(assignments));
     }
 
     RenderedNode target = null;
@@ -110,13 +110,8 @@ class DynamicHierarchy implements Hierarchy {
       }
     }
 
-    if (targetSource == null) {
-      return Optional.empty();
-    }
-
     cachedSources.put(assignments, targetSource);
-
-    return Optional.of(targetSource);
+    return Optional.ofNullable(targetSource);
   }
 
   @Override
