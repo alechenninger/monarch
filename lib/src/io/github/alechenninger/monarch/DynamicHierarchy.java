@@ -65,6 +65,7 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     if (target == null) {
+      cachedSources.put(assignments, null);
       return Optional.empty();
     }
 
