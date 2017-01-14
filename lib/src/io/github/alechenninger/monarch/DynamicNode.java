@@ -33,7 +33,13 @@ public interface DynamicNode {
 
   List<String> variables();
 
-  // TODO: Add renderOne which accepts just variables that we expect to cover all of variables()
+  default RenderedNode renderOne(Assignments assignments) {
+    List<RenderedNode> rendered = render(assignments);
+    if (rendered.size() != 1) {
+      throw new IllegalArgumentException("Assignments do not cover all variables.");
+    }
+    return rendered.get(0);
+  }
 
   List<RenderedNode> render(Assignments assignments);
 

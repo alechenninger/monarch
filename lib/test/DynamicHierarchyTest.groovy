@@ -336,7 +336,36 @@ potentials:
   }
 
   @Test
-  @Ignore("This may warrant some refactoring, currently 'foo' is not included in descendants of 'top'")
+  void shouldNotIncludePathInLineageIfItIsDuplicatedInDescendants() {
+    // This prevents a misleading lineage where really, because the path is duplicated in
+    // descendants, the path will actually override (come before, below) this one, which means it is
+    // not really an ancestor.
+
+    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+sources:
+  - top
+  - '%{a}'
+  - middle
+  - '%{b}'
+  - '%{c}/%{b}'
+  - '%{c}'
+potentials:
+  a:
+  - foo
+  b:
+  - bar:
+      a: foo
+  c:
+  - foo:
+      b: bar
+'''))
+
+    def bBar = hierarchy.sourceFor(['b': 'bar']).get()
+
+    assert bBar.lineage()*.path() == ['bar', 'middle', 'top']
+  }
+
+  @Test
   void ancestorsDescendantsShouldBeConsistentWithChildLineage() {
     def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
 sources:
