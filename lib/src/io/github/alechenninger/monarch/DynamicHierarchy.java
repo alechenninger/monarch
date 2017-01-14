@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,8 @@ import java.util.stream.Stream;
 class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> nodes;
   private final Inventory inventory;
+
+  private Map<Assignments, Source> cachedSources = new HashMap<>();
 
   private static final Logger log = LoggerFactory.getLogger(DynamicHierarchy.class);
 
@@ -47,6 +50,10 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Assignments assignments) {
+    if (cachedSources.containsKey(assignments)) {
+      return Optional.of(cachedSources.get(assignments));
+    }
+
     RenderedNode target = null;
 
     // First find target, if any.
@@ -81,6 +88,15 @@ class DynamicHierarchy implements Hierarchy {
             if (maybeSource.isPresent()) {
               DynamicSource source = maybeSource.get();
               if (source.path().equals(target.path())) {
+                if (!source.render.equals(target)) {
+                  throw new IllegalStateException("Found source for assignments, but it is " +
+                      "shadowed by a descendant with a duplicate path. Impossible to refer to " +
+                      "desired position in hierarchy. Path was '" + target.path() + "'. Desired " +
+                      "target for assignments " + assignments.toMap() + " was at node " +
+                      target.node() + ". Shadowed by same path at descendant " + source.node() +
+                      ".");
+                }
+
                 targetSource = source;
               }
             }
@@ -98,6 +114,8 @@ class DynamicHierarchy implements Hierarchy {
       throw new IllegalStateException(
           "Bug! Found a target but not the source? Doesn't make sense.");
     }
+
+    cachedSources.put(assignments, targetSource);
 
     return Optional.of(targetSource);
   }

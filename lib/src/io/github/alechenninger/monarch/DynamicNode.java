@@ -79,7 +79,8 @@ public interface DynamicNode {
     @Override
     public String toString() {
       return "RenderedNode{" +
-          "path='" + path + '\'' +
+          "node=" + node +
+          ", path='" + path + '\'' +
           ", usedAssignments=" + usedAssignments +
           '}';
     }
@@ -89,13 +90,14 @@ public interface DynamicNode {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       RenderedNode that = (RenderedNode) o;
-      return Objects.equals(path, that.path) &&
+      return Objects.equals(node, that.node) &&
+          Objects.equals(path, that.path) &&
           Objects.equals(usedAssignments, that.usedAssignments);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(path, usedAssignments);
+      return Objects.hash(node, path, usedAssignments);
     }
   }
 }
