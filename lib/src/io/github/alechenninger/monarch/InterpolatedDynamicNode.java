@@ -68,7 +68,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
   @Override
   public List<RenderedNode> render(Assignments assignments) {
     if (variableNames.isEmpty()) {
-      return Collections.singletonList(new RenderedNode(expression, Collections.emptySet()));
+      return Collections.singletonList(new RenderedNode(expression, Collections.emptySet(), this));
     }
 
     return assignments.possibleAssignments(variableNames).stream()
@@ -85,7 +85,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
 
           String path = interpolator.interpolate(expression, possibility.toMap());
 
-          return new RenderedNode(path, usedAssignments);
+          return new RenderedNode(path, usedAssignments, this);
         })
         .collect(Collectors.toList());
   }

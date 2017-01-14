@@ -47,54 +47,58 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Assignments assignments) {
-    for (int iTarget = 0; iTarget < nodes.size(); iTarget++) {
-      DynamicNode targetNode = nodes.get(iTarget);
+    RenderedNode target = null;
 
-      if (assignments.assignsOnly(targetNode.variables())) {
-        RenderedNode target = targetNode.renderOne(assignments);
-        Level current = null;
-        DynamicSource targetSource = null;
+    // First find target, if any.
+    for (DynamicNode node : nodes) {
+      if (assignments.assignsOnly(node.variables())) {
+        target = node.renderOne(assignments);
+        break;
+      }
+    }
 
-        for (int i = nodes.size() - 1; i >= 0; i--) {
-          current = current == null
-              ? new Level()
-              : current.parent();
-          DynamicNode node = nodes.get(i);
+    if (target == null) {
+      return Optional.empty();
+    }
 
-          if (i >= iTarget) {
-            List<RenderedNode> renders = node.render(assignments);
+    Level current = null;
+    DynamicSource targetSource = null;
 
-            for (RenderedNode render : renders) {
-              Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
-              if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
-                Optional<DynamicSource> maybeSource = current.addMember(render, renderAssigns);
-                if (maybeSource.isPresent()) {
-                  DynamicSource source = maybeSource.get();
-                  if (source.path().equals(target.path())) {
-                    targetSource = source;
-                  }
-                }
-              }
-            }
-          } else {
-            if (assignments.assignsSupersetOf(node.variables())) {
-              RenderedNode render = node.renderOne(assignments);
-              Optional<DynamicSource> maybeSource = current.addMember(render, assignments);
-              if (maybeSource.isPresent()) {
-                DynamicSource source = maybeSource.get();
-                if (source.path().equals(target.path())) {
-                  targetSource = source;
-                }
+    // Build hierarchy from bottom up.
+    for (int i = nodes.size() - 1; i >= 0; i--) {
+      current = current == null
+          ? new Level()
+          : current.parent();
+      DynamicNode node = nodes.get(i);
+
+      if (targetSource == null) {
+        List<RenderedNode> renders = node.render(assignments);
+
+        for (RenderedNode render : renders) {
+          Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
+          if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
+            Optional<DynamicSource> maybeSource = current.addMember(render, renderAssigns);
+            if (maybeSource.isPresent()) {
+              DynamicSource source = maybeSource.get();
+              if (source.path().equals(target.path())) {
+                targetSource = source;
               }
             }
           }
         }
-
-        return Optional.of(targetSource);
+      } else {
+        if (assignments.assignsSupersetOf(node.variables())) {
+          RenderedNode render = node.renderOne(assignments);
+          current.addMember(render, assignments);
+        }
       }
     }
 
-    return Optional.empty();
+    if (targetSource == null) {
+      throw new IllegalStateException("Bug! Found a target but not the source? Doesn't make sense.");
+    }
+
+    return Optional.of(targetSource);
   }
 
   @Override
@@ -157,6 +161,10 @@ class DynamicHierarchy implements Hierarchy {
       this.assignments = assignments;
       this.render = render;
       this.level = level;
+    }
+
+    public DynamicNode node() {
+      return render.node();
     }
 
     @Override

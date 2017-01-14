@@ -54,12 +54,14 @@ public interface DynamicNode {
   }
 
   final class RenderedNode {
+    private final DynamicNode node;
     private final String path;
     private final Set<Assignment> usedAssignments;
 
-    public RenderedNode(String path, Set<Assignment> usedAssignments) {
+    public RenderedNode(String path, Set<Assignment> usedAssignments, DynamicNode node) {
       this.path = Objects.requireNonNull(path, "path");
       this.usedAssignments = Objects.requireNonNull(usedAssignments, "usedAssignments");
+      this.node = Objects.requireNonNull(node, "node");
     }
 
     public String path() {
@@ -68,6 +70,10 @@ public interface DynamicNode {
 
     public Set<Assignment> usedAssignments() {
       return usedAssignments;
+    }
+
+    public DynamicNode node() {
+      return node;
     }
 
     @Override

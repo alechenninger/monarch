@@ -83,7 +83,7 @@ public class PartsDynamicNode implements DynamicNode {
             }
           }
 
-          return new RenderedNode(path.toString(), usedAssignments);
+          return new RenderedNode(path.toString(), usedAssignments, this);
         })
         .collect(Collectors.toList());
   }
