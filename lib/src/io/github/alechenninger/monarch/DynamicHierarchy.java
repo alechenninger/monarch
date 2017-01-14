@@ -91,7 +91,7 @@ class DynamicHierarchy implements Hierarchy {
                 if (source.render.equals(target)) {
                   targetSource = source;
                 } else {
-                  log.warn("Found source for assignments, but it is shadowed by a descendant " +
+                  log.error("Found source for assignments, but it is shadowed by a descendant " +
                           "with a duplicate path. Impossible to refer to desired position in " +
                           "hierarchy. Path was '{}'. Desired target for assignments {} was at " +
                           "node {}. Shadowed by same path at descendant {} from assignments {}.",
