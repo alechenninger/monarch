@@ -200,13 +200,15 @@ public class Main {
         continue;
       }
 
+      log.info("Writing result source data for {} to {}", path, outPath);
+
       try {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         sourceData.writeUpdate(outData, out);
         ensureParentDirectories(outPath);
         Files.write(outPath, out.toByteArray());
       } catch (Exception e) {
-        log.error("Failed to write updated data source at " + path + " to " + outPath, e);
+        log.error("Failed to write updated data source for " + path + " to " + outPath, e);
       }
     }
   }
