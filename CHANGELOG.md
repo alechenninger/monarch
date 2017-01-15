@@ -1,5 +1,19 @@
 # Change Log
 
+## [v0.8.0](https://github.com/alechenninger/monarch/tree/v0.8.0) (2017-01-15)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.7.1...v0.8.0)
+
+**Closed issues:**
+
+- Add verbose flag to explain behavior [\#73](https://github.com/alechenninger/monarch/issues/73)
+- Allow one variable definition to define others, implicitly [\#67](https://github.com/alechenninger/monarch/issues/67)
+- Errors output to stdout instead of stderr [\#61](https://github.com/alechenninger/monarch/issues/61)
+
+**Merged pull requests:**
+
+- Fixes \#73: Add verbose flag [\#74](https://github.com/alechenninger/monarch/pull/74) ([alechenninger](https://github.com/alechenninger))
+- Implied variables \(fixes \#67\) [\#72](https://github.com/alechenninger/monarch/pull/72) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.7.1](https://github.com/alechenninger/monarch/tree/v0.7.1) (2016-10-08)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.7.0...v0.7.1)
 
