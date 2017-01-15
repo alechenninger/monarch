@@ -24,7 +24,7 @@ import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
-public class MonarchLogFormatter extends Formatter {
+class MonarchLogFormatter extends Formatter {
   @Override
   public String format(LogRecord record) {
     String levelPrefix = record.getLevel().intValue() >= Level.WARNING.intValue()

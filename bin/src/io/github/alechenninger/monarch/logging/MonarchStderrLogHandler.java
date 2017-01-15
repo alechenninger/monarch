@@ -21,8 +21,8 @@ package io.github.alechenninger.monarch.logging;
 import java.io.OutputStream;
 import java.util.logging.Level;
 
-public class MonarchStderrLogHandler extends ImmediateFlushStreamHandler {
-  public MonarchStderrLogHandler(OutputStream stderr) {
+class MonarchStderrLogHandler extends ImmediateFlushStreamHandler {
+  MonarchStderrLogHandler(OutputStream stderr) {
     super(stderr, new MonarchLogFormatter());
     setLevel(Level.WARNING);
   }

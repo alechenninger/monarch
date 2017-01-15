@@ -21,8 +21,8 @@ package io.github.alechenninger.monarch.logging;
 import java.io.OutputStream;
 import java.util.logging.Level;
 
-public class MonarchStdoutLogHandler extends ImmediateFlushStreamHandler {
-  public MonarchStdoutLogHandler(OutputStream stdout) {
+class MonarchStdoutLogHandler extends ImmediateFlushStreamHandler {
+  MonarchStdoutLogHandler(OutputStream stdout) {
     super(stdout, new MonarchLogFormatter());
     setLevel(Level.ALL);
     setFilter(record -> record.getLevel().intValue() < Level.WARNING.intValue());

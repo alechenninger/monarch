@@ -23,8 +23,8 @@ import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 import java.util.logging.StreamHandler;
 
-public class ImmediateFlushStreamHandler extends StreamHandler {
-  public ImmediateFlushStreamHandler(OutputStream out, Formatter formatter) {
+class ImmediateFlushStreamHandler extends StreamHandler {
+  ImmediateFlushStreamHandler(OutputStream out, Formatter formatter) {
     super(out, formatter);
   }
 
