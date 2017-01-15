@@ -83,7 +83,7 @@ public class Main {
     try {
       commandInput = parser.parse(args);
     } catch (MonarchArgParserException e) {
-      log.error(e.getMessage(), e);
+      log.error("Error parsing arguments.", e);
       log.info("");
       log.info(e.getHelpMessage());
       return 2;
@@ -196,7 +196,7 @@ public class Main {
         continue;
       }
 
-      log.info("Writing result source data for {} to {}", path, outPath);
+      log.debug("Writing result source data for {} to {}", path, outPath);
 
       try {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -237,7 +237,7 @@ public class Main {
     }
 
     if (hierarchy.map(h -> !h.sourceFor(source).isPresent()).orElse(false)) {
-      log.info("Warning: source not found in provided hierarchy. source=" + source);
+      log.warn("Source not found in provided hierarchy. source={}", source);
     }
 
     // Sort by hierarchy depth if provided, else sort alphabetically
