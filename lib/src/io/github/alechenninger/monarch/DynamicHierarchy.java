@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,6 +19,7 @@ class DynamicHierarchy implements Hierarchy {
   private final Inventory inventory;
 
   private Map<Assignments, Source> cachedSources = new HashMap<>();
+  private List<Source> all = null;
 
   private static final Logger log = LoggerFactory.getLogger(DynamicHierarchy.class);
 
@@ -117,8 +117,12 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public List<Source> descendants() {
+    if (all != null) {
+      return all;
+    }
+
     if (nodes.isEmpty()) {
-      return Collections.emptyList();
+      return all = Collections.emptyList();
     }
 
     Level current = null;
@@ -138,10 +142,10 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     if (current == null) {
-      return Collections.emptyList();
+      return all = Collections.emptyList();
     }
 
-    return current.descendants().stream()
+    return all = current.descendants().stream()
         .flatMap(l -> l.members().stream())
         .collect(Collectors.toList());
   }
