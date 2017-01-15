@@ -23,10 +23,12 @@ import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
+import net.sourceforge.argparse4j.impl.action.StoreTrueArgumentAction;
 import net.sourceforge.argparse4j.inf.Argument;
 import net.sourceforge.argparse4j.inf.ArgumentAction;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.inf.MutuallyExclusiveGroup;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 import net.sourceforge.argparse4j.inf.Subparsers;
@@ -42,6 +44,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class ArgParseMonarchArgParser implements MonarchArgParser {
@@ -69,10 +72,26 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show this message and exit.");
 
-    parser.addArgument("--version")
+    parser.addArgument("-v", "--version")
         .dest("show_version")
         .action(new AbortParsingAction(Arguments.storeTrue()))
         .help("Show the running version of monarch and exit.");
+
+    MutuallyExclusiveGroup logGroup = parser.addMutuallyExclusiveGroup("logging flags")
+        .description("Control log levels. Without either flag, some logs are written. " +
+            "Errors and warnings are output to stderr.");
+
+    logGroup.addArgument("--verbose")
+        .action(new StoreTrueArgumentAction())
+        .setDefault(false)
+        .dest("verbose")
+        .help("Log everything. Useful to understand what your changeset is doing.");
+
+    logGroup.addArgument("--quiet")
+        .action(new StoreTrueArgumentAction())
+        .setDefault(false)
+        .dest("quiet")
+        .help("Log nothing.");
 
     Subparsers subparsers = parser.addSubparsers().dest(SUBPARSER_DEST)
         .title("commands")
@@ -129,6 +148,19 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
         @Override
         public String getVersionMessage() {
           return parser.formatVersion() + '\n';
+        }
+
+        @Override
+        public Optional<Level> getLogLevel() {
+          if (parsed.getBoolean("verbose")) {
+            return Optional.of(Level.ALL);
+          }
+
+          if (parsed.getBoolean("quiet")) {
+            return Optional.of(Level.OFF);
+          }
+
+          return Optional.of(Level.INFO);
         }
       };
     } catch (ArgumentParserException e) {
