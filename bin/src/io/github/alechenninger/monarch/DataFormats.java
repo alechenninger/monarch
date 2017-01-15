@@ -207,31 +207,19 @@ public interface DataFormats {
   }
 
   class Default implements DataFormats {
-    private final DataFormatsConfiguration config;
-    private final Yaml yaml;
+    private final YamlDataFormat yaml;
 
     public Default() {
-      this(new Yaml());
+      this.yaml = new YamlDataFormat();
     }
 
     public Default(DataFormatsConfiguration config) {
-      this.config = config;
-      this.yaml = new Yaml();
-    }
-
-    public Default(Yaml yaml) {
-      this.yaml = yaml;
-      this.config = new DataFormatsConfiguration() {
-        @Override
-        public Optional<YamlConfiguration> yamlConfiguration() {
-          return Optional.empty();
-        }
-      };
+      this.yaml = config.yamlConfiguration().map(YamlDataFormat::new).orElse(new YamlDataFormat());
     }
 
     @Override
     public DataFormat yaml() {
-      return config.yamlConfiguration().map(YamlDataFormat::new).orElse(new YamlDataFormat(yaml));
+      return yaml;
     }
 
     @Override

@@ -51,10 +51,10 @@ public interface ApplyChangesOptions {
   Optional<Path> outputDir();
 
   default Optional<DataFormatsConfiguration> dataFormatsConfiguration() {
-    return Optional.of(new DataFormatsConfiguration() {
+    return yamlConfiguration().map(yamlConf -> new DataFormatsConfiguration() {
       @Override
       public Optional<YamlConfiguration> yamlConfiguration() {
-        return ApplyChangesOptions.this.yamlConfiguration();
+        return Optional.of(yamlConf);
       }
     });
   }

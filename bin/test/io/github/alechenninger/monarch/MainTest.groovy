@@ -29,6 +29,7 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 
 @RunWith(JUnit4.class)
 class MainTest {
@@ -39,12 +40,10 @@ class MainTest {
     return it
   }
   def yaml = new Yaml(dumperOptions)
-  def consolePath = fs.getPath("console")
-  def consoleCapture = new PrintStream(Files.newOutputStream(consolePath))
-  def parsers = new DataFormats.Default(yaml)
+  def consoleOut = new ByteArrayOutputStream();
+  def parsers = new DataFormats.Default()
 
-  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs,
-      parsers)
+  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs, parsers, consoleOut)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -84,7 +83,7 @@ global.yaml:
   }
 
   String getConsole() {
-    return new String(Files.readAllBytes(consolePath))
+    return consoleOut.toString();
   }
 
   @Before
@@ -235,9 +234,9 @@ outputDir: /output/
   }
 
   @Test
-  void shouldPrintHelpForSetCommandIfBadArgumentProvided() {
+  void shouldNotPrintHelpForSetCommandIfBadArgumentProvided() {
     main.run("set --source global.yaml foo --changes petstore.yaml")
-    assert console.contains("usage: monarch set")
+    assert !console.contains("usage: monarch set")
   }
 
   @Test
@@ -249,7 +248,7 @@ outputDir: /output/
   @Test
   void shouldShowVersion() {
     assert main.run("--version") == 0
-    assert console ==~ /[0-9].[0-9].[0-9]\n/
+    assert console ==~ /[0-9].[0-9].[0-9]\n*/
   }
 
   @Test

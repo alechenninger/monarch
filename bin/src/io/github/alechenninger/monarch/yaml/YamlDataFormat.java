@@ -57,12 +57,6 @@ public class YamlDataFormat implements DataFormat {
   private static final String BEGIN_MONARCH_MANAGED = "# --- Begin managed by monarch";
   private static final String END_MONARCH_MANAGED = "# --- End managed by monarch";
 
-  @Deprecated
-  public YamlDataFormat(Yaml yaml) {
-    this.yaml = Objects.requireNonNull(yaml, "yaml");
-    this.updateStrategy = UpdateStrategy.fromYamlConfiguration(YamlConfiguration.DEFAULT, yaml);
-  }
-
   public YamlDataFormat() {
     this(YamlConfiguration.DEFAULT);
   }

@@ -39,7 +39,7 @@ class DefaultDataFormatsTest {
     return it
   }
   def yaml = new Yaml(dumperOptions)
-  def parsers = new DataFormats.Default(yaml)
+  def parsers = new DataFormats.Default()
 
   void writeFile(Path path, String data, OpenOption... options) {
     def parent = path.getParent()

@@ -30,6 +30,8 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.FileSystem;
@@ -66,13 +68,15 @@ public class Main {
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
 
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      DataFormats dataFormats) {
+      DataFormats dataFormats, OutputStream stdout) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.dataFormats = dataFormats;
     this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
     this.fileSystem = fileSystem;
     this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo());
+
+    configureLogging(stdout);
   }
 
   public int run(String argsSpaceDelimited) {
@@ -285,8 +289,6 @@ public class Main {
   }
 
   public static void main(String[] args) throws IOException, ArgumentParserException {
-    configureLogging();
-
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
     dumperOptions.setIndent(YamlConfiguration.DEFAULT.indent());
@@ -304,13 +306,14 @@ public class Main {
           public Optional<YamlConfiguration> yamlConfiguration() {
             return Optional.of(YamlConfiguration.DEFAULT);
           }
-        })
-    ).run(args);
+        }),
+        System.out)
+        .run(args);
 
     System.exit(exitCode);
   }
 
-  private static void configureLogging() {
+  private static void configureLogging(OutputStream stdout) {
     Logger rootLogger = Logger.getLogger("");
 
     for (Handler handler : rootLogger.getHandlers()) {
@@ -318,7 +321,7 @@ public class Main {
     }
 
     // TODO: Output errors to stderr
-    StreamHandler handler = new StreamHandler(System.out, new Formatter() {
+    StreamHandler handler = new StreamHandler(stdout, new Formatter() {
       @Override
       public String format(LogRecord record) {
         String levelPrefix = record.getLevel().intValue() >= Level.WARNING.intValue()
@@ -333,7 +336,13 @@ public class Main {
         }
         return levelPrefix + record.getMessage() + '\n' + stackTrace;
       }
-    });
+    }) {
+      @Override
+      public synchronized void publish(LogRecord record) {
+        super.publish(record);
+        flush();
+      }
+    };
     handler.setLevel(Level.ALL);
     rootLogger.addHandler(handler);
     rootLogger.setLevel(Level.ALL);
