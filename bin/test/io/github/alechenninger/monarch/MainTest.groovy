@@ -239,6 +239,15 @@ outputDir: /output/
   }
 
   @Test
+  void shouldOutputErrorsToStderr() {
+    def stderr = new ByteArrayOutputStream()
+    def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs, parsers, consoleOut, stderr)
+    main.run("set --source global.yaml foo --changes petstore.yaml")
+    assert stderr.toString().contains("java.lang.IllegalArgumentException")
+    assert !console.contains("java.lang.IllegalArgumentException")
+  }
+
+  @Test
   void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
     assert main.run("set") == 2
     assert console.contains("usage: monarch set")
