@@ -21,7 +21,6 @@ package io.github.alechenninger.monarch.logging;
 import java.io.OutputStream;
 import java.util.logging.Level;
 
-// TODO: Output errors to stderr
 public class MonarchStdoutLogHandler extends ImmediateFlushStreamHandler {
   public MonarchStdoutLogHandler(OutputStream stdout) {
     super(stdout, new MonarchLogFormatter());
