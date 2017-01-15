@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2016  Alec Henninger
+ * Copyright (C) 2017 Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,29 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.github.alechenninger.monarch;
+package io.github.alechenninger.monarch.logging;
 
-import io.github.alechenninger.monarch.apply.ApplyChangesInput;
-import io.github.alechenninger.monarch.set.UpdateSetInput;
+import java.io.OutputStream;
+import java.util.logging.Formatter;
+import java.util.logging.LogRecord;
+import java.util.logging.StreamHandler;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.logging.Level;
+public class ImmediateFlushStreamHandler extends StreamHandler {
+  public ImmediateFlushStreamHandler(OutputStream out, Formatter formatter) {
+    super(out, formatter);
+  }
 
-public interface CommandInput {
-  List<ApplyChangesInput> getApplyCommands();
-
-  List<UpdateSetInput> getUpdateSetCommands();
-
-  String getHelpMessage();
-
-  boolean isHelpRequested();
-
-  boolean isVersionRequested();
-
-  String getVersionMessage();
-
-  default Optional<Level> getLogLevel() {
-    return Optional.empty();
+  @Override
+  public synchronized void publish(LogRecord record) {
+    super.publish(record);
+    flush();
   }
 }

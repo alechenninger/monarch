@@ -20,6 +20,7 @@ package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.apply.ApplyChangesOptions;
+import io.github.alechenninger.monarch.logging.Logging;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
 import io.github.alechenninger.monarch.yaml.YamlConfiguration;
@@ -31,9 +32,6 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -47,12 +45,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.logging.Formatter;
-import java.util.logging.Handler;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import java.util.logging.StreamHandler;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -62,13 +55,13 @@ public class Main {
   private final Monarch monarch;
   private final DataFormats dataFormats;
   private final Yaml yaml;
-
   private final MonarchArgParser parser;
 
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
 
+  // TODO: Don't use yaml directly for update changeset?
   public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
-      DataFormats dataFormats, OutputStream stdout) {
+      DataFormats dataFormats, OutputStream stdout, OutputStream stderr) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.dataFormats = dataFormats;
@@ -76,7 +69,8 @@ public class Main {
     this.fileSystem = fileSystem;
     this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo());
 
-    configureLogging(stdout);
+    Logging.outputTo(stdout, stderr);
+    Logging.setLevel(Level.INFO);
   }
 
   public int run(String argsSpaceDelimited) {
@@ -94,6 +88,8 @@ public class Main {
       log.info(e.getHelpMessage());
       return 2;
     }
+
+    commandInput.getLogLevel().ifPresent(Logging::setLevel);
 
     if (commandInput.isHelpRequested()) {
       log.info(commandInput.getHelpMessage());
@@ -121,7 +117,7 @@ public class Main {
         updateSetInChange(source, outputPath, options.changes(), options.putInSet(),
             options.removeFromSet(), options.hierarchy());
       } catch (Exception e) {
-        log.error(e.getMessage(), e);
+        log.error("Error while updating 'set' in change.", e);
         return 2;
       }
     }
@@ -157,7 +153,7 @@ public class Main {
 
         applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, target);
       } catch (Exception e) {
-        printError(e);
+        log.error("Error while applying changes.", e);
         return 2;
       }
     }
@@ -286,10 +282,6 @@ public class Main {
     return () -> new MonarchException("Missing required option: " + option);
   }
 
-  private void printError(Throwable e) {
-    log.error(e.getMessage(), e);
-  }
-
   public static void main(String[] args) throws IOException, ArgumentParserException {
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
@@ -309,44 +301,9 @@ public class Main {
             return Optional.of(YamlConfiguration.DEFAULT);
           }
         }),
-        System.out)
+        System.out, System.err)
         .run(args);
 
     System.exit(exitCode);
-  }
-
-  private static void configureLogging(OutputStream stdout) {
-    Logger rootLogger = Logger.getLogger("");
-
-    for (Handler handler : rootLogger.getHandlers()) {
-      rootLogger.removeHandler(handler);
-    }
-
-    // TODO: Output errors to stderr
-    StreamHandler handler = new StreamHandler(stdout, new Formatter() {
-      @Override
-      public String format(LogRecord record) {
-        String levelPrefix = record.getLevel().intValue() >= Level.WARNING.intValue()
-            ? record.getLevel().getLocalizedName() + ": "
-            : "";
-        Throwable thrown = record.getThrown();
-        String stackTrace = "";
-        if (thrown != null) {
-          StringWriter writer = new StringWriter();
-          thrown.printStackTrace(new PrintWriter(writer));
-          stackTrace = writer.toString();
-        }
-        return levelPrefix + record.getMessage() + '\n' + stackTrace;
-      }
-    }) {
-      @Override
-      public synchronized void publish(LogRecord record) {
-        super.publish(record);
-        flush();
-      }
-    };
-    handler.setLevel(Level.ALL);
-    rootLogger.addHandler(handler);
-    rootLogger.setLevel(Level.ALL);
   }
 }

@@ -42,7 +42,7 @@ class MainTest {
   def consoleOut = new ByteArrayOutputStream();
   def parsers = new DataFormats.Default()
 
-  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs, parsers, consoleOut)
+  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs, parsers, consoleOut, consoleOut)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
