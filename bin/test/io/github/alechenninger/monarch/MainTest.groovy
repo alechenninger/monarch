@@ -29,7 +29,6 @@ import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
-import java.nio.file.StandardOpenOption
 
 @RunWith(JUnit4.class)
 class MainTest {
