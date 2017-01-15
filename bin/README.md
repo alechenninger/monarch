@@ -1,12 +1,12 @@
 
 ```
-usage: monarch [-?] [--version] {apply,set} ...
+usage: monarch [-?] [-v] [--verbose | --quiet] {apply,set} ...
 
 A tool to manage hierarchical data.
 
 optional arguments:
   -?, --help             Show this message and exit.
-  --version              Show the running version of monarch and exit.
+  -v, --version          Show the running version of monarch and exit.
 
 commands:
   If none chosen, defaults to 'apply'
@@ -14,6 +14,13 @@ commands:
   {apply,set}            Pass --help to a command for more information.
     apply                Applies changes to a target data source and its descendants.
     set                  Add or remove key value pairs to set within a change.
+
+logging flags:
+  Control log levels. Without either  flag,  some  logs  are  written.  Errors and warnings are
+  output to stderr.
+
+  --verbose              Log everything. Useful to understand what your changeset is doing.
+  --quiet                Log nothing.
 
 https://github.com/alechenninger/monarch
 ```
