@@ -45,13 +45,10 @@ public class DefaultConfigPaths {
   public List<Path> get(FileSystem fs) {
     List<Path> paths = new ArrayList<>();
 
-    Path working = fs.getPath(this.working);
-    paths.add(working);
-
-    for (Path parentToPwd = working.toAbsolutePath().getParent();
-         parentToPwd != null;
-         parentToPwd = parentToPwd.getParent()) {
-      paths.add(parentToPwd.resolve(this.working));
+    for (Path dir = fs.getPath("").toAbsolutePath();
+         dir != null;
+         dir = dir.getParent()) {
+      paths.add(dir.resolve(this.working));
     }
 
     paths.add(fs.getPath(global));

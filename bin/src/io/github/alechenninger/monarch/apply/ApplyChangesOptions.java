@@ -27,8 +27,11 @@ import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
 import io.github.alechenninger.monarch.yaml.YamlConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.error.YAMLException;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -51,6 +54,8 @@ public interface ApplyChangesOptions {
   Optional<SourceSpec> target();
   Optional<Path> dataDir();
   Optional<Path> outputDir();
+
+  Logger log = LoggerFactory.getLogger(ApplyChangesOptions.class);
 
   default Optional<DataFormatsConfiguration> dataFormatsConfiguration() {
     return yamlConfiguration().map(yamlConf -> new DataFormatsConfiguration() {
@@ -85,22 +90,22 @@ public interface ApplyChangesOptions {
     configPaths.addAll(defaultConfigPaths.get(fileSystem));
 
     for (Path configPath : configPaths) {
-      if (Files.exists(configPath)) {
+      if (Files.exists(configPath) && !Files.isDirectory(configPath)) {
         // TODO: eventually maybe don't assume YAML
-        options = options.fallingBackTo(ApplyChangesOptions.fromYaml(configPath));
+        try {
+          options = options.fallingBackTo(ApplyChangesOptions.fromYaml(configPath));
+        } catch (YAMLException | IOException e) {
+          log.warn("Unable to read config file: {}", configPath, e);
+        }
       }
     }
 
     return options;
   }
 
-  static ApplyChangesOptions fromYaml(Path configPath) {
-    try {
+  static ApplyChangesOptions fromYaml(Path configPath) throws IOException {
       SerializableConfig config = (SerializableConfig) new Yaml(new Constructor(SerializableConfig.class))
           .load(Files.newInputStream(configPath));
       return new ApplyChangesOptionsFromSerializableConfig(config, configPath.getFileSystem());
-    } catch (IOException e) {
-      throw new MonarchException("Unable to read config file: " + configPath, e);
-    }
   }
 }
