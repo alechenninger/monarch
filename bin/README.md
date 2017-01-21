@@ -75,11 +75,14 @@ optional arguments:
                          environment=qa team=ops
   --configs CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
                          Space delimited paths to  files  which  configures  default values for
-                         command line options. The  default  config  path of ~/.monarch/config.
-                         yaml  is  always   checked.   Config   values   read   are  'dataDir',
-                         'outputDir', 'hierarchy',  and  'dataFormats'.  'dataFormats'  has sub
-                         values for supported data formats,  like  'yaml'. Each data format has
-                         its own options. 'yaml' has 'indent' and 'isolate'.
+                         command line options. By  default,  monarch  will  look for '.monarch'
+                         files in the working  directory  and  all  of  its parent directories.
+                         Additionally, '~/.monarch/config.yaml' is always checked.
+                         
+                         Config  values  read  are  'dataDir',  'outputDir',  'hierarchy',  and
+                         'dataFormats'.  'dataFormats'  has  sub   values  for  supported  data
+                         formats, like 'yaml'. Each  data  format  has  its own options. 'yaml'
+                         has 'indent' and 'isolate'.
   --hierarchy HIERARCHY, -h HIERARCHY
                          Path to a yaml file describing  the  source hierarchy, relative to the
                          data directory (see data-dir option).  If  not provided, will look for
@@ -167,7 +170,12 @@ optional arguments:
                          output changes. For more information  about hierarchies, see: apply --
                          help
   --configs CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
-                         Paths to config files  to  use  for  the  hierarchy.  First one with a
-                         hierarchy wins.
+                         Space delimited paths to  files  which  configures  default values for
+                         command line options. By  default,  monarch  will  look for '.monarch'
+                         files in the working  directory  and  all  of  its parent directories.
+                         Additionally, '~/.monarch/config.yaml' is always checked.
+                         
+                         The only config value read is  'hierarchy',  which is used to sort the
+                         changes from top-most to bottom-most
 ```
 
