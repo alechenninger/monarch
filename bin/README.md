@@ -64,7 +64,7 @@ optional arguments:
                              environment: stage
                            set:
                              myapp::favorite_website: http://stage.redhat.com
-  --target TARGET [TARGET ...], -t TARGET [TARGET ...]
+  --target TARGET [TARGET ...], -t TARGET [TARGET ...], --source TARGET [TARGET ...], -s TARGET [TARGET ...]
                          A target is the source  in  the  source  tree  from  where you want to
                          change, including itself and any sources  beneath it in the hierarchy.
                          Redundant keys will be  removed  in  sources  beneath the target (that
@@ -150,7 +150,7 @@ optional arguments:
   -?, --help             Show this message and exit.
   --changes CHANGES, --changeset CHANGES, --change CHANGES, -c CHANGES
                          Path to a file with changes to modify or create.
-  --source SOURCE [SOURCE ...], -s SOURCE [SOURCE ...]
+  --source SOURCE [SOURCE ...], -s SOURCE [SOURCE ...], --target SOURCE [SOURCE ...], -t SOURCE [SOURCE ...]
                          Identifies the change  to  operate  on  by  its  data  source.  May be
                          defined as a single data source path,  or  as a set of key=value pairs
                          which evaluate  to  a  single  source  in  a  dynamic  hierarchy.  For

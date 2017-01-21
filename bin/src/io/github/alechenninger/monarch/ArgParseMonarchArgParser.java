@@ -274,7 +274,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "  set:\n" +
               "    myapp::favorite_website: http://stage.redhat.com");
 
-      subparser.addArgument("--target", "-t")
+      subparser.addArgument("--target", "-t", "--source", "-s")
           .dest("target")
           .required(true)
           .nargs("+")
@@ -450,7 +450,7 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .required(true)
           .help("Path to a file with changes to modify or create.");
 
-      subparser.addArgument("--source", "-s")
+      subparser.addArgument("--source", "-s", "--target", "-t")
           .dest("source")
           .required(true)
           .nargs("+")
