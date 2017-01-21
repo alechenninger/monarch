@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch
 
+import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import org.junit.After
 import org.junit.Before
@@ -40,9 +41,10 @@ class MainTest {
   }
   def yaml = new Yaml(dumperOptions)
   def consoleOut = new ByteArrayOutputStream();
-  def parsers = new DataFormats.Default()
+  def dataFormats = new DataFormats.Default()
 
-  def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs, parsers, consoleOut, consoleOut)
+  def main = new Main(new Monarch(), yaml, new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
+      fs, dataFormats, consoleOut, consoleOut)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -66,7 +68,7 @@ global.yaml:
   void writeDataSource(String source, String data) {
     def sourcePath = fs.getPath(dataDir, source)
     sourcePath.parent?.identity Files.&createDirectories
-    parsers.forPath(sourcePath)
+    dataFormats.forPath(sourcePath)
         .newSourceData()
         .writeUpdate(yaml.load(data) as Map<String, Object>, Files.newOutputStream(sourcePath))
   }
@@ -241,7 +243,8 @@ outputDir: /output/
   @Test
   void shouldOutputErrorsToStderr() {
     def stderr = new ByteArrayOutputStream()
-    def main = new Main(new Monarch(), yaml, "/etc/monarch.yaml", fs, parsers, consoleOut, stderr)
+    def main = new Main(
+        new Monarch(), yaml, DefaultConfigPaths.standard(), fs, dataFormats, consoleOut, stderr)
     main.run("set --source global.yaml foo --changes petstore.yaml")
     assert stderr.toString().contains("java.lang.IllegalArgumentException")
     assert !console.contains("java.lang.IllegalArgumentException")
@@ -599,5 +602,67 @@ set:
         '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'always', '--config', '/etc/config.yaml')
 
     assert Files.notExists(fs.getPath('/output/global.yaml'))
+  }
+
+  @Test
+  void looksForDotMonarchFilesInWorkingDirectoryAndAncestorsForApplyCommand() {
+    fs = Jimfs.newFileSystem(Configuration.unix().toBuilder()
+        .setWorkingDirectory("/working/directory/")
+        .build())
+    main = new Main(
+        new Monarch(), yaml, DefaultConfigPaths.standard(), fs, dataFormats, consoleOut, consoleOut)
+
+    writeFile('/.monarch', '''
+hierarchy:
+  top.yaml:
+  - bottom.yaml
+''')
+
+    writeFile('/working/.monarch', '''
+dataDir: /hieradata/
+''')
+
+    writeFile('/working/directory/.monarch', '''
+outputDir: /output/
+''')
+
+    writeFile('/etc/changes.yaml', '''
+---
+source: top.yaml
+set:
+  key: new value
+''')
+
+    main.run('apply', '-c', '/etc/changes.yaml', '-t', 'top.yaml')
+
+    def topPath = fs.getPath('/output/top.yaml')
+    assert Files.exists(topPath)
+
+    def topYaml = new String(Files.readAllBytes(topPath), 'UTF-8')
+    assert ['key': 'new value'] == yaml.load(topYaml)
+  }
+
+  @Test
+  void looksForDotMonarchFilesInWorkingDirectoryAndAncestorsForSetCommand() {
+    fs = Jimfs.newFileSystem(Configuration.unix().toBuilder()
+        .setWorkingDirectory("/working/directory/")
+        .build())
+    main = new Main(
+        new Monarch(), yaml, DefaultConfigPaths.standard(), fs, dataFormats, consoleOut, consoleOut)
+
+    writeFile('/.monarch', '''
+hierarchy:
+  top.yaml:
+  - bottom.yaml
+''')
+
+    main.run('set', '-c', '/etc/changes.yaml', '-s', 'top.yaml', '--put', 'key: new value')
+    main.run('set', '-c', '/etc/changes.yaml', '-s', 'bottom.yaml', '--put', 'bottom_key: new value')
+
+    // Test sorting which should use hierarchy config in working directory ancestry
+    // A bit convoluted admittedly
+    assert ['top.yaml', 'bottom.yaml'] ==
+        yaml.loadAll(Files.newBufferedReader(fs.getPath('/etc/changes.yaml')))
+            .collect { it['source'] }
   }
 }

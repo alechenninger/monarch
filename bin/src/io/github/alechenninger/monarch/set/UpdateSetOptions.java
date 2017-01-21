@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch.set;
 
 import io.github.alechenninger.monarch.Change;
+import io.github.alechenninger.monarch.DefaultConfigPaths;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.DataFormats;
@@ -56,7 +57,7 @@ public interface UpdateSetOptions {
   }
 
   static UpdateSetOptions fromInputAndConfigFiles(UpdateSetInput input,
-      FileSystem fileSystem, DataFormats parsers, Path defaultConfigPath) {
+      FileSystem fileSystem, DataFormats parsers, DefaultConfigPaths defaultConfigPaths) {
     UpdateSetOptions options = fromInput(input, fileSystem, parsers);
 
     List<Path> configPaths = input.getConfigPaths()
@@ -64,7 +65,7 @@ public interface UpdateSetOptions {
         .map(fileSystem::getPath)
         .collect(Collectors.toCollection(ArrayList::new));
 
-    configPaths.add(defaultConfigPath);
+    configPaths.addAll(defaultConfigPaths.get(fileSystem));
 
     for (Path configPath : configPaths) {
       if (Files.exists(configPath)) {
