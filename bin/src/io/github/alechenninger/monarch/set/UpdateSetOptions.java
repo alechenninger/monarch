@@ -25,8 +25,11 @@ import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.SerializableConfig;
 import io.github.alechenninger.monarch.SourceSpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.error.YAMLException;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -46,6 +49,8 @@ public interface UpdateSetOptions {
   Set<String> removeFromSet();
   Map<String, Object> putInSet();
   Optional<SourceSpec> source();
+
+  Logger log = LoggerFactory.getLogger(UpdateSetOptions.class);
 
   default UpdateSetOptions fallingBackTo(UpdateSetOptions fallback) {
     return new OverridableUpdateSetOptions(this, fallback);
@@ -68,22 +73,23 @@ public interface UpdateSetOptions {
     configPaths.addAll(defaultConfigPaths.get(fileSystem));
 
     for (Path configPath : configPaths) {
-      if (Files.exists(configPath)) {
+      if (Files.exists(configPath) && !Files.isDirectory(configPath)) {
         // TODO: eventually maybe don't assume YAML
-        options = options.fallingBackTo(UpdateSetOptions.fromYaml(configPath));
+        try {
+          options = options.fallingBackTo(UpdateSetOptions.fromYaml(configPath));
+        } catch (YAMLException | IOException e) {
+          log.warn("Unable to read config file: {}", configPath, e);
+        }
       }
     }
 
     return options;
   }
 
-  static UpdateSetOptions fromYaml(Path configPath) {
-    try {
-      SerializableConfig config = (SerializableConfig) new Yaml(new Constructor(SerializableConfig.class))
-          .load(Files.newInputStream(configPath));
-      return new UpdateSetOptionsFromSerializableConfig(config);
-    } catch (IOException e) {
-      throw new MonarchException("Unable to read config file: " + configPath, e);
-    }
+  static UpdateSetOptions fromYaml(Path configPath) throws IOException {
+    SerializableConfig config = (SerializableConfig)
+        new Yaml(new Constructor(SerializableConfig.class))
+            .load(Files.newInputStream(configPath));
+    return new UpdateSetOptionsFromSerializableConfig(config);
   }
 }
