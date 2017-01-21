@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class Main {
-  private final Path defaultConfigPath;
+  private final DefaultConfigPaths defaultConfigPaths;
   private final FileSystem fileSystem;
   private final Monarch monarch;
   private final DataFormats dataFormats;
@@ -60,12 +60,12 @@ public class Main {
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
 
   // TODO: Don't use yaml directly for update changeset?
-  public Main(Monarch monarch, Yaml yaml, String defaultConfigPath, FileSystem fileSystem,
+  public Main(Monarch monarch, Yaml yaml, DefaultConfigPaths defaultConfigPaths, FileSystem fileSystem,
       DataFormats dataFormats, OutputStream stdout, OutputStream stderr) {
     this.monarch = monarch;
     this.yaml = yaml;
     this.dataFormats = dataFormats;
-    this.defaultConfigPath = fileSystem.getPath(defaultConfigPath);
+    this.defaultConfigPaths = defaultConfigPaths;
     this.fileSystem = fileSystem;
     this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo());
 
@@ -107,7 +107,7 @@ public class Main {
 
       try {
         UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
-            fileSystem, dataFormats, defaultConfigPath);
+            fileSystem, dataFormats, defaultConfigPaths);
 
         SourceSpec source = options.source()
             .orElseThrow(missingOptionException("source"));
@@ -130,7 +130,7 @@ public class Main {
 
       try {
         ApplyChangesOptions options = ApplyChangesOptions.fromInputAndConfigFiles(
-            applyChangesInput, fileSystem, dataFormats, defaultConfigPath);
+            applyChangesInput, fileSystem, dataFormats, defaultConfigPaths);
 
         DataFormats configuredFormats = options.dataFormatsConfiguration()
             .map(dataFormats::withConfiguration)
@@ -268,6 +268,7 @@ public class Main {
         .map(Change::toMap)
         .collect(Collectors.toList());
 
+    ensureParentDirectories(outputPath);
     yaml.dumpAll(serializableChanges.iterator(), Files.newBufferedWriter(outputPath));
   }
 
@@ -293,7 +294,7 @@ public class Main {
     int exitCode = new Main(
         new Monarch(),
         yaml,
-        System.getProperty("user.home") + "/.monarch/config.yaml",
+        DefaultConfigPaths.standard(),
         FileSystems.getDefault(),
         new DataFormats.Default(new DataFormatsConfiguration() {
           @Override

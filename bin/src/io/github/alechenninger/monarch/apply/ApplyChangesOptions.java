@@ -20,6 +20,7 @@ package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.DataFormatsConfiguration;
+import io.github.alechenninger.monarch.DefaultConfigPaths;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.DataFormats;
@@ -33,6 +34,7 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -72,7 +74,7 @@ public interface ApplyChangesOptions {
   }
 
   static ApplyChangesOptions fromInputAndConfigFiles(ApplyChangesInput input, FileSystem
-      fileSystem, DataFormats dataFormats, Path defaultConfigPath) {
+      fileSystem, DataFormats dataFormats, DefaultConfigPaths defaultConfigPaths) {
     ApplyChangesOptions options = fromInput(input, fileSystem, dataFormats);
 
     List<Path> configPaths = input.getConfigPaths()
@@ -80,7 +82,7 @@ public interface ApplyChangesOptions {
         .map(fileSystem::getPath)
         .collect(Collectors.toCollection(ArrayList::new));
 
-    configPaths.add(defaultConfigPath);
+    configPaths.addAll(defaultConfigPaths.get(fileSystem));
 
     for (Path configPath : configPaths) {
       if (Files.exists(configPath)) {

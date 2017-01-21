@@ -52,9 +52,6 @@ public interface Source {
   @Override
   boolean equals(Object other);
 
-  /**
-   * In the format, Source(${path()}).
-   */
   @Override
   String toString();
 }

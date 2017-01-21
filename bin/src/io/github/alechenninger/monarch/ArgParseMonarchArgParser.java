@@ -51,8 +51,10 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
   private final AppInfo appInfo;
 
   private static final String SUBPARSER_DEST = "subparser";
-  private static final String DEFAULT_COMMAND_WARNING = "WARNING: Defaulting to 'apply' command. "
-      + "In the future this default will be removed";
+  private static final String SHARED_CONFIG_HELP = "Space delimited paths to files which " +
+      "configures default values for command line options. By default, monarch will look for " +
+      "'.monarch' files in the working directory and all of its parent directories. " +
+      "Additionally, '~/.monarch/config.yaml' is always checked.";
 
   private static final Logger log = LoggerFactory.getLogger(ArgParseMonarchArgParser.class);
 
@@ -289,8 +291,8 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .dest("configs")
           .metavar("CONFIG")
           .nargs("+")
-          .help("Space delimited paths to files which configures default values for command line "
-              + "options. The default config path of ~/.monarch/config.yaml is always checked. " +
+          .help(SHARED_CONFIG_HELP + "\n" +
+              "\n" +
               "Config values read are 'dataDir', 'outputDir', 'hierarchy', and 'dataFormats'. " +
               "'dataFormats' has sub values for supported data formats, like 'yaml'. Each data " +
               "format has its own options. 'yaml' has 'indent' and 'isolate'.");
@@ -479,7 +481,10 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
           .dest("configs")
           .metavar("CONFIG")
           .nargs("+")
-          .help("Paths to config files to use for the hierarchy. First one with a hierarchy wins.");
+          .help(SHARED_CONFIG_HELP + "\n" +
+              "\n" +
+              "The only config value read is 'hierarchy', which is used to sort the changes from " +
+              "top-most to bottom-most");
 
       return parsed -> new UpdateSetInput() {
         @Override
