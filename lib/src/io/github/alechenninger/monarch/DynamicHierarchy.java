@@ -18,6 +18,7 @@ class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> nodes;
   private final Inventory inventory;
 
+  private Map<Map.Entry<String, String>, Assignment> cachedAssignments = new HashMap<>();
   private Map<Assignments, Source> cachedSources = new HashMap<>();
   private List<Source> all = null;
 
@@ -41,10 +42,27 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(Map<String, String> assignments) {
-    List<Assignment> assignmentList = assignments.entrySet()
-        .stream()
-        .map(entry -> inventory.assign(entry.getKey(), entry.getValue()))
-        .collect(Collectors.toList());
+    List<Assignment> assignmentList = new ArrayList<>(assignments.size());
+
+    for (Map.Entry<String, String> entry : assignments.entrySet()) {
+      if (!cachedAssignments.containsKey(entry)) {
+        try {
+          cachedAssignments.put(entry, inventory.assign(entry.getKey(), entry.getValue()));
+        } catch (IllegalArgumentException e) {
+          log.warn("Invalid assignments {}: {}", assignments, e.getLocalizedMessage());
+          cachedAssignments.put(entry, null);
+          return Optional.empty();
+        }
+      }
+
+      Assignment assignment = cachedAssignments.get(entry);
+      if (assignment == null) {
+        // Must have been invalid.
+        return Optional.empty();
+      }
+      assignmentList.add(assignment);
+    }
+
     return sourceFor(inventory.assignAll(assignmentList));
   }
 
