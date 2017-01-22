@@ -63,7 +63,7 @@ public class Inventory {
     if (!assignable.isPresent()) {
       throw new IllegalArgumentException("Cannot assign value <" + value + "> to variable <" +
           variable + "> because value is not in inventory for variable. Check your assignment " +
-          "or add value to inventory. An inventory needs to be comprehensive it can be used " +
+          "or add value to inventory. An inventory needs to be comprehensive so it can be used " +
           "to discover all of the sources in your hierarchy.");
     }
 
