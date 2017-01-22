@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -151,7 +152,12 @@ public class Main {
             () -> new IllegalArgumentException("No source found in hierarchy which satisfies: " +
                 targetSpec));
 
-        applyChanges(outputDir, options.changes(), options.mergeKeys(), currentData, target);
+        Iterable<Change> changes = options.changes();
+        for (Change change : changes) {
+          checkChangeIsApplicable(hierarchy, change);
+        }
+
+        applyChanges(outputDir, changes, options.mergeKeys(), currentData, target);
       } catch (Exception e) {
         log.error("Error while applying changes.", e);
         return 2;
@@ -163,11 +169,6 @@ public class Main {
 
   private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
       Map<String, SourceData> currentSources, Source target) throws IOException {
-    if (!changes.iterator().hasNext()) {
-      log.info("No changes provided. Still writing sources at and under target to " +
-          outputDir);
-    }
-
     List<String> affectedSources = target.descendants().stream()
         .map(Source::path)
         .collect(Collectors.toList());
@@ -270,6 +271,14 @@ public class Main {
 
     ensureParentDirectories(outputPath);
     yaml.dumpAll(serializableChanges.iterator(), Files.newBufferedWriter(outputPath));
+  }
+
+  private static void checkChangeIsApplicable(Hierarchy hierarchy, Change change) {
+    SourceSpec spec = change.sourceSpec();
+    if (!spec.findSource(hierarchy).isPresent()) {
+      log.warn("Source for change not found in hierarchy. You may want to check this " +
+          "change's target for correctness: {}", spec);
+    }
   }
 
   private static void ensureParentDirectories(Path path) throws IOException {
