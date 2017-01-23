@@ -1,5 +1,20 @@
 # Change Log
 
+## [v0.8.1](https://github.com/alechenninger/monarch/tree/v0.8.1) (2017-01-23)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.0...v0.8.1)
+
+**Closed issues:**
+
+- Also look in current directory for config file [\#60](https://github.com/alechenninger/monarch/issues/60)
+- Should validate changeset 'source' is in config hierarchy [\#27](https://github.com/alechenninger/monarch/issues/27)
+
+**Merged pull requests:**
+
+- Fixes \#27: Validate changeset; cache individual assignments [\#78](https://github.com/alechenninger/monarch/pull/78) ([alechenninger](https://github.com/alechenninger))
+- Handle errors better when looking for config files [\#77](https://github.com/alechenninger/monarch/pull/77) ([alechenninger](https://github.com/alechenninger))
+- Use same options to refer to source/target for both apply and set [\#76](https://github.com/alechenninger/monarch/pull/76) ([alechenninger](https://github.com/alechenninger))
+- Fixes \#60: Look for .monarch files in working directories and parents [\#75](https://github.com/alechenninger/monarch/pull/75) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.8.0](https://github.com/alechenninger/monarch/tree/v0.8.0) (2017-01-15)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.7.1...v0.8.0)
 
