@@ -74,8 +74,10 @@ public interface UpdateSetOptions {
 
     for (Path configPath : configPaths) {
       if (Files.exists(configPath) && !Files.isDirectory(configPath)) {
-        // TODO: eventually maybe don't assume YAML
+        log.debug("Loading config from: {}", configPath);
+
         try {
+          // TODO: eventually maybe don't assume YAML
           options = options.fallingBackTo(UpdateSetOptions.fromYaml(configPath));
         } catch (YAMLException | IOException e) {
           log.warn("Unable to read config file: {}", configPath, e);
