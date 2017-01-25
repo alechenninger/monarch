@@ -60,5 +60,60 @@ class YamlDataFormatTest {
       assert 1 == updated.count('unmanaged')
       assert ['unmanaged': 456] == yaml.load(updated)
     }
+
+    @Test
+    void shouldSortOutput() {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      parser.newSourceData().writeUpdate([
+          'xyz': 1,
+          'abc': 2,
+          'a': 3,
+          'fgh': 4,
+          'cde': 5,
+          'lmnop': 6
+      ], out)
+
+      assert new String(out.toByteArray()).contains('''a: 3
+abc: 2
+cde: 5
+fgh: 4
+lmnop: 6
+xyz: 1''')
+    }
+  }
+
+  static class WithIsolateAlways {
+    def fs = Jimfs.newFileSystem()
+    def parser = new YamlDataFormat(new YamlConfiguration() {
+      YamlConfiguration.Isolate updateIsolation() { YamlConfiguration.Isolate.ALWAYS }
+    })
+
+    @Test(expected = MonarchException.class)
+    void shouldNotAllowUpdatesToUnmanagedKeys() {
+      def sourcePath = fs.getPath('/source.yaml')
+      Files.write(sourcePath, 'unmanaged: 123'.bytes)
+      parser.parseData(Files.newInputStream(sourcePath))
+          .writeUpdate(['unmanaged': 456], Files.newOutputStream(sourcePath))
+    }
+
+    @Test
+    void shouldSortOutput() {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      parser.newSourceData().writeUpdate([
+          'xyz': 1,
+          'abc': 2,
+          'a': 3,
+          'fgh': 4,
+          'cde': 5,
+          'lmnop': 6
+      ], out)
+
+      assert new String(out.toByteArray()).contains('''a: 3
+abc: 2
+cde: 5
+fgh: 4
+lmnop: 6
+xyz: 1''')
+    }
   }
 }
