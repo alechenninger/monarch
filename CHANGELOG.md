@@ -1,5 +1,16 @@
 # Change Log
 
+## [v0.8.2](https://github.com/alechenninger/monarch/tree/v0.8.2) (2017-01-25)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.1...v0.8.2)
+
+**Closed issues:**
+
+- Data source output no longer sorted \(regression\) [\#79](https://github.com/alechenninger/monarch/issues/79)
+
+**Merged pull requests:**
+
+- Fixes \#79: Sort output yaml when isolate is 'never' [\#81](https://github.com/alechenninger/monarch/pull/81) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.8.1](https://github.com/alechenninger/monarch/tree/v0.8.1) (2017-01-23)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.0...v0.8.1)
 
