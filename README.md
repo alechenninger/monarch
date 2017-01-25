@@ -4,12 +4,12 @@ Rule over hierarchical data!
 ## example
 ```
 $ monarch set --changes petstore.yaml --source global.yaml --put 'petstore::version: "2"'
-$ monarch apply --changes petstore.yaml --target env/dev.yaml --config config.yaml 
+$ monarch apply --changes petstore.yaml --target env=dev
 $ cat hieradata/env/dev.yaml 
 petstore::version: '2'
 $ cat hieradata/global.yaml 
 petstore::version: '1'
-$ monarch apply --changes petstore.yaml --target global.yaml --config config.yaml
+$ monarch apply --changes petstore.yaml --target global.yaml
 $ cat hieradata/env/dev.yaml 
 $ cat hieradata/global.yaml 
 petstore::version: '2'
