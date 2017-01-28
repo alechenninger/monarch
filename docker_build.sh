@@ -5,9 +5,12 @@ if [[ -z $1 ]]; then
 fi
 
 tags="--tag monarch:$1"
+tags="--tag alechenninger/monarch:$1"
 
 if [[ $2 = "--latest" ]]; then
   tags="$tags --tag monarch:latest"
+  tags="$tags --tag alechenninger/monarch:latest"
 fi
 
 docker build --build-arg version=$1 $tags .
+

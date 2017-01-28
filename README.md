@@ -36,6 +36,10 @@ petstore::version: '2'
 7. Add symlink 'monarch' to your path which points to ${where_you_put_git_things}/monarch/bin/build/install/monarch-bin/bin/monarch-bin
 8. Hack or git pull and gradle installDist whenever you want to update your executable
 
+## install from docker
+1. docker pull alechenninger/monarch
+2. docker run alechenninger/monarch
+
 ## usage
 See [bin](https://github.com/alechenninger/monarch/blob/master/bin/) for command line usage.
 

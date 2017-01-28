@@ -1,14 +1,11 @@
-FROM centos
+FROM openjdk:8
 LABEL maintainer alechenninger@gmail.com
 
 ARG version
 
-RUN yum install java-1.8.0-openjdk -y; yum clean all
-
 ADD bin/build/distributions/monarch-bin-${version}.tar /opt/
+RUN ln -s /opt/monarch-bin-${version}/bin/monarch-bin /bin/monarch
 
-ENV version $version
-ENV JAVA_HOME /etc/alternatives/jre_1.8.0/
-
-ENTRYPOINT /opt/monarch-bin-${version}/bin/monarch-bin
+ENTRYPOINT ["monarch"]
+CMD ["--help"]
 
