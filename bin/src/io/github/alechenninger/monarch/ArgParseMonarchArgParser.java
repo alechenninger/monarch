@@ -299,10 +299,12 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
-          .help("Path to a yaml file describing the source hierarchy, relative to the data " +
-              "directory (see data-dir option). If not provided, will look for a value in config " +
-              "files with key 'hierarchy'. Hierarchies come in two flavors: static and dynamic. " +
-              "Static hierarchies have an explicit YAML structure like: \n" +
+          .help("Path to a yaml file describing the source hierarchy in paths relative to the " +
+              "data directory (see data-dir option). If not provided, will look for a value in " +
+              "config files with key 'hierarchy'. Hierarchies come in two flavors: static and " +
+              "dynamic. Static hierarchies have an explicit, pre-defined tree structure. A " +
+              "source deeper in the tree inherits from its lineage, nearest first. In YAML, these " +
+              "look like: \n" +
               "global.yaml:\n" +
               "  teams/myteam.yaml:\n" +
               "    - teams/myteam/dev.yaml\n" +
@@ -310,8 +312,11 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "    - teams/myteam/prod.yaml\n" +
               "  teams/otherteam.yaml\n" +
               "\n" +
-              "Dynamic hierarchies are defined with variables an inventory of possible " +
-              "assignable values for those variables. They look like: \n" +
+              "Dynamic hierarchies are defined with an ordered list of source nodes, from top " +
+              "most to bottom-most (ancestors to children). Nodes are relative paths to data " +
+              "sources which inherit from their lineage like in static hierarchies, but may use " +
+              "variables and an inventory of possible assignable values for those variables. In " +
+              "YAML, these look like: \n" +
               "sources:\n" +
               "  - common.yaml\n" +
               "  - team/%{team}.yaml\n" +
