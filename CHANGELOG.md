@@ -1,5 +1,20 @@
 # Change Log
 
+## [v0.8.3](https://github.com/alechenninger/monarch/tree/v0.8.3) (2017-01-28)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.2...v0.8.3)
+
+**Closed issues:**
+
+- Wrong help message for commands [\#85](https://github.com/alechenninger/monarch/issues/85)
+- Support inventory assignment of single value without list syntax [\#84](https://github.com/alechenninger/monarch/issues/84)
+- Support ranges in change source syntax [\#80](https://github.com/alechenninger/monarch/issues/80)
+- NPE when potentials for variable has nulls [\#66](https://github.com/alechenninger/monarch/issues/66)
+
+**Merged pull requests:**
+
+- Fixes \#85: Remove incorrect description [\#86](https://github.com/alechenninger/monarch/pull/86) ([alechenninger](https://github.com/alechenninger))
+- Support brace expansion in inventory definitions [\#83](https://github.com/alechenninger/monarch/pull/83) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.8.2](https://github.com/alechenninger/monarch/tree/v0.8.2) (2017-01-25)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.1...v0.8.2)
 
