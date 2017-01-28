@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -166,6 +167,28 @@ class DynamicHierarchy implements Hierarchy {
     return all = current.descendants().stream()
         .flatMap(l -> l.members().stream())
         .collect(Collectors.toList());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    DynamicHierarchy that = (DynamicHierarchy) o;
+    return Objects.equals(nodes, that.nodes) &&
+        Objects.equals(inventory, that.inventory);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(nodes, inventory);
+  }
+
+  @Override
+  public String toString() {
+    return "DynamicHierarchy{" +
+        "nodes=" + nodes +
+        ", inventory=" + inventory +
+        '}';
   }
 
   private Optional<Assignments> variablesFor(String source) {

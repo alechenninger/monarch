@@ -263,16 +263,16 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "\n" +
               "Example:\n" +
               "---\n" +
-              "  source: teams/myteam.yaml\n" +
-              "  set:\n" +
-              "    myapp::version: 2\n" +
-              "    myapp::favorite_website: http://www.redhat.com\n" +
+              "source: teams/myteam.yaml\n" +
+              "set:\n" +
+              "  myapp::version: 2\n" +
+              "  myapp::favorite_website: http://www.redhat.com\n" +
               "---\n" +
-              "  source:\n" +
-              "    team: myteam\n" +
-              "    environment: stage\n" +
-              "  set:\n" +
-              "    myapp::favorite_website: http://stage.redhat.com");
+              "source:\n" +
+              "  team: myteam\n" +
+              "  environment: stage\n" +
+              "set:\n" +
+              "  myapp::favorite_website: http://stage.redhat.com");
 
       subparser.addArgument("--target", "-t", "--source", "-s")
           .dest("target")
@@ -299,10 +299,12 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
       subparser.addArgument("--hierarchy", "-h")
           .dest("hierarchy")
-          .help("Path to a yaml file describing the source hierarchy, relative to the data " +
-              "directory (see data-dir option). If not provided, will look for a value in config " +
-              "files with key 'hierarchy'. Hierarchies come in two flavors: static and dynamic. " +
-              "Static hierarchies have an explicit YAML structure like: \n" +
+          .help("Path to a yaml file describing the source hierarchy in paths relative to the " +
+              "data directory (see data-dir option). If not provided, will look for a value in " +
+              "config files with key 'hierarchy'. Hierarchies come in two flavors: static and " +
+              "dynamic. Static hierarchies have an explicit, pre-defined tree structure. A " +
+              "source deeper in the tree inherits from its lineage, nearest first. In YAML, these " +
+              "look like: \n" +
               "global.yaml:\n" +
               "  teams/myteam.yaml:\n" +
               "    - teams/myteam/dev.yaml\n" +
@@ -310,20 +312,40 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "    - teams/myteam/prod.yaml\n" +
               "  teams/otherteam.yaml\n" +
               "\n" +
-              "Dynamic hierarchies are defined with variables and potential values for those " +
-              "variables. They look like: \n" +
+              "Dynamic hierarchies are defined with an ordered list of source nodes, from top " +
+              "most to bottom-most (ancestors to children). Nodes are relative paths to data " +
+              "sources which inherit from their lineage like in static hierarchies, but may use " +
+              "variables and an inventory of possible assignable values for those variables. In " +
+              "YAML, these look like: \n" +
               "sources:\n" +
               "  - common.yaml\n" +
               "  - team/%{team}.yaml\n" +
               "  - environment/%{environment}.yaml\n" +
               "  - team/%{team}/%{environment}.yaml\n" +
-              "potentials:\n" +
+              "inventory:\n" +
               "  team:\n" +
               "    - teamA\n" +
               "    - teamB\n" +
               "  environment:\n" +
               "    - qa\n" +
-              "    - prod"
+              "    - prod\n" +
+              "\n" +
+              "Inventory definitions can use brace expansion syntax like that in Bash:\n" +
+              "inventory:\n" +
+              "  team:\n" +
+              "    - team{A,B}\n" +
+              "\n" +
+              "Assignments in an inventory can imply other assignments, like so:\n" +
+              "inventory:\n" +
+              "  team:\n" +
+              "    - team{A,B}\n" +
+              "  app:\n" +
+              "    store:\n" +
+              "      team: teamA\n" +
+              "\n" +
+              "When a variable is assigned a value, its implicit assignments are applied " +
+              "simultaneously. Assignments may rule out possible values for a variable if those " +
+              "values would imply conflicts with known assignments."
           );
 
       subparser.addArgument("--data-dir", "-d")

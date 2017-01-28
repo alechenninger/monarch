@@ -7,7 +7,8 @@ import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
 class DynamicHierarchyTest {
-  def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+  def yaml = new Yaml()
+  def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - common
   - "%{os}"
@@ -185,7 +186,7 @@ inventory:
 
   @Test
   void shouldNotIncludeDescendantsWhichDoNotImplyEnoughToBeIncluded() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - environment/%{environment}
   - teams/%{team}/%{environment}
@@ -220,7 +221,7 @@ potentials:
 
   @Test
   void shouldExcludeDescendantsWhichHaveConflictingImpliedValues() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - common
   - "%{os}"
@@ -271,7 +272,7 @@ potentials:
    */
   @Test
   void shouldNotIncludeDescendantsWithoutVariables() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - '%{a}'
   - bottom
@@ -285,7 +286,7 @@ potentials:
 
   @Test
   void shouldNotIncludeASourceMoreThanOnceInDescendants() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - top
   - '%{a}'
@@ -308,7 +309,7 @@ potentials:
 
   @Test
   void shouldNotFindTargetIsShadowedByLowerDuplicate() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - top
   - '%{a}'
@@ -330,7 +331,7 @@ potentials:
 
   @Test
   void shouldNotIncludeDuplicatePathsInLineage() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - top
   - '%{a}'
@@ -359,7 +360,7 @@ potentials:
     // descendants, the path will actually override (come before, below) this one, which means it is
     // not really an ancestor.
 
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - top
   - '%{a}'
@@ -385,7 +386,7 @@ potentials:
 
   @Test
   void ancestorsDescendantsShouldBeConsistentWithChildLineage() {
-    def hierarchy = Hierarchy.fromStringListOrMap(new Yaml().load('''
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - top
   - '%{a}'
@@ -405,5 +406,104 @@ potentials:
     def cBar = hierarchy.sourceFor(['c': 'bar']).get()
 
     assert cBar.lineage().get(2).descendants()*.path() == ['top', 'foo', 'bar/foo']
+  }
+
+  @Test
+  void expandsBracesInInventory() {
+    def withBraces = Hierarchy.fromStringListOrMap(yaml.load('''
+sources:
+  - '%{b1}\'
+  - '%{aa}\'
+  - '%{b2}\'
+  - '%{ab}\'
+  - '%{b3}\'
+  - '%{ac}\'
+inventory:
+  a{a,b,c}:
+  - foo{,bar}
+  - xyz
+  b{1..3}:
+  - baz:
+      a{b..c}: foo
+'''))
+
+    def manuallyExpanded = Hierarchy.fromStringListOrMap(yaml.load('''
+sources:
+  - '%{b1}\'
+  - '%{aa}\'
+  - '%{b2}\'
+  - '%{ab}\'
+  - '%{b3}\'
+  - '%{ac}\'
+inventory:
+  aa:
+  - foo
+  - foobar
+  - xyz
+  ab:
+  - foo
+  - foobar
+  - xyz
+  ac:
+  - foo
+  - foobar
+  - xyz
+  b1:
+  - baz:
+      ab: foo
+      ac: foo
+  b2:
+  - baz:
+      ab: foo
+      ac: foo
+  b3:
+  - baz:
+      ab: foo
+      ac: foo
+'''))
+
+    assert manuallyExpanded == withBraces
+  }
+
+  @Test
+  void allowsEscapingBraceExpansionAndDoesNotExpandValuesInImpliedAssignments() {
+    def withBraces = Hierarchy.fromStringListOrMap(yaml.load('''
+sources:
+  - '%{a}'
+  - '%{b}'
+inventory:
+  a:
+  - foo\\{,bar\\}
+  b:
+  - baz:
+      a: foo{,bar}
+'''))
+
+    def manuallyExpanded = Hierarchy.fromDynamicSourceExpressions(
+        ['%{a}', '%{b}'],
+        Inventory.from([
+            'a': [Assignable.of('foo{,bar}')],
+            'b': [Assignable.of('baz', ['a': 'foo{,bar}'])]
+        ])
+    )
+
+    assert manuallyExpanded == withBraces
+  }
+
+  @Test
+  void expandsStringAssignmentWhenNotInAListOrMap() {
+    def withBraces = Hierarchy.fromStringListOrMap(yaml.load('''
+sources:
+  - '%{a}'
+inventory:
+  a: test{,test}
+'''))
+
+    def manuallyExpanded = Hierarchy.fromDynamicSourceExpressions(
+        ['%{a}'],
+        Inventory.from(['a': [Assignable.of('test'), Assignable.of('testtest')]])
+    )
+
+    assert manuallyExpanded == withBraces
   }
 }
