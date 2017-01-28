@@ -44,7 +44,8 @@ public class Assignable {
       return fromMap((Map<String, Object>) assignables);
     }
 
-    throw new IllegalArgumentException("Expected potentials to be either a list or a map.");
+    throw new IllegalArgumentException("Expected assignable(s) in inventory to be a string, " +
+        "a list, or a map, but was: " + assignables);
   }
 
   @SuppressWarnings("unchecked")
@@ -90,7 +91,7 @@ public class Assignable {
           }
 
           throw new IllegalArgumentException("Expected value to be either a string or a map of " +
-              "the value to it's implied assignments.");
+              "the value to it's implied assignments, but was: " + assignable);
         })
         .collect(Collectors.toList());
   }
