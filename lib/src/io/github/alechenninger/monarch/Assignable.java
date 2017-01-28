@@ -31,7 +31,11 @@ public class Assignable {
   private final Map<String, String> impliedAssignments;
 
   @SuppressWarnings("unchecked")
-  public static List<Assignable> fromMapOrList(Object assignables) {
+  public static List<Assignable> fromStringMapOrList(Object assignables) {
+    if (assignables instanceof String) {
+      return Assignable.expandToStream((String) assignables, null).collect(Collectors.toList());
+    }
+
     if (assignables instanceof List) {
       return fromList((List<Object>) assignables);
     }
@@ -43,10 +47,10 @@ public class Assignable {
     throw new IllegalArgumentException("Expected potentials to be either a list or a map.");
   }
 
+  @SuppressWarnings("unchecked")
   private static List<Assignable> fromMap(Map<String, Object> assignables) {
     return assignables.entrySet().stream()
-        .flatMap(entry ->
-            Assignable.expandToStream(entry.getKey(), (Map<String, String>) entry.getValue()))
+        .flatMap(e -> Assignable.expandToStream(e.getKey(), (Map<String, String>) e.getValue()))
         .collect(Collectors.toList());
   }
 
@@ -59,44 +63,45 @@ public class Assignable {
           }
 
           if (assignable instanceof Map) {
-            Map<String, Object> nameToImplications = (Map) assignable;
+            Map<String, Object> valuesToImplications = (Map) assignable;
 
-            if (nameToImplications.size() > 1) {
-              throw new IllegalArgumentException("Expected 1 key for potential " +
+            if (valuesToImplications.size() > 1) {
+              throw new IllegalArgumentException("Expected 1 value for assignment " +
                   "with implied values. You probably need to correct your YAML " +
-                  "indentation. Keys found were: " +
-                  nameToImplications.keySet());
+                  "indentation by further indenting the implications. Values found were: " +
+                  valuesToImplications.keySet());
             }
 
-            Map.Entry<String, Object> nameAndImplications =
-                nameToImplications.entrySet().iterator().next();
-            Object implications = nameAndImplications.getValue();
+            Map.Entry<String, Object> valueToImplications =
+                valuesToImplications.entrySet().iterator().next();
+
+            String value = valueToImplications.getKey();
+            Object implications = valueToImplications.getValue();
 
             if (implications instanceof Map) {
-              return Assignable.expandToStream(
-                  nameAndImplications.getKey(),
-                  (Map<String, String>) implications);
+              return Assignable.expandToStream(value, (Map<String, String>) implications);
             }
 
             if (implications == null) {
-              return Assignable.expandToStream(nameAndImplications.getKey(), null);
+              return Assignable.expandToStream(value, null);
             }
 
             throw new IllegalArgumentException("Expected implications to be a map");
           }
 
-          throw new IllegalArgumentException("Expected potential to be either a string or map");
+          throw new IllegalArgumentException("Expected value to be either a string or a map of " +
+              "the value to it's implied assignments.");
         })
         .collect(Collectors.toList());
   }
 
   private Assignable(String value) {
-    this.value = value;
+    this.value = Objects.requireNonNull(value, "value");
     this.impliedAssignments = Collections.emptyMap();
   }
 
   private Assignable(String value, Map<String, String> impliedAssignments) {
-    this.value = value;
+    this.value = Objects.requireNonNull(value, "value");
     this.impliedAssignments = Collections.unmodifiableMap(impliedAssignments);
   }
 

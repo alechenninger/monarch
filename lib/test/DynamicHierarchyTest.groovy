@@ -489,4 +489,21 @@ inventory:
 
     assert manuallyExpanded == withBraces
   }
+
+  @Test
+  void expandsStringAssignmentWhenNotInAListOrMap() {
+    def withBraces = Hierarchy.fromStringListOrMap(yaml.load('''
+sources:
+  - '%{a}'
+inventory:
+  a: test{,test}
+'''))
+
+    def manuallyExpanded = Hierarchy.fromDynamicSourceExpressions(
+        ['%{a}'],
+        Inventory.from(['a': [Assignable.of('test'), Assignable.of('testtest')]])
+    )
+
+    assert manuallyExpanded == withBraces
+  }
 }

@@ -47,7 +47,7 @@ public class Inventory {
         .stream()
         .collect(Collectors.toMap(
             entry -> entry.getKey(),
-            entry -> Assignable.fromMapOrList(entry.getValue()))));
+            entry -> Assignable.fromStringMapOrList(entry.getValue()))));
   }
 
   public static Inventory from(Map<String, List<Assignable>> map) {
