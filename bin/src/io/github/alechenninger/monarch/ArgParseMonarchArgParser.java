@@ -97,7 +97,6 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
     Subparsers subparsers = parser.addSubparsers().dest(SUBPARSER_DEST)
         .title("commands")
-        .description("If none chosen, defaults to '" + applySpec.name() + "'")
         .help("Pass --help to a command for more information.");
 
     InputFactory<ApplyChangesInput> applyChangesFactory = applySpec.addToSubparsers(subparsers);
