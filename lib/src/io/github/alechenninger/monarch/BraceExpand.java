@@ -1,6 +1,6 @@
 /*
  * monarch - A tool for managing hierarchical data.
- * Copyright (C) 2015  Alec Henninger
+ * Copyright (C) 2017 Alec Henninger
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,39 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-apply plugin: 'java'
-apply plugin: 'groovy'
+package io.github.alechenninger.monarch;
 
-version = '0.6.1'
+import me.andrz.brace.BraceExpansion;
 
-sourceCompatibility = 1.8
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-dependencies {
-  compile 'org.slf4j:slf4j-api:1.7.22'
-  compile 'org.bigtesting:interpolatd:1.0.0'
-  compile('me.andrz:brace-expansion:1.0.0') {
-    exclude module: 'logback-classic'
+final class BraceExpand {
+  private BraceExpand() {}
+
+  static List<String> string(String string) {
+    return BraceExpansion.expand(string);
   }
-  testCompile 'org.codehaus.groovy:groovy:2.4.5'
-  testCompile 'junit:junit:4.12'
-  testCompile 'org.yaml:snakeyaml:1.16'
-  testCompile 'ch.qos.logback:logback-classic:1.1.8'
-}
 
-sourceSets {
-  main {
-    java {
-      srcDirs = ['src/']
+  static <T> Map<String, T> keysOf(Map<String, T> map) {
+    Map<String, T> expanded = new HashMap<>(map.size());
+
+    for (Map.Entry<String, T> entry : map.entrySet()) {
+      T value = entry.getValue();
+      for (String key : BraceExpansion.expand(entry.getKey())) {
+        expanded.put(key, value);
+      }
     }
-  }
 
-  test {
-    groovy {
-      srcDirs = ['test/']
-    }
+    return expanded;
   }
-}
-
-repositories {
-  mavenCentral()
 }

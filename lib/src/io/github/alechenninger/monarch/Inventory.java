@@ -30,8 +30,28 @@ import java.util.stream.Collectors;
 public class Inventory {
   private final Map<String, List<Assignable>> map;
 
-  public static Inventory from(Map<String, List<Assignable>> potentials) {
-    return new Inventory(potentials);
+  @SuppressWarnings("unchecked")
+  public static Inventory parse(Object data) {
+    if (data == null) {
+      return Inventory.empty();
+    }
+
+    if (!(data instanceof Map)) {
+      throw new IllegalArgumentException("Expected map but got " + data);
+    }
+
+    Map<String, Object> inventory = BraceExpand.keysOf((Map<String, Object>) data);
+
+    //noinspection Convert2MethodRef
+    return new Inventory(inventory.entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            entry -> entry.getKey(),
+            entry -> Assignable.fromMapOrList(entry.getValue()))));
+  }
+
+  public static Inventory from(Map<String, List<Assignable>> map) {
+    return new Inventory(map);
   }
 
   public static Inventory empty() {
