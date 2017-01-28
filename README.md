@@ -38,7 +38,14 @@ petstore::version: '2'
 
 ## install from docker
 1. docker pull alechenninger/monarch
-2. docker run alechenninger/monarch
+2. docker tag alechenninger/monarch monarch
+3. docker run [-v ...:... -w ...] monarch
+
+Few things to note when running with docker:
+
+- You will need to mount your data and output directories at a minimum.
+- You may also want to mount the locations of config files, and set your working directory appropriately, or use --config option.
+- The containers user is "root" so on your system monarch may look for default config files (in user's home directory) in a different location then in the container.
 
 ## usage
 See [bin](https://github.com/alechenninger/monarch/blob/master/bin/) for command line usage.
