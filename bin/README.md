@@ -9,8 +9,6 @@ optional arguments:
   -v, --version          Show the running version of monarch and exit.
 
 commands:
-  If none chosen, defaults to 'apply'
-
   {apply,set}            Pass --help to a command for more information.
     apply                Applies changes to a target data source and its descendants.
     set                  Add or remove key value pairs to set within a change.
@@ -54,16 +52,16 @@ optional arguments:
                          
                          Example:
                          ---
-                           source: teams/myteam.yaml
-                           set:
-                             myapp::version: 2
-                             myapp::favorite_website: http://www.redhat.com
+                         source: teams/myteam.yaml
+                         set:
+                           myapp::version: 2
+                           myapp::favorite_website: http://www.redhat.com
                          ---
-                           source:
-                             team: myteam
-                             environment: stage
-                           set:
-                             myapp::favorite_website: http://stage.redhat.com
+                         source:
+                           team: myteam
+                           environment: stage
+                         set:
+                           myapp::favorite_website: http://stage.redhat.com
   --target TARGET [TARGET ...], -t TARGET [TARGET ...], --source TARGET [TARGET ...], -s TARGET [TARGET ...]
                          A target is the source  in  the  source  tree  from  where you want to
                          change, including itself and any sources  beneath it in the hierarchy.
@@ -84,11 +82,12 @@ optional arguments:
                          formats, like 'yaml'. Each  data  format  has  its own options. 'yaml'
                          has 'indent' and 'isolate'.
   --hierarchy HIERARCHY, -h HIERARCHY
-                         Path to a yaml file describing  the  source hierarchy, relative to the
-                         data directory (see data-dir option).  If  not provided, will look for
-                         a value in config files with  key 'hierarchy'. Hierarchies come in two
-                         flavors: static and dynamic. Static  hierarchies have an explicit YAML
-                         structure like: 
+                         Path to a yaml file describing  the source hierarchy in paths relative
+                         to the data directory  (see  data-dir  option).  If not provided, will
+                         look for a value  in  config  files  with key 'hierarchy'. Hierarchies
+                         come in two flavors: static  and  dynamic.  Static hierarchies have an
+                         explicit, pre-defined tree  structure.  A  source  deeper  in the tree
+                         inherits from its lineage, nearest first. In YAML, these look like: 
                          global.yaml:
                            teams/myteam.yaml:
                              - teams/myteam/dev.yaml
@@ -96,20 +95,43 @@ optional arguments:
                              - teams/myteam/prod.yaml
                            teams/otherteam.yaml
                          
-                         Dynamic hierarchies are defined  with  variables  and potential values
-                         for those variables. They look like: 
+                         Dynamic hierarchies are defined with an  ordered list of source nodes,
+                         from top  most  to  bottom-most  (ancestors  to  children).  Nodes are
+                         relative paths to data sources  which  inherit from their lineage like
+                         in static hierarchies,  but  may  use  variables  and  an inventory of
+                         possible assignable values for  those  variables.  In YAML, these look
+                         like: 
                          sources:
                            - common.yaml
                            - team/%{team}.yaml
                            - environment/%{environment}.yaml
                            - team/%{team}/%{environment}.yaml
-                         potentials:
+                         inventory:
                            team:
                              - teamA
                              - teamB
                            environment:
                              - qa
                              - prod
+                         
+                         Inventory definitions can  use  brace  expansion  syntax  like that in
+                         Bash:
+                         inventory:
+                           team:
+                             - team{A,B}
+                         
+                         Assignments in an inventory can imply other assignments, like so:
+                         inventory:
+                           team:
+                             - team{A,B}
+                           app:
+                             store:
+                               team: teamA
+                         
+                         When a variable is  assigned  a  value,  its  implicit assignments are
+                         applied simultaneously. Assignments may  rule  out possible values for
+                         a  variable  if  those  values   would   imply  conflicts  with  known
+                         assignments.
   --data-dir DATA_DIR, -d DATA_DIR
                          Path to  where  existing  data  sources  life.  The  data  for sources
                          describe in the hierarchy is looked  using  the paths in the hierarchy
