@@ -1,5 +1,17 @@
 # Change Log
 
+## [v0.8.4](https://github.com/alechenninger/monarch/tree/v0.8.4) (2017-01-29)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.3...v0.8.4)
+
+**Closed issues:**
+
+- Support brace expansion inside a change's target source [\#87](https://github.com/alechenninger/monarch/issues/87)
+
+**Merged pull requests:**
+
+- Closes \#87: Support brace expansion in change source [\#89](https://github.com/alechenninger/monarch/pull/89) ([alechenninger](https://github.com/alechenninger))
+- TURBO MODE! Cache some hashCodes and renderings [\#88](https://github.com/alechenninger/monarch/pull/88) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.8.3](https://github.com/alechenninger/monarch/tree/v0.8.3) (2017-01-28)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.2...v0.8.3)
 
