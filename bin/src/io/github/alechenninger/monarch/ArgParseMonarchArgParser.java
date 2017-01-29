@@ -271,7 +271,18 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "  team: myteam\n" +
               "  environment: stage\n" +
               "set:\n" +
-              "  myapp::favorite_website: http://stage.redhat.com");
+              "  myapp::favorite_website: http://stage.redhat.com\n" +
+              "\n" +
+              "Bash-like brace expansion may be used anywhere within the source definition. For " +
+              "example:\n" +
+              "\n" +
+              "---\n" +
+              "source:\n" +
+              "  host: app{1..4}.company.com\n" +
+              "set:\n" +
+              "  key: value\n" +
+              "\n" +
+              "Brace expansion does not apply to any keys or values within 'set' or 'remove'.");
 
       subparser.addArgument("--target", "-t", "--source", "-s")
           .dest("target")

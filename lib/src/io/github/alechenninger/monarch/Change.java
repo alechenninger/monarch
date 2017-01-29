@@ -20,8 +20,10 @@ package io.github.alechenninger.monarch;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public interface Change {
   static Change forVariables(Map<String, String> variables, Map<String, Object> set,
@@ -34,22 +36,18 @@ public interface Change {
   }
 
   /** @see #toMap */
-  static Change fromMap(Map<String, Object> map) {
+  static List<Change> fromMap(Map<String, Object> map) {
     if (map == null) {
       throw new IllegalArgumentException("Cannot create a change from 'null'.");
     }
+
     Map<String, Object> set = (Map<String, Object>) map.get("set");
     Collection<String> remove = (Collection<String>) map.get("remove");
-    if (set == null) {
-      set = Collections.emptyMap();
-    }
-    if (remove == null) {
-      remove = Collections.emptyList();
-    }
+    List<SourceSpec> sources = SourceSpec.fromStringOrMap(map.get("source"));
 
-    SourceSpec source = SourceSpec.fromStringOrMap(map.get("source"));
-
-    return new DefaultChange(source, set, remove);
+    return sources.stream()
+        .map(s -> new DefaultChange(s, set, remove))
+        .collect(Collectors.toList());
   }
 
   SourceSpec sourceSpec();
