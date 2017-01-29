@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 public class Inventory {
   private final Map<String, List<Assignable>> map;
+  private final Map<String, Variable> cachedVariables;
 
   private final int hash;
 
@@ -67,6 +68,7 @@ public class Inventory {
     //noinspection Convert2MethodRef
     this.map = map;
 
+    cachedVariables = new HashMap<>(map.size());
     hash = map.hashCode();
   }
 
@@ -94,8 +96,16 @@ public class Inventory {
   }
 
   public Optional<Variable> variableByName(String name) {
-    return Optional.ofNullable(map.get(name))
-        .map(a -> new Variable(name, a, this));
+    if (!cachedVariables.containsKey(name)) {
+      List<Assignable> assignables = map.get(name);
+      if (assignables == null) {
+        cachedVariables.put(name, null);
+      } else {
+        cachedVariables.put(name, new Variable(name, assignables, this));
+      }
+    }
+
+    return Optional.ofNullable(cachedVariables.get(name));
   }
 
   @Override
