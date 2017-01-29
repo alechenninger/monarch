@@ -62,6 +62,18 @@ optional arguments:
                            environment: stage
                          set:
                            myapp::favorite_website: http://stage.redhat.com
+                         
+                         Bash-like brace expansion  may  be  used  anywhere  within  the source
+                         definition. For example:
+                         
+                         ---
+                         source:
+                           host: app{1..4}.company.com
+                         set:
+                           key: value
+                         
+                         Brace expansion does not apply to  any  keys or values within 'set' or
+                         'remove'.
   --target TARGET [TARGET ...], -t TARGET [TARGET ...], --source TARGET [TARGET ...], -s TARGET [TARGET ...]
                          A target is the source  in  the  source  tree  from  where you want to
                          change, including itself and any sources  beneath it in the hierarchy.
