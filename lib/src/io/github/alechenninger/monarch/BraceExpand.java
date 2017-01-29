@@ -37,9 +37,8 @@ final class BraceExpand {
     Map<String, T> expanded = new HashMap<>(map.size());
 
     for (Map.Entry<String, T> entry : map.entrySet()) {
-      T value = entry.getValue();
       for (String key : BraceExpansion.expand(entry.getKey())) {
-        expanded.put(key, value);
+        expanded.put(key, entry.getValue());
       }
     }
 

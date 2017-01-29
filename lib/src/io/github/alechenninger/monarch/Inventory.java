@@ -22,13 +22,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Inventory {
-  private final Map<String, List<Assignable>> map;
+  private final Map<String, Variable> map;
 
   private final int hash;
 
@@ -53,7 +54,7 @@ public class Inventory {
   }
 
   public static Inventory from(Map<String, List<Assignable>> map) {
-    return new Inventory(map);
+    return new Inventory(new HashMap<>(map));
   }
 
   public static Inventory empty() {
@@ -61,37 +62,22 @@ public class Inventory {
   }
 
   private Inventory(Map<String, List<Assignable>> map) {
-    // TODO: Validate same value doesn't appear twice in potentials
-    // TODO: Validate there are no conflicting implied values
+    // TODO: Validate there are no conflicting implied values? This is done lazily currently.
     // e.g. foo=bar implies foo=baz (either directly or transitively)
-    this.map = new HashMap<>(map);
+    //noinspection Convert2MethodRef
+    this.map = map.entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            entry -> entry.getKey(),
+            entry -> new Variable(entry.getKey(), entry.getValue(), this)));
 
     hash = map.hashCode();
   }
 
   public Assignment assign(String variable, String value) {
-    if (!map.containsKey(variable)) {
-      throw new IllegalArgumentException("Variable not found in inventory: " + variable);
-    }
-
-    List<Assignable> assignables = map.get(variable);
-
-    if (assignables == null) {
-      throw new IllegalStateException("No assignable values defined for variable: " + variable);
-    }
-
-    Optional<Assignable> assignable = assignables.stream()
-        .filter(p -> p.value().equals(value))
-        .findFirst();
-
-    if (!assignable.isPresent()) {
-      throw new IllegalArgumentException("Cannot assign value <" + value + "> to variable <" +
-          variable + "> because value is not in inventory for variable. Check your assignment " +
-          "or add value to inventory. An inventory needs to be comprehensive so it can be used " +
-          "to discover all of the sources in your hierarchy.");
-    }
-
-    return new Assignment(this, new Variable(variable, assignables, this), assignable.get());
+    return variableByName(variable)
+        .orElseThrow(() -> new NoSuchElementException("Variable not found in inventory: " + variable))
+        .assign(value);
   }
 
   public Assignments assignAll(Iterable<Assignment> assignments) {
@@ -112,8 +98,7 @@ public class Inventory {
   }
 
   public Optional<Variable> variableByName(String name) {
-    return Optional.ofNullable(map.get(name))
-        .map(assignables -> new Variable(name, assignables, this));
+    return Optional.ofNullable(map.get(name));
   }
 
   @Override
@@ -131,6 +116,6 @@ public class Inventory {
 
   @Override
   public String toString() {
-    return "Inventory{" + map + '}';
+    return "Inventory{" + map.values() + '}';
   }
 }

@@ -19,11 +19,13 @@
 package io.github.alechenninger.monarch;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Variable {
   private final String name;
@@ -31,9 +33,26 @@ public class Variable {
   private final Inventory inventory;
 
   public Variable(String name, List<Assignable> assignables, Inventory inventory) {
-    this.name = name;
-    this.assignables = assignables;
-    this.inventory = inventory;
+    this.name = Objects.requireNonNull(name, "name");
+    this.assignables = Objects.requireNonNull(assignables, "assignables");
+    this.inventory = Objects.requireNonNull(inventory, "inventory");
+
+    if (assignables.isEmpty()) {
+      throw new IllegalArgumentException("Must provide at least one assignable value for " +
+          "variable. variable=" + name);
+    }
+
+    List<Map.Entry<String, Long>> duplicates = assignables.stream()
+        .collect(Collectors.groupingBy(Assignable::value, Collectors.counting()))
+        .entrySet()
+        .stream()
+        .filter(entry -> entry.getValue() > 1)
+        .collect(Collectors.toList());
+
+    if (!duplicates.isEmpty()) {
+      throw new IllegalArgumentException("List of assignables for variable <" + name + "> " +
+          "contains duplicate values. Values to occurrences: " + duplicates);
+    }
   }
 
   public String name() {
@@ -57,7 +76,18 @@ public class Variable {
   }
 
   public Assignment assign(String value) {
-    return inventory.assign(name, value);
+    Optional<Assignable> assignable = assignables.stream()
+        .filter(a -> a.value().equals(value))
+        .findFirst();
+
+    if (!assignable.isPresent()) {
+      throw new IllegalArgumentException("Cannot assign value <" + value + "> to variable <" +
+          name + "> because value is not assignable for this variable. Check your assignment or " +
+          "add value to inventory. An inventory needs to be comprehensive so it can be used to " +
+          "discover all of the sources in your hierarchy.");
+    }
+
+    return new Assignment(inventory, this, assignable.get());
   }
 
   @Override
@@ -75,8 +105,7 @@ public class Variable {
     if (o == null || getClass() != o.getClass()) return false;
     Variable variable = (Variable) o;
     return Objects.equals(name, variable.name) &&
-        Objects.equals(assignables, variable.assignables) &&
-        Objects.equals(inventory, variable.inventory);
+        Objects.equals(assignables, variable.assignables);
   }
 
   @Override
