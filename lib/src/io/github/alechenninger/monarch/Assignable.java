@@ -30,6 +30,8 @@ public class Assignable {
   private final String value;
   private final Map<String, String> impliedAssignments;
 
+  private final int hash;
+
   @SuppressWarnings("unchecked")
   public static List<Assignable> fromStringMapOrList(Object assignables) {
     if (assignables instanceof String) {
@@ -99,11 +101,15 @@ public class Assignable {
   private Assignable(String value) {
     this.value = Objects.requireNonNull(value, "value");
     this.impliedAssignments = Collections.emptyMap();
+
+    hash = Objects.hash(value, impliedAssignments);
   }
 
   private Assignable(String value, Map<String, String> impliedAssignments) {
     this.value = Objects.requireNonNull(value, "value");
     this.impliedAssignments = Collections.unmodifiableMap(impliedAssignments);
+
+    hash = Objects.hash(value, impliedAssignments);
   }
 
   public static Assignable of(String value) {
@@ -142,7 +148,7 @@ public class Assignable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(value, impliedAssignments);
+    return hash;
   }
 
   @Override

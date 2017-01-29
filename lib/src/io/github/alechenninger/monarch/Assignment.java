@@ -25,12 +25,16 @@ public class Assignment {
   private final Variable variable;
   private final Assignable assignable;
 
+  private final int hash;
+
   private Assignments implied;
 
   Assignment(Inventory inventory, Variable variable, Assignable assignable) {
     this.inventory = inventory;
     this.variable = variable;
     this.assignable = assignable;
+
+    hash = Objects.hash(inventory, variable, assignable);
   }
 
   public Variable variable() {
@@ -65,7 +69,7 @@ public class Assignment {
 
   @Override
   public int hashCode() {
-    return Objects.hash(inventory, variable, assignable);
+    return hash;
   }
 
   @Override

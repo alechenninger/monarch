@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 public class Inventory {
   private final Map<String, List<Assignable>> map;
 
+  private final int hash;
+
   @SuppressWarnings("unchecked")
   public static Inventory parse(Object data) {
     if (data == null) {
@@ -63,6 +65,8 @@ public class Inventory {
     // TODO: Validate there are no conflicting implied values
     // e.g. foo=bar implies foo=baz (either directly or transitively)
     this.map = new HashMap<>(map);
+
+    hash = map.hashCode();
   }
 
   public Assignment assign(String variable, String value) {
@@ -122,7 +126,7 @@ public class Inventory {
 
   @Override
   public int hashCode() {
-    return Objects.hash(map);
+    return hash;
   }
 
   @Override
