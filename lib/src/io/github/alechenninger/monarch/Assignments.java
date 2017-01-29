@@ -68,6 +68,10 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public Assignments with(Assignment assignment) {
+    if (contains(assignment)) {
+      return this;
+    }
+
     return with(new Assignments(inventory, assignment));
   }
 
@@ -148,29 +152,7 @@ public class Assignments implements Iterable<Assignment> {
       Set<Assignments> survivors = new LinkedHashSet<>();
       for (Assignments possibility : possibilities) {
         for (String value : possibility.possibleValues(variable)) {
-          if (possibility.isAssigned(variable)) {
-            // Either way, the current possibility will remain because it assigns this variable
-            survivors.add(possibility);
-
-            // If the new value is different and we can, we'll add a fork of this possibility with
-            // the alternate value.
-            if (possibility.conflictsWith(variable, value) &&
-                possibility.canForkAt(variable)) {
-              Assignments fork = possibility.forkAt(variable);
-              if (!fork.conflictsWith(variable, value)) {
-                survivors.add(fork.with(variable, value));
-              }
-            }
-          } else if (possibility.conflictsWith(variable, value)) {
-            // This only happens if the missing var is not assigned, but assigning it this possible
-            // value would imply a conflict. I think this may never happen since we ask this
-            // possibility for potential values already, and therefore it won't give us values we
-            // couldn't assign.
-            // TODO: consider removing this branch
-            survivors.add(possibility);
-          } else {
-            survivors.add(possibility.with(variable, value));
-          }
+          survivors.add(possibility.with(variable, value));
         }
       }
       possibilities = survivors;
@@ -198,10 +180,10 @@ public class Assignments implements Iterable<Assignment> {
 
   // TODO: I think this should actually return a List
   public Optional<Assignment> conflictOf(Assignment assignment) {
-    Variable variable = assignment.variable();
+    String variable = assignment.variable().name();
 
-    if (isAssigned(variable.name()) && !forVariable(variable.name()).equals(assignment)) {
-      return Optional.of(forVariable(variable.name()));
+    if (isAssigned(variable) && !forVariable(variable).equals(assignment)) {
+      return Optional.of(forVariable(variable));
     }
 
     for (Assignment implied : assignment.implied()) {
