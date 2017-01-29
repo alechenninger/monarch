@@ -105,7 +105,8 @@ public class Variable {
     if (o == null || getClass() != o.getClass()) return false;
     Variable variable = (Variable) o;
     return Objects.equals(name, variable.name) &&
-        Objects.equals(assignables, variable.assignables);
+        Objects.equals(assignables, variable.assignables) &&
+        Objects.equals(inventory, variable.inventory);
   }
 
   @Override

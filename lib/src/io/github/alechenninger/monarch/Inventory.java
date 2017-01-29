@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Inventory {
-  private final Map<String, Variable> map;
+  private final Map<String, List<Assignable>> map;
 
   private final int hash;
 
@@ -65,11 +65,7 @@ public class Inventory {
     // TODO: Validate there are no conflicting implied values? This is done lazily currently.
     // e.g. foo=bar implies foo=baz (either directly or transitively)
     //noinspection Convert2MethodRef
-    this.map = map.entrySet()
-        .stream()
-        .collect(Collectors.toMap(
-            entry -> entry.getKey(),
-            entry -> new Variable(entry.getKey(), entry.getValue(), this)));
+    this.map = map;
 
     hash = map.hashCode();
   }
@@ -98,7 +94,8 @@ public class Inventory {
   }
 
   public Optional<Variable> variableByName(String name) {
-    return Optional.ofNullable(map.get(name));
+    return Optional.ofNullable(map.get(name))
+        .map(a -> new Variable(name, a, this));
   }
 
   @Override
