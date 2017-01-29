@@ -36,18 +36,23 @@ public class Assignments implements Iterable<Assignment> {
   private final Set<Assignment> implicit = new LinkedHashSet<>();
   private final Inventory inventory;
 
+  private final int hash;
+
   Assignments(Inventory inventory) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
+    hash = Objects.hash(explicit, implicit, inventory);
   }
 
   Assignments(Inventory inventory, Assignment assignment) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
     add(assignment);
+    hash = Objects.hash(explicit, implicit, inventory);
   }
 
   Assignments(Inventory inventory, Iterable<Assignment> assignments) {
     this.inventory = Objects.requireNonNull(inventory, "inventory");
     assignments.forEach(this::add);
+    hash = Objects.hash(explicit, implicit, inventory);
   }
 
   public static Assignments none(Inventory inventory) { return new Assignments(inventory); }
@@ -291,7 +296,7 @@ public class Assignments implements Iterable<Assignment> {
 
   @Override
   public int hashCode() {
-    return Objects.hash(explicit, implicit, inventory);
+    return hash;
   }
 
   @Override
