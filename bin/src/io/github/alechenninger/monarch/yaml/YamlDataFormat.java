@@ -91,7 +91,7 @@ public class YamlDataFormat implements DataFormat {
         if (parsedChange == null) continue;
 
         Map<String, Object> parsedAsMap = (Map<String, Object>) parsedChange;
-        changes.add(Change.fromMap(parsedAsMap));
+        changes.addAll(Change.fromMap(parsedAsMap));
       }
 
       return changes;

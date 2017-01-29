@@ -319,7 +319,7 @@ set:
     main.run("set", "--changes", "/etc/new.yaml", "--source", "teams/myteam.yaml", "--put", "foo: bar");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/new.yaml")))
-        .collect { Change.fromMap(it as Map<String, Object>) }
+        .collectMany { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
     def expected = [Change.forPath("teams/myteam.yaml", ["foo": "bar"], [])]
@@ -339,7 +339,7 @@ set:
     main.run("set", "--changes", "/etc/changes.yaml", "--source", "teams/myteam.yaml", "--put", "");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
-        .collect { Change.fromMap(it as Map<String, Object>) }
+        .collectMany { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
     def expected = [Change.forPath("teams/myteam.yaml", ["myapp::version": 2], [])]
@@ -353,7 +353,7 @@ set:
         "--put", "app_version: 2");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
-        .collect { Change.fromMap(it as Map<String, Object>) }
+        .collectMany { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
     def expected = [Change.forVariables(
@@ -383,7 +383,7 @@ set:
         "--put", "app_url: stage.app.com");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
-        .collect { Change.fromMap(it as Map<String, Object>) }
+        .collectMany { Change.fromMap(it as Map<String, Object>) }
         .toList()
 
     def expected = [

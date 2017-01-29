@@ -17,13 +17,18 @@ public interface SourceSpec {
 
   Object toStringOrMap();
 
-  static SourceSpec fromStringOrMap(Object object) {
+  @SuppressWarnings("unchecked")
+  static List<SourceSpec> fromStringOrMap(Object object) {
     if (object instanceof String) {
-      return byPath((String) object);
+      return BraceExpand.string((String) object).stream()
+          .map(SourceSpec::byPath)
+          .collect(Collectors.toList());
     }
 
     if (object instanceof Map) {
-      return byVariables((Map) object);
+      return BraceExpand.keysAndValuesOf((Map<String, String>) object).stream()
+          .map(SourceSpec::byVariables)
+          .collect(Collectors.toList());
     }
 
     throw new IllegalArgumentException("Expected String or Map but got: " + object);

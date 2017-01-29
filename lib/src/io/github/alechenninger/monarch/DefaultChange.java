@@ -35,8 +35,12 @@ class DefaultChange implements Change {
 
   DefaultChange(SourceSpec source, Map<String, Object> set, Collection<String> remove) {
     this.source = source;
-    this.set = Collections.unmodifiableMap(new TreeMap<>(set));
-    this.remove = Collections.unmodifiableSet(new HashSet<>(remove));
+    this.set = set == null
+        ? Collections.emptyMap()
+        : Collections.unmodifiableMap(new TreeMap<>(set));
+    this.remove = remove == null
+        ? Collections.emptySet()
+        : Collections.unmodifiableSet(new HashSet<>(remove));
   }
 
   @Override

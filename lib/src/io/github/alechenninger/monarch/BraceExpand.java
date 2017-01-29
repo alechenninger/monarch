@@ -20,9 +20,11 @@ package io.github.alechenninger.monarch;
 
 import me.andrz.brace.BraceExpansion;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 final class BraceExpand {
   private BraceExpand() {}
@@ -38,6 +40,38 @@ final class BraceExpand {
       T value = entry.getValue();
       for (String key : BraceExpansion.expand(entry.getKey())) {
         expanded.put(key, value);
+      }
+    }
+
+    return expanded;
+  }
+
+  static List<Map<String, String>> keysAndValuesOf(Map<String, String> map) {
+    List<Map<String, String>> expanded = new ArrayList<>();
+    expanded.add(new HashMap<>());
+
+    for (Map.Entry<String, String> entry : map.entrySet()) {
+      for (String key : BraceExpansion.expand(entry.getKey())) {
+        List<Map<String, String>> newPermutations = new ArrayList<>();
+
+        for (String value : BraceExpansion.expand(entry.getValue())) {
+          for (Map<String, String> permutation : expanded) {
+            if (permutation.containsKey(key)) {
+              if (Objects.equals(permutation.get(key), value)) {
+                continue;
+              }
+
+              Map<String, String> newPermutation = new HashMap<>(permutation);
+              newPermutation.put(key, value);
+              newPermutations.add(newPermutation);
+            } else {
+              permutation.put(key, value);
+            }
+          }
+
+        }
+
+        expanded.addAll(newPermutations);
       }
     }
 
