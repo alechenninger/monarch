@@ -39,7 +39,27 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(String source) {
-    return variablesFor(source).flatMap(this::sourceFor);
+    if (!cachedPaths.containsKey(source)) {
+
+      List<Assignments> satisfyingVars = nodes.stream()
+          .flatMap(node -> node.assignmentsFor(source, inventory, Assignments.none(inventory))
+              .map(Stream::of).orElse(Stream.empty()))
+          .collect(Collectors.toList());
+
+      if (satisfyingVars.isEmpty()) {
+        cachedPaths.put(source, null);
+      }
+
+      Assignments allVariables = new Assignments(inventory);
+      // TODO: Instead, we can do this in loop over nodes
+      for (Assignments assignments : satisfyingVars) {
+        allVariables = allVariables.with(assignments);
+      }
+
+      cachedPaths.put(source, allVariables);
+    }
+
+    return Optional.ofNullable(cachedPaths.get(source)).flatMap(this::sourceFor);
   }
 
   @Override
@@ -190,30 +210,6 @@ class DynamicHierarchy implements Hierarchy {
         "nodes=" + nodes +
         ", inventory=" + inventory +
         '}';
-  }
-
-  private Optional<Assignments> variablesFor(String source) {
-    if (!cachedPaths.containsKey(source)) {
-
-      List<Assignments> satisfyingVars = nodes.stream()
-          .flatMap(node -> node.assignmentsFor(source, inventory, Assignments.none(inventory))
-              .map(Stream::of).orElse(Stream.empty()))
-          .collect(Collectors.toList());
-
-      if (satisfyingVars.isEmpty()) {
-        cachedPaths.put(source, null);
-      }
-
-      Assignments allVariables = new Assignments(inventory);
-      // TODO: Instead, we can do this in loop over nodes
-      for (Assignments assignments : satisfyingVars) {
-        allVariables = allVariables.with(assignments);
-      }
-
-      cachedPaths.put(source, allVariables);
-    }
-
-    return Optional.ofNullable(cachedPaths.get(source));
   }
 
   class DynamicSource implements Source {
