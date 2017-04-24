@@ -38,6 +38,7 @@ public class InterpolatedDynamicNode implements DynamicNode {
   private final Optional<String> escapeCharacter;
 
   private final List<String> variableNames;
+  private final int hash;
 
   public InterpolatedDynamicNode(String expression) {
     this(expression, "%{", "}", Optional.of("\\"));
@@ -58,6 +59,9 @@ public class InterpolatedDynamicNode implements DynamicNode {
     paramCapture.interpolate(expression, null);
 
     this.variableNames = Collections.unmodifiableList(variableNames);
+
+    hash = Objects.hash(
+        expression, variableOpening, variableClosing, escapeCharacter, variableNames);
   }
 
   @Override
@@ -116,7 +120,6 @@ public class InterpolatedDynamicNode implements DynamicNode {
 
   @Override
   public int hashCode() {
-    return Objects.hash(expression, variableOpening, variableClosing, escapeCharacter,
-        variableNames);
+    return hash;
   }
 }

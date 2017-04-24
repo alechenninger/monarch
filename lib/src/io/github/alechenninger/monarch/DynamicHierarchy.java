@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,11 +18,17 @@ class DynamicHierarchy implements Hierarchy {
   private final List<DynamicNode> nodes;
   private final Inventory inventory;
 
+  // ----- These things are expensive to compute, so cache them. ------
   private Map<String, Assignments> cachedPaths = new HashMap<>();
   private Map<Map.Entry<String, String>, Assignment> cachedAssignments = new HashMap<>();
   private Map<Assignments, Source> cachedSources = new HashMap<>();
-  private Map<SourceCacheKey, Object> cachedRenderedSources = new HashMap<>();
-  private List<Source> all = null;
+
+  /**
+   * Value is RenderedSource or an exception. WTB union types. See {@link #sourceFor(RenderedNode,
+   * int)}
+   */
+  private Map<RenderedSourceCacheKey, Object> cachedRenderedSources = new HashMap<>();
+  private List<Source> cachedAll = null;
 
   private static final Logger log = LoggerFactory.getLogger(DynamicHierarchy.class);
 
@@ -102,9 +107,9 @@ class DynamicHierarchy implements Hierarchy {
       DynamicNode node = nodes.get(i);
       if (assignments.assignsOnly(node.variables())) {
         try {
-          target = RenderedSource.newOrCached(node.renderOne(assignments), i, this);
+          target = sourceFor(node.renderOne(assignments), i);
           break;
-        } catch (RenderedSource.UnreachableSourceException ignored) {
+        } catch (UnreachableSourceException ignored) {
           // TODO: error
           break;
         }
@@ -122,12 +127,12 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public List<Source> allSources() {
-    if (all != null) {
-      return all;
+    if (cachedAll != null) {
+      return cachedAll;
     }
 
     if (nodes.isEmpty()) {
-      return all = Collections.emptyList();
+      return cachedAll = Collections.emptyList();
     }
 
     List<Source> descendants = new ArrayList<>();
@@ -137,14 +142,14 @@ class DynamicHierarchy implements Hierarchy {
 
       for (RenderedNode rendered : dynamicNode.render(Assignments.none(inventory))) {
         try {
-          descendants.add(RenderedSource.newOrCached(rendered, i, this));
-        } catch (RenderedSource.UnreachableSourceException ignored) {
+          descendants.add(sourceFor(rendered, i));
+        } catch (UnreachableSourceException ignored) {
           // Fall through
         }
       }
     }
 
-    return all = descendants;
+    return cachedAll = descendants;
   }
 
   @Override
@@ -169,90 +174,73 @@ class DynamicHierarchy implements Hierarchy {
         '}';
   }
 
-  static class SourceCacheKey {
-    final RenderedNode render;
-    final int level;
+  /**
+   * @throws UnreachableSourceException If render at this level is shadowed by a descendant with the
+   * same path, then there is no node at this level; the path will always be inherited lower in the
+   * hierarchy.
+   */
+  private RenderedSource sourceFor(RenderedNode render, int level) {
+    RenderedSourceCacheKey key = new RenderedSourceCacheKey(render, level);
 
-    public SourceCacheKey(RenderedNode render, int level) {
+    if (cachedRenderedSources.containsKey(key)) {
+      Object sourceOrException = cachedRenderedSources.get(key);
+      if (sourceOrException instanceof RenderedSource) {
+        return (RenderedSource) sourceOrException;
+      }
+      //noinspection ConstantConditions
+      throw (UnreachableSourceException) sourceOrException;
+    }
+
+    try {
+      RenderedSource source = new RenderedSource(render, level);
+      cachedRenderedSources.put(key, source);
+      return source;
+    } catch (UnreachableSourceException e) {
+      cachedRenderedSources.put(key, e);
+      throw e;
+    }
+  }
+
+  private static class RenderedSourceCacheKey {
+    private final RenderedNode render;
+    private final int level;
+    private final int hash;
+
+    private RenderedSourceCacheKey(RenderedNode render, int level) {
       this.render = render;
       this.level = level;
+      hash = Objects.hash(render, level);
     }
 
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
-      SourceCacheKey sourceCacheKey = (SourceCacheKey) o;
-      return level == sourceCacheKey.level &&
-          Objects.equals(render, sourceCacheKey.render);
+      RenderedSourceCacheKey renderedSourceCacheKey = (RenderedSourceCacheKey) o;
+      return level == renderedSourceCacheKey.level &&
+          Objects.equals(render, renderedSourceCacheKey.render);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(render, level);
+      return hash;
     }
   }
 
-  static class RenderedSource implements Source {
+  private class RenderedSource implements Source {
     private final RenderedNode render;
     private final Assignments assignments;
     private final int level;
-    private final DynamicHierarchy hierarchy;
 
     private List<RenderedSource> lineage;
     private List<RenderedSource> descendants;
 
-    static RenderedSource newOrCached(RenderedNode render, int level, DynamicHierarchy hierarchy) {
-      SourceCacheKey key = new SourceCacheKey(render, level);
-      if (hierarchy.cachedRenderedSources.containsKey(key)) {
-        Object sourceOrException = hierarchy.cachedRenderedSources.get(key);
-        if (sourceOrException instanceof RenderedSource) {
-          return (RenderedSource) sourceOrException;
-        }
-        throw (RuntimeException) sourceOrException;
-      }
-
-      try {
-        RenderedSource source = new RenderedSource(render, level, hierarchy);
-        hierarchy.cachedRenderedSources.put(key, source);
-        return source;
-      } catch (UnreachableSourceException e) {
-        hierarchy.cachedRenderedSources.put(key, e);
-        throw e;
-      }
-    }
-
-    private static class UnreachableSourceException extends RuntimeException {
-      private final RenderedNode render;
-      private final int level;
-      private final RenderedSource conflict;
-
-      public UnreachableSourceException(RenderedNode render, int level, RenderedSource conflict) {
-        this.render = render;
-        this.level = level;
-        this.conflict = conflict;
-      }
-
-      public RenderedNode render() {
-        return render;
-      }
-
-      public int level() {
-        return level;
-      }
-
-      public RenderedSource conflict() {
-        return conflict;
-      }
-    }
-
-    private RenderedSource(RenderedNode render, int level, DynamicHierarchy hierarchy) {
+    private RenderedSource(RenderedNode render, int level) {
       this.render = render;
-      this.assignments = hierarchy.inventory.assignAll(render.usedAssignments());
+      this.assignments = inventory.assignAll(render.usedAssignments());
       this.level = level;
-      this.hierarchy = hierarchy;
 
-      Optional<RenderedSource> maybeConflict = descendantsRendered().stream()
+      Optional<RenderedSource> maybeConflict = renderedDescendants().stream()
           .skip(1)
           .filter(s -> s.path().equals(render.path()))
           .findAny();
@@ -266,7 +254,7 @@ class DynamicHierarchy implements Hierarchy {
       }
     }
 
-    public DynamicNode node() {
+    DynamicNode node() {
       return render.node();
     }
 
@@ -278,18 +266,18 @@ class DynamicHierarchy implements Hierarchy {
     @Override
     public List<Source> lineage() {
       if (lineage == null) {
-        lineage = new ArrayList<>();
+        lineage = new ArrayList<>(level + 1 /* == how many in lineage + me */);
         lineage.add(this);
 
         for (int parentLevel = level - 1; parentLevel >= 0; parentLevel--) {
-          DynamicNode node = hierarchy.nodes.get(parentLevel);
+          DynamicNode node = nodes.get(parentLevel);
           if (assignments.assignsSupersetOf(node.variables())) {
             RenderedNode parentRender = node.renderOne(assignments);
             if (lineage == null) {
               lineage = new ArrayList<>();
             }
             try {
-              lineage.add(RenderedSource.newOrCached(parentRender, parentLevel, hierarchy));
+              lineage.add(sourceFor(parentRender, parentLevel));
             } catch (UnreachableSourceException ignored) {
               // Fall through
             }
@@ -300,22 +288,28 @@ class DynamicHierarchy implements Hierarchy {
       return Collections.unmodifiableList(lineage);
     }
 
-    public List<RenderedSource> descendantsRendered() {
+    @Override
+    public List<Source> descendants() {
+      return Collections.unmodifiableList(renderedDescendants());
+    }
+
+    List<RenderedSource> renderedDescendants() {
       if (descendants == null) {
         descendants = new ArrayList<>();
         descendants.add(this);
 
-        for (int childLevel = level + 1; childLevel < hierarchy.nodes.size(); childLevel++) {
-          List<RenderedNode> childRenders = hierarchy.nodes.get(childLevel).render(assignments);
+        for (int childLevel = level + 1; childLevel < nodes.size(); childLevel++) {
+          List<RenderedNode> childRenders = nodes.get(childLevel).render(assignments);
 
           for (RenderedNode childRender : childRenders) {
-            Assignments childAssigns = hierarchy.inventory.assignAll(childRender.usedAssignments());
+            Assignments childAssigns = inventory.assignAll(childRender.usedAssignments());
             if (assignments.isEmpty() || childAssigns.containsAll(assignments)) {
               if (descendants == null ) {
                 descendants = new ArrayList<>(childRenders.size());
               }
+
               try {
-                descendants.add(RenderedSource.newOrCached(childRender, childLevel, hierarchy));
+                descendants.add(sourceFor(childRender, childLevel));
               } catch (UnreachableSourceException ignored) {
                 // Fall through
               }
@@ -328,13 +322,8 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     @Override
-    public List<Source> descendants() {
-      return Collections.unmodifiableList(descendantsRendered());
-    }
-
-    @Override
     public boolean isTargetedBy(SourceSpec spec) {
-      return spec.findSource(hierarchy)
+      return spec.findSource(DynamicHierarchy.this)
           .map(found -> found.path().equals(path()))
           .orElse(false);
     }
@@ -345,6 +334,44 @@ class DynamicHierarchy implements Hierarchy {
           "node=" + render.node() +
           ", path=" + render.path() +
           '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      RenderedSource that = (RenderedSource) o;
+      return level == that.level &&
+          Objects.equals(render, that.render);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(render, level);
+    }
+  }
+
+  private static class UnreachableSourceException extends RuntimeException {
+    private final RenderedNode render;
+    private final int level;
+    private final RenderedSource conflict;
+
+    UnreachableSourceException(RenderedNode render, int level, RenderedSource conflict) {
+      this.render = render;
+      this.level = level;
+      this.conflict = conflict;
+    }
+
+    public RenderedNode render() {
+      return render;
+    }
+
+    public int level() {
+      return level;
+    }
+
+    public RenderedSource conflict() {
+      return conflict;
     }
   }
 }
