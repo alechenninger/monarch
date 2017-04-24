@@ -212,6 +212,112 @@ class DynamicHierarchy implements Hierarchy {
         '}';
   }
 
+  class RenderedSource implements Source {
+    private final RenderedNode render;
+    private final Assignments assignments;
+    private Level level;
+
+    RenderedSource(RenderedNode render) {
+      this.render = render;
+      this.assignments = inventory.assignAll(render.usedAssignments());
+
+      Level current = new Level();
+      boolean descendants = true;
+
+      for (DynamicNode node : new ListReversed<>(nodes)) {
+        current = current == null ? new Level() : current.parent();
+
+        // Adding descendants of a target has different logic than ancestors.
+        // While target source is null, it means we haven't found it yet, so we're still adding
+        // descendants.
+        if (descendants) {
+          List<RenderedNode> nodeRenders = node.render(assignments);
+
+          for (RenderedNode nodeRender : nodeRenders) {
+            Assignments renderAssigns = inventory.assignAll(nodeRender.usedAssignments());
+            if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
+              Optional<DynamicSource> maybeSource = current.addMember(nodeRender, renderAssigns);
+              if (maybeSource.isPresent()) {
+                DynamicSource source = maybeSource.get();
+                if (source.path().equals(path())) {
+                  if (source.render.equals(this.render)) {
+                    descendants = false;
+                    level = current;
+                  } else {
+                    log.error("Found source for assignments, but it is shadowed by a descendant " +
+                            "with a duplicate path. Impossible to refer to desired position in " +
+                            "hierarchy. Path was '{}'. Desired target for assignments {} was at " +
+                            "node {}. Shadowed by same path at descendant {} from assignments {}.",
+                        path(), assignments.toMap(), this.render.node(), source.node(),
+                        source.assignments.toMap());
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          if (assignments.assignsSupersetOf(node.variables())) {
+            RenderedNode nodeRender = node.renderOne(assignments);
+            current.addMember(nodeRender, assignments);
+          }
+        }
+      }
+    }
+
+    @Override
+    public String path() {
+      return render.path();
+    }
+
+    @Override
+    public List<Source> lineage() {
+      List<Source> lineage = new ArrayList<>();
+      lineage.add(this);
+      DynamicSource ancestor = parent();
+      while (ancestor != null) {
+        lineage.add(ancestor);
+        ancestor = ancestor.parent();
+      }
+      return lineage;
+    }
+
+    @Override
+    public List<Source> descendants() {
+      return level.descendants()
+          .stream()
+          .flatMap(l -> l.members().stream())
+          .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean isTargetedBy(SourceSpec spec) {
+      return spec.findSource(DynamicHierarchy.this)
+          .map(found -> found.path().equals(path()))
+          .orElse(false);
+    }
+
+    @Override
+    public String toString() {
+      return "RenderedSource{" +
+          "render=" + render +
+          ", level=" + level +
+          '}';
+    }
+
+    private DynamicSource parent() {
+      for (Level ancestorLevel : level.ancestors()) {
+        for (DynamicSource parent : ancestorLevel.parent()) {
+          // This will only ever have one?
+//          if (assignments.containsAll(parent.assignments)) {
+            return parent;
+//          }
+        }
+      }
+
+      return null;
+    }
+  }
+
   class DynamicSource implements Source {
     private final Assignments assignments;
     private final RenderedNode render;
