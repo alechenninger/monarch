@@ -58,6 +58,6 @@ b:
   - b2
 '''))
 
-    assert ['a', 'b', 'a1', 'a2', 'b1', 'b2'] == hierarchy.descendants().collect { it.path() }
+    assert ['a', 'b', 'a1', 'a2', 'b1', 'b2'] == hierarchy.allSources().collect { it.path() }
   }
 }

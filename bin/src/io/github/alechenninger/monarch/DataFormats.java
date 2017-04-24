@@ -18,9 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
-import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import io.github.alechenninger.monarch.yaml.YamlDataFormat;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
@@ -33,7 +31,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Represents both a collection of known {@link DataFormat}s by capability, and a strategy for
@@ -194,7 +191,7 @@ public interface DataFormats {
   default Map<String, SourceData> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
     Map<String, SourceData> data = new HashMap<>();
 
-    hierarchy.descendants().stream()
+    hierarchy.allSources().stream()
         // TODO .parallel() but yaml is not threadsafe
         .map(Source::path)
         .forEach(source -> {

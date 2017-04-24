@@ -58,5 +58,5 @@ public interface Hierarchy {
 
   Optional<Source> sourceFor(Assignments assignments);
 
-  List<Source> descendants();
+  List<Source> allSources();
 }

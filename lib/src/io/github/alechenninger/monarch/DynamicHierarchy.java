@@ -22,7 +22,7 @@ class DynamicHierarchy implements Hierarchy {
   private Map<String, Assignments> cachedPaths = new HashMap<>();
   private Map<Map.Entry<String, String>, Assignment> cachedAssignments = new HashMap<>();
   private Map<Assignments, Source> cachedSources = new HashMap<>();
-  private Map<SourceCacheKey, RenderedSource> cachedRenderedSources = new HashMap<>();
+  private Map<SourceCacheKey, Object> cachedRenderedSources = new HashMap<>();
   private List<Source> all = null;
 
   private static final Logger log = LoggerFactory.getLogger(DynamicHierarchy.class);
@@ -106,6 +106,7 @@ class DynamicHierarchy implements Hierarchy {
           break;
         } catch (RenderedSource.UnreachableSourceException ignored) {
           // TODO: error
+          break;
         }
       }
     }
@@ -115,54 +116,12 @@ class DynamicHierarchy implements Hierarchy {
       return Optional.empty();
     }
 
-    Level current = null;
-    DynamicSource targetSource = null;
-
-    // Build hierarchy from bottom up.
-//    for (DynamicNode node : new ListReversed<>(nodes)) {
-//      current = current == null ? new Level() : current.parent();
-//
-//      // Adding descendants of a target has different logic than ancestors.
-//      // While target source is null, it means we haven't found it yet, so we're still adding
-//      // descendants.
-//      if (targetSource == null) {
-//        List<RenderedNode> renders = node.render(assignments);
-//
-//        for (RenderedNode render : renders) {
-//          Assignments renderAssigns = inventory.assignAll(render.usedAssignments());
-//          if (assignments.isEmpty() || renderAssigns.containsAll(assignments)) {
-//            Optional<DynamicSource> maybeSource = current.addMember(render, renderAssigns);
-//            if (maybeSource.isPresent()) {
-//              DynamicSource source = maybeSource.get();
-//              if (source.path().equals(target.path())) {
-//                if (source.render.equals(target)) {
-//                  targetSource = source;
-//                } else {
-//                  log.error("Found source for assignments, but it is shadowed by a descendant " +
-//                          "with a duplicate path. Impossible to refer to desired position in " +
-//                          "hierarchy. Path was '{}'. Desired target for assignments {} was at " +
-//                          "node {}. Shadowed by same path at descendant {} from assignments {}.",
-//                      target.path(), assignments.toMap(), target.node(), source.node(),
-//                      source.assignments.toMap());
-//                }
-//              }
-//            }
-//          }
-//        }
-//      } else {
-//        if (assignments.assignsSupersetOf(node.variables())) {
-//          RenderedNode render = node.renderOne(assignments);
-//          current.addMember(render, assignments);
-//        }
-//      }
-//    }
-
     cachedSources.put(assignments, target);
-    return Optional.ofNullable(target);
+    return Optional.of(target);
   }
 
   @Override
-  public List<Source> descendants() {
+  public List<Source> allSources() {
     if (all != null) {
       return all;
     }
@@ -171,29 +130,21 @@ class DynamicHierarchy implements Hierarchy {
       return all = Collections.emptyList();
     }
 
-    Level current = null;
+    List<Source> descendants = new ArrayList<>();
 
-    for (int i = nodes.size() - 1; i >= 0; i--) {
+    for (int i = 0; i < nodes.size(); i++) {
       DynamicNode dynamicNode = nodes.get(i);
-      Level level = current == null ? new Level() : current.parent();
 
       for (RenderedNode rendered : dynamicNode.render(Assignments.none(inventory))) {
-        Assignments assignments = inventory.assignAll(rendered.usedAssignments());
-        level.addMember(rendered, assignments);
-      }
-
-      if (!level.isEmpty()) {
-        current = level;
+        try {
+          descendants.add(RenderedSource.newOrCached(rendered, i, this));
+        } catch (RenderedSource.UnreachableSourceException ignored) {
+          // Fall through
+        }
       }
     }
 
-    if (current == null) {
-      return all = Collections.emptyList();
-    }
-
-    return all = current.descendants().stream()
-        .flatMap(l -> l.members().stream())
-        .collect(Collectors.toList());
+    return all = descendants;
   }
 
   @Override
@@ -254,11 +205,11 @@ class DynamicHierarchy implements Hierarchy {
     static RenderedSource newOrCached(RenderedNode render, int level, DynamicHierarchy hierarchy) {
       SourceCacheKey key = new SourceCacheKey(render, level);
       if (hierarchy.cachedRenderedSources.containsKey(key)) {
-        RenderedSource source = hierarchy.cachedRenderedSources.get(key);
-        if (source == null) {
-          throw new UnreachableSourceException(render, level);
+        Object sourceOrException = hierarchy.cachedRenderedSources.get(key);
+        if (sourceOrException instanceof RenderedSource) {
+          return (RenderedSource) sourceOrException;
         }
-        return source;
+        throw (RuntimeException) sourceOrException;
       }
 
       try {
@@ -266,13 +217,32 @@ class DynamicHierarchy implements Hierarchy {
         hierarchy.cachedRenderedSources.put(key, source);
         return source;
       } catch (UnreachableSourceException e) {
-        hierarchy.cachedRenderedSources.put(key, null);
+        hierarchy.cachedRenderedSources.put(key, e);
         throw e;
       }
     }
 
     private static class UnreachableSourceException extends RuntimeException {
-      public UnreachableSourceException(RenderedNode render, int level) {
+      private final RenderedNode render;
+      private final int level;
+      private final RenderedSource conflict;
+
+      public UnreachableSourceException(RenderedNode render, int level, RenderedSource conflict) {
+        this.render = render;
+        this.level = level;
+        this.conflict = conflict;
+      }
+
+      public RenderedNode render() {
+        return render;
+      }
+
+      public int level() {
+        return level;
+      }
+
+      public RenderedSource conflict() {
+        return conflict;
       }
     }
 
@@ -282,9 +252,22 @@ class DynamicHierarchy implements Hierarchy {
       this.level = level;
       this.hierarchy = hierarchy;
 
-      if (descendants().stream().skip(1).anyMatch(d -> render.path().equals(d.path()))) {
-        throw new UnreachableSourceException(render, level);
+      Optional<RenderedSource> maybeConflict = descendantsRendered().stream()
+          .skip(1)
+          .filter(s -> s.path().equals(render.path()))
+          .findAny();
+      if (maybeConflict.isPresent()) {
+        RenderedSource conflict = maybeConflict.get();
+        log.warn("Repeat source path '{}' at nodes {} and descendant {}. " +
+                "Ancestor is unreachable at this level in the hierarchy since it is shadowed by " +
+                "a descendant.",
+            render.path(), render.node(), conflict.node());
+        throw new UnreachableSourceException(render, level, conflict);
       }
+    }
+
+    public DynamicNode node() {
+      return render.node();
     }
 
     @Override
@@ -308,7 +291,7 @@ class DynamicHierarchy implements Hierarchy {
             try {
               lineage.add(RenderedSource.newOrCached(parentRender, parentLevel, hierarchy));
             } catch (UnreachableSourceException ignored) {
-              // TODO: warn
+              // Fall through
             }
           }
         }
@@ -317,8 +300,7 @@ class DynamicHierarchy implements Hierarchy {
       return Collections.unmodifiableList(lineage);
     }
 
-    @Override
-    public List<Source> descendants() {
+    public List<RenderedSource> descendantsRendered() {
       if (descendants == null) {
         descendants = new ArrayList<>();
         descendants.add(this);
@@ -335,14 +317,19 @@ class DynamicHierarchy implements Hierarchy {
               try {
                 descendants.add(RenderedSource.newOrCached(childRender, childLevel, hierarchy));
               } catch (UnreachableSourceException ignored) {
-                // TODO: warn
+                // Fall through
               }
             }
           }
         }
       }
 
-      return Collections.unmodifiableList(descendants);
+      return descendants;
+    }
+
+    @Override
+    public List<Source> descendants() {
+      return Collections.unmodifiableList(descendantsRendered());
     }
 
     @Override
@@ -357,172 +344,6 @@ class DynamicHierarchy implements Hierarchy {
       return "RenderedSource{" +
           "node=" + render.node() +
           ", path=" + render.path() +
-          '}';
-    }
-  }
-
-  class DynamicSource implements Source {
-    private final Assignments assignments;
-    private final RenderedNode render;
-    private final Level level;
-
-    DynamicSource(Assignments assignments, RenderedNode render, Level level) {
-      this.assignments = assignments;
-      this.render = render;
-      this.level = level;
-    }
-
-    DynamicNode node() {
-      return render.node();
-    }
-
-    @Override
-    public String path() {
-      return render.path();
-    }
-
-    @Override
-    public List<Source> lineage() {
-      List<Source> lineage = new ArrayList<>();
-      lineage.add(this);
-      DynamicSource ancestor = parent();
-      while (ancestor != null) {
-        lineage.add(ancestor);
-        ancestor = ancestor.parent();
-      }
-      return lineage;
-    }
-
-    @Override
-    public List<Source> descendants() {
-      return level.descendants()
-          .stream()
-          .flatMap(l -> l.members().stream())
-          .collect(Collectors.toList());
-    }
-
-    @Override
-    public boolean isTargetedBy(SourceSpec spec) {
-      return spec.findSource(DynamicHierarchy.this)
-          .map(found -> found.path().equals(path()))
-          .orElse(false);
-    }
-
-    @Override
-    public String toString() {
-      return "DynamicSource{" +
-          "node=" + render.node() +
-          ", rendered=" + render.path() +
-          '}';
-    }
-
-    // TODO: equals, hashCode
-
-    private DynamicSource parent() {
-      for (Level ancestorLevel : level.ancestors()) {
-        for (DynamicSource parent : ancestorLevel.parent()) {
-          if (assignments.containsAll(parent.assignments)) {
-            return parent;
-          }
-        }
-      }
-
-      return null;
-    }
-  }
-
-  class Level implements Iterable<DynamicSource> {
-    final List<DynamicSource> members = new ArrayList<>();
-    final Level child;
-
-    Level parent;
-
-    Level() {
-      this(null);
-    }
-
-    private Level(Level child) {
-      this.child = child;
-      if (child != null) child.parent = this;
-    }
-
-    Optional<DynamicSource> addMember(RenderedNode render, Assignments assignments) {
-      if (!parent().isEmpty()) {
-        // TODO: Handle this case. Would require moving members around if added a repeat at a
-        // lower level.
-        throw new IllegalStateException("Cannot add members to level once a level has a " +
-            "non-empty parent.");
-      }
-
-      DynamicSource newMember = new DynamicSource(assignments, render, this);
-      Optional<DynamicSource> match = descendants().stream()
-          .flatMap(l -> l.members().stream())
-          .filter(s -> s.path().equals(newMember.path()))
-          .findAny();
-
-      if (match.isPresent()) {
-        log.warn("Repeat source path '{}' at nodes {} and descendant {}. Ignoring ancestor node.",
-            newMember.path(), newMember.node(), match.get().node());
-        return Optional.empty();
-      }
-
-      members.add(newMember);
-      return Optional.of(newMember);
-    }
-
-    List<DynamicSource> members() {
-      return Collections.unmodifiableList(members);
-    }
-
-    List<Level> ancestors() {
-      List<Level> ancestors = new ArrayList<>();
-      ancestors.add(this);
-      Level ancestor = this.parent;
-      while (ancestor != null && !ancestor.isEmpty()) {
-        ancestors.add(ancestor);
-        ancestor = ancestor.parent;
-      }
-      return ancestors;
-    }
-
-    List<Level> descendants() {
-      List<Level> descendants = new ArrayList<>();
-      descendants.add(this);
-      Level child = this.child;
-      while (child != null) {
-        descendants.add(child);
-        child = child.child;
-      }
-      return descendants;
-    }
-
-    Level parent() {
-      if (members.isEmpty()) {
-        return this;
-      }
-
-      if (parent != null) {
-        return parent;
-      }
-
-      return new Level(this);
-    }
-
-    boolean isEmpty() {
-      return members.isEmpty();
-    }
-
-    @Override
-    public Iterator<DynamicSource> iterator() {
-      return members().iterator();
-    }
-
-    // TODO: Better to string
-    // TODO: equals, hashCode
-    @Override
-    public String toString() {
-      return "Level{" +
-          "members=" + members +
           '}';
     }
   }

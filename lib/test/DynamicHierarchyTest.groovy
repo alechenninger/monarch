@@ -1,9 +1,7 @@
 import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
-import io.github.alechenninger.monarch.Source
 import io.github.alechenninger.monarch.SourceSpec
-import org.junit.Ignore
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
@@ -41,7 +39,7 @@ inventory:
 
   @Test
   void shouldCalculateDescendantsFromPotentialValues() {
-    assert hierarchy.descendants()*.path() == [
+    assert hierarchy.allSources()*.path() == [
         "common",
         "rhel",
         "environment/qa",

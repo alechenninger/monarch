@@ -43,7 +43,7 @@ mergeKeys:
 
     def options = new ApplyChangesOptionsFromSerializableConfig(config, FileSystems.default)
 
-    assert options.hierarchy().get().descendants().collect { it.path() } == ['foo', 'baz']
+    assert options.hierarchy().get().allSources().collect { it.path() } == ['foo', 'baz']
     assert options.mergeKeys() == ['bar'] as Set
   }
 }
