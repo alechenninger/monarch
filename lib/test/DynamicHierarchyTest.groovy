@@ -2,13 +2,117 @@ import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
 import io.github.alechenninger.monarch.SourceSpec
-import org.junit.Ignore
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
 
 class DynamicHierarchyTest {
   def yaml = new Yaml()
   def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
+sources:
+  - common
+  - "%{os}"
+  - environment/%{environment}
+  - teams/%{team}
+  - teams/%{team}/%{environment}
+  - teams/%{team}/%{environment}/%{app}
+  - nodes/%{hostname}
+inventory:
+  hostname:
+    - foo.com:
+        team: teamA
+        environment: prod
+        os: rhel
+    - bar.com
+  team:
+  - teamA:
+      app: store
+  - teamB
+  environment:
+  - qa
+  - prod
+  app:
+  - store
+  - blog
+  os:
+  - rhel
+'''))
+
+  @Test
+  void shouldCalculateDescendantsFromPotentialValues() {
+    assert hierarchy.allSources()*.path() == [
+        "common",
+        "rhel",
+        "environment/qa",
+        "environment/prod",
+        "teams/teamA",
+        "teams/teamB",
+        "teams/teamA/qa",
+        "teams/teamA/prod",
+        "teams/teamB/qa",
+        "teams/teamB/prod",
+        "teams/teamA/qa/store",
+        "teams/teamA/prod/store",
+        // Since teamA implies app: store, there are no /team/teamA/*/blog descendants
+        "teams/teamB/qa/store",
+        "teams/teamB/qa/blog",
+        "teams/teamB/prod/store",
+        "teams/teamB/prod/blog",
+        "nodes/foo.com",
+        "nodes/bar.com",
+    ]
+  }
+
+  @Test
+  void shouldCalculateAncestorsByExactSource() {
+    assert hierarchy.sourceFor("teams/teamA/qa").get().lineage()*.path() == [
+        "teams/teamA/qa",
+        "teams/teamA",
+        "environment/qa",
+        "common",
+    ]
+  }
+
+  @Test
+  void shouldNotReturnASourceForUnsatisfiableVariableCombination() {
+    assert hierarchy.sourceFor(["team": "teamA", "environment": "qa", "os": "rhel"]) ==
+        Optional.empty()
+  }
+
+  @Test
+  void shouldCalculateAncestorsByCompleteVariables() {
+    assert hierarchy.sourceFor(["team": "teamA", "environment": "qa"]).get()
+        .lineage()*.path() == [
+        "teams/teamA/qa",
+        "teams/teamA",
+        "environment/qa",
+        "common",
+    ]
+  }
+
+  @Test
+  // TODO: Not sure if this should include dynamic source with only one assignable value
+  // Question of: is assignables expected to be comprehensive WRT when a variable may be potentially
+  // absent or not? I'm thinking if it's not absent, then you should supply the variable.
+  void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
+    assert hierarchy.sourceFor(["hostname": "bar.com"]).get()
+        .lineage()*.path() == ["nodes/bar.com", "common"]
+  }
+
+  @Test
+  void shouldCreateNewHierarchiesByExactSource() {
+    assert hierarchy.sourceFor("teams/teamB/prod").get()
+        .descendants()*.path() == [
+        "teams/teamB/prod",
+        "teams/teamB/prod/store",
+        "teams/teamB/prod/blog",
+    ]
+  }
+
+  @Test
+  // We could consider instead returning two Sources, one for each environment variable.
+  // But this gets complicated actually (weird edge cases), so for now the algorithm is simple.
+  void shouldNotReturnSourceIfNoOneSourceHasMatchingVariables() {
+    def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - common
   - "%{os}"
@@ -37,83 +141,12 @@ inventory:
   - rhel
 '''))
 
-  @Test
-  void shouldCalculateDescendantsFromPotentialValues() {
-    assert hierarchy.descendants().collect { it.path() } == [
-        "common",
-        "rhel",
-        "environment/qa",
-        "environment/prod",
-        "teams/teamA/qa",
-        "teams/teamA/prod",
-        "teams/teamB/qa",
-        "teams/teamB/prod",
-        "teams/teamA/qa/store",
-        "teams/teamA/prod/store",
-        // Since teamA implies app: store, there are no /team/teamA/*/blog descendants
-        "teams/teamB/qa/store",
-        "teams/teamB/qa/blog",
-        "teams/teamB/prod/store",
-        "teams/teamB/prod/blog",
-        "nodes/foo.com",
-        "nodes/bar.com",
-    ]
-  }
-
-  @Test
-  void shouldCalculateAncestorsByExactSource() {
-    assert hierarchy.sourceFor("teams/teamA/qa").get().lineage().collect { it.path() } == [
-        "teams/teamA/qa",
-        "environment/qa",
-        "common",
-    ]
-  }
-
-  @Test
-  void shouldNotReturnASourceForUnsatisfiableVariableCombination() {
-    assert hierarchy.sourceFor(["team": "teamA", "environment": "qa", "os": "rhel"]) ==
-        Optional.empty()
-  }
-
-  @Test
-  void shouldCalculateAncestorsByCompleteVariables() {
-    assert hierarchy.sourceFor(["team": "teamA", "environment": "qa"]).get()
-        .lineage().collect { it.path() } == [
-        "teams/teamA/qa",
-        "environment/qa",
-        "common",
-    ]
-  }
-
-  @Test
-  // TODO: Not sure if this should include dynamic source with only one assignable value
-  // Question of: is assignables expected to be comprehensive WRT when a variable may be potentially
-  // absent or not? I'm thinking if it's not absent, then you should supply the variable.
-  void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
-    assert hierarchy.sourceFor(["hostname": "bar.com"]).get()
-        .lineage().collect { it.path() } == ["nodes/bar.com", "common"]
-  }
-
-  @Test
-  void shouldCreateNewHierarchiesByExactSource() {
-    assert hierarchy.sourceFor("teams/teamB/prod").get()
-        .descendants().collect { it.path() } == [
-        "teams/teamB/prod",
-        "teams/teamB/prod/store",
-        "teams/teamB/prod/blog",
-    ]
-  }
-
-  @Test
-  // We could consider instead returning two Sources, one for each environment variable.
-  // But this gets complicated actually (weird edge cases), so for now the algorithm is simple.
-  void shouldNotReturnSourceIfNoOneSourceHasMatchingVariables() {
     assert hierarchy.sourceFor(["team": "teamA"]) == Optional.empty()
   }
 
   @Test
   void shouldCreateNewHierarchiesByCompleteVariables() {
-    assert hierarchy.sourceFor(["environment": "qa"]).get().descendants().collect { it.path() } == [
+    assert hierarchy.sourceFor(["environment": "qa"]).get().descendants()*.path() == [
         "environment/qa",
         "teams/teamA/qa",
         "teams/teamB/qa",
@@ -156,15 +189,16 @@ inventory:
     ]))
 
     assert hierarchy.sourceFor(["bar": "baz"]).get()
-        .descendants().collect { it.path() } == ["baz", "bar/baz"]
+        .descendants()*.path() == ["baz", "bar/baz"]
   }
 
   @Test
   void shouldUseImpliedValuesForLineage() {
-    assert hierarchy.sourceFor(['hostname': 'foo.com']).get().lineage().collect { it.path() } == [
+    assert hierarchy.sourceFor(['hostname': 'foo.com']).get().lineage()*.path() == [
         "nodes/foo.com",
         "teams/teamA/prod/store",
         "teams/teamA/prod",
+        "teams/teamA",
         "environment/prod",
         "rhel",
         "common",
@@ -173,7 +207,7 @@ inventory:
 
   @Test
   void shouldUseImpliedValuesForDescendants() {
-    assert hierarchy.sourceFor(['environment': 'prod']).get().descendants().collect { it.path() } == [
+    assert hierarchy.sourceFor(['environment': 'prod']).get().descendants()*.path() == [
         "environment/prod",
         "teams/teamA/prod",
         "teams/teamB/prod",
@@ -210,7 +244,7 @@ potentials:
   - blog
 '''))
 
-    assert hierarchy.sourceFor(['environment': 'prod', 'team': 'teamB']).get().descendants().collect { it.path() } == [
+    assert hierarchy.sourceFor(['environment': 'prod', 'team': 'teamB']).get().descendants()*.path() == [
         "teams/teamB/prod",
         "teams/teamB/prod/store",
         "teams/teamB/prod/blog",
@@ -251,7 +285,7 @@ potentials:
   - rhel
 '''))
 
-    assert hierarchy.sourceFor(['app': 'blog']).get().descendants().collect { it.path() } == [
+    assert hierarchy.sourceFor(['app': 'blog']).get().descendants()*.path() == [
         "app/blog",
         "teams/teamB/qa/blog",
         "teams/teamB/prod/blog",
@@ -385,7 +419,8 @@ potentials:
   }
 
   @Test
-  void ancestorsDescendantsShouldBeConsistentWithChildLineage() {
+  // TODO: Not sure if this actually tests this
+  void ancestorsDescendantsShouldBeRelativeToAncestor() {
     def hierarchy = Hierarchy.fromStringListOrMap(yaml.load('''
 sources:
   - top
@@ -406,6 +441,18 @@ potentials:
     def cBar = hierarchy.sourceFor(['c': 'bar']).get()
 
     assert cBar.lineage().get(2).descendants()*.path() == ['top', 'foo', 'bar/foo']
+  }
+
+  @Test
+  void descendantsAncestorsShouldBeRelativeToDescendant() {
+    def prod = hierarchy.sourceFor(['environment': 'prod']).get()
+    def environmentUnderTeam = prod.descendants()[1]
+    assert environmentUnderTeam.lineage()*.path() == [
+        'teams/teamA/prod',
+        'teams/teamA',
+        'environment/prod',
+        'common'
+    ]
   }
 
   @Test

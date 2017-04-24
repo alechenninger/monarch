@@ -57,11 +57,14 @@ public interface DynamicNode {
     private final DynamicNode node;
     private final String path;
     private final Set<Assignment> usedAssignments;
+    private final int hash;
 
     public RenderedNode(String path, Set<Assignment> usedAssignments, DynamicNode node) {
       this.path = Objects.requireNonNull(path, "path");
       this.usedAssignments = Objects.requireNonNull(usedAssignments, "usedAssignments");
       this.node = Objects.requireNonNull(node, "node");
+
+      hash = Objects.hash(node, path, usedAssignments);
     }
 
     public String path() {
@@ -97,7 +100,7 @@ public interface DynamicNode {
 
     @Override
     public int hashCode() {
-      return Objects.hash(node, path, usedAssignments);
+      return hash;
     }
   }
 }

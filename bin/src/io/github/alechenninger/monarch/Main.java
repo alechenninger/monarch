@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -243,7 +242,7 @@ public class Main {
 
     // Sort by hierarchy depth if provided, else sort alphabetically
     Comparator<Change> changeComparator = hierarchy.map(h -> {
-      List<String> descendants = h.descendants().stream()
+      List<String> descendants = h.allSources().stream()
           .map(Source::path)
           .collect(Collectors.toList());
 

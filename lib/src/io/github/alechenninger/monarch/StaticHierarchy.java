@@ -66,7 +66,7 @@ class StaticHierarchy implements Hierarchy {
         "identifying a source via variables.");
   }
 
-  public List<Source> descendants() {
+  public List<Source> allSources() {
     return DescendantsIterator.asStream(rootNodes)
         .map(StaticSource::new)
         .collect(Collectors.toList());
