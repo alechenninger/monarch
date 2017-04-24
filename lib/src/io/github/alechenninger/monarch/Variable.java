@@ -19,6 +19,7 @@
 package io.github.alechenninger.monarch;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,8 @@ public class Variable {
   private final String name;
   private final List<Assignable> assignables;
   private final Inventory inventory;
+
+  private final Map<String, Assignment> cachedAssignments = new HashMap<>();
 
   public Variable(String name, List<Assignable> assignables, Inventory inventory) {
     this.name = Objects.requireNonNull(name, "name");
@@ -76,18 +79,27 @@ public class Variable {
   }
 
   public Assignment assign(String value) {
-    Optional<Assignable> assignable = assignables.stream()
-        .filter(a -> a.value().equals(value))
-        .findFirst();
+    Assignment assignment;
 
-    if (!assignable.isPresent()) {
+    if (cachedAssignments.containsKey(value)) {
+      assignment = cachedAssignments.get(value);
+    } else {
+      assignment = assignables.stream()
+          .filter(a -> a.value().equals(value))
+          .findFirst()
+          .map(a -> new Assignment(inventory, this, a))
+          .orElse(null);
+      cachedAssignments.put(value, assignment);
+    }
+
+    if (assignment == null) {
       throw new IllegalArgumentException("Cannot assign value <" + value + "> to variable <" +
           name + "> because value is not assignable for this variable. Check your assignment or " +
           "add value to inventory. An inventory needs to be comprehensive so it can be used to " +
           "discover all of the sources in your hierarchy.");
     }
 
-    return new Assignment(inventory, this, assignable.get());
+    return assignment;
   }
 
   @Override

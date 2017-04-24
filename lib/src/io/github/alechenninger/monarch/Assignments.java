@@ -20,6 +20,7 @@ package io.github.alechenninger.monarch;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.stream.Stream;
 public class Assignments implements Iterable<Assignment> {
   private final Set<Assignment> explicit = new LinkedHashSet<>();
   private final Set<Assignment> implicit = new LinkedHashSet<>();
+  private final Map<String, Assignment> byVariable = new HashMap<>();
   private final Inventory inventory;
 
   private final int hash;
@@ -119,12 +121,11 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public boolean isAssigned(String variable) {
-    return stream().anyMatch(a -> a.variable().name().equals(variable));
+    return byVariable.containsKey(variable);
   }
 
   public Assignment forVariable(String variable) {
-    return stream().filter(a -> a.variable().name().equals(variable))
-        .findAny()
+    return Optional.ofNullable(byVariable.get(variable))
         .orElseThrow(NoSuchElementException::new);
   }
 
@@ -255,7 +256,7 @@ public class Assignments implements Iterable<Assignment> {
   }
 
   public Stream<Assignment> stream() {
-    return Stream.concat(explicit.stream(), implicit.stream());
+    return byVariable.values().stream();
   }
 
   @Override
@@ -332,6 +333,7 @@ public class Assignments implements Iterable<Assignment> {
     }
 
     explicit.add(assignment);
+    byVariable.put(variable.name(), assignment);
     assignment.implied().forEach(this::addImplicit);
   }
 
@@ -347,6 +349,7 @@ public class Assignments implements Iterable<Assignment> {
     }
 
     this.implicit.add(assignment);
+    byVariable.put(assignment.variable().name(), assignment);
     assignment.implied().forEach(this::addImplicit);
   }
 
