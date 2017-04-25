@@ -196,8 +196,26 @@ three: 3"""
       def update = new ByteArrayOutputStream()
       parser.parseData(new ByteArrayInputStream(source.bytes))
           .writeUpdate([
-          'test': 12,
-          'three': 3,
+              'test': 12,
+              'three': 3,
+      ], update)
+
+      Assert.assertEquals(source.toString(), update.toString())
+    }
+
+    @Test
+    void maintainesExistingLackOfNewlineAtEndOfFileEvenIfNothingOutsideOfManagedBlock() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate([
+          'test': 12
+      ], out)
+
+      def source = out.toString().trim()
+
+      def update = new ByteArrayOutputStream()
+      parser.parseData(new ByteArrayInputStream(source.bytes))
+          .writeUpdate([
+              'test': 12,
       ], update)
 
       Assert.assertEquals(source.toString(), update.toString())
