@@ -1,5 +1,20 @@
 # Change Log
 
+## [v0.8.5](https://github.com/alechenninger/monarch/tree/v0.8.5) (2017-04-25)
+[Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.4...v0.8.5)
+
+**Closed issues:**
+
+- Lineage assignments should be relative to node in dynamic hierarchy [\#92](https://github.com/alechenninger/monarch/issues/92)
+- Make apply target optional [\#91](https://github.com/alechenninger/monarch/issues/91)
+
+**Merged pull requests:**
+
+- Fixes \#91: Allow omitting target as if to say, 'apply my change as is' [\#96](https://github.com/alechenninger/monarch/pull/96) ([alechenninger](https://github.com/alechenninger))
+- Avoid changing existing whitespace outside of managed yaml blocks [\#95](https://github.com/alechenninger/monarch/pull/95) ([alechenninger](https://github.com/alechenninger))
+- Cache some assignments... cache everything! [\#94](https://github.com/alechenninger/monarch/pull/94) ([alechenninger](https://github.com/alechenninger))
+- Fixes \#92: Make dynamic hierarchy source lineage and descendants relative [\#93](https://github.com/alechenninger/monarch/pull/93) ([alechenninger](https://github.com/alechenninger))
+
 ## [v0.8.4](https://github.com/alechenninger/monarch/tree/v0.8.4) (2017-01-29)
 [Full Changelog](https://github.com/alechenninger/monarch/compare/v0.8.3...v0.8.4)
 
