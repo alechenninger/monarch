@@ -24,7 +24,7 @@ https://github.com/alechenninger/monarch
 ```
 
 ```
-usage: monarch apply [-?] --changes CHANGES --target TARGET [TARGET ...]
+usage: monarch apply [-?] --changes CHANGES [--target TARGET [TARGET ...]]
                [--configs CONFIG [CONFIG ...]] [--hierarchy HIERARCHY] [--data-dir DATA_DIR]
                [--output-dir OUTPUT_DIR] [--merge-keys MERGE_KEY [MERGE_KEY ...]]
                [--yaml-isolate {always,never}]
@@ -83,6 +83,9 @@ optional arguments:
                          evaluate to a single source in a dynamic hierarchy. For example:
                          teams/myteam.yaml
                          environment=qa team=ops
+                         
+                         Without a target, the whole  hierarchy  is  up  for change, and so all
+                         changes are applied to whatever their targets are.
   --configs CONFIG [CONFIG ...], --config CONFIG [CONFIG ...]
                          Space delimited paths to  files  which  configures  default values for
                          command line options. By  default,  monarch  will  look for '.monarch'
