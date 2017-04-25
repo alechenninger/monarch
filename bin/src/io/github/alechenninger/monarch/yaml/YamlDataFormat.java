@@ -18,10 +18,10 @@
 
 package io.github.alechenninger.monarch.yaml;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.CharStreams;
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.DataFormat;
 import io.github.alechenninger.monarch.Hierarchy;
@@ -31,7 +31,6 @@ import io.github.alechenninger.monarch.yaml.YamlConfiguration.Isolate;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -48,7 +47,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 public class YamlDataFormat implements DataFormat {
   private final Yaml yaml;
@@ -120,10 +118,8 @@ public class YamlDataFormat implements DataFormat {
   @Override
   @SuppressWarnings("unchecked")
   public SourceData parseData(InputStream in) throws IOException {
-    Reader reader = new InputStreamReader(in, Charset.forName("UTF-8"));
-    try (BufferedReader buffered = new BufferedReader(reader)) {
-      String dataString = buffered.lines().collect(Collectors.joining("\n"));
-      return new YamlSourceData(dataString);
+    try (Reader reader = new InputStreamReader(in, Charset.forName("UTF-8"));) {
+      return new YamlSourceData(CharStreams.toString(reader));
     }
   }
 
@@ -158,8 +154,8 @@ public class YamlDataFormat implements DataFormat {
       this.managed = Optional.ofNullable(yaml.loadAs(managed, Map.class))
           .orElse(Collections.emptyMap());
 
-      this.pre = dataString.substring(0, managedBegin).trim();
-      this.post = dataString.substring(managedEnd).trim();
+      this.pre = dataString.substring(0, managedBegin);
+      this.post = dataString.substring(managedEnd);
       this.unmanaged = new HashMap<>();
 
       Map<String, Object> preData = yaml.loadAs(pre, Map.class);
@@ -238,25 +234,25 @@ public class YamlDataFormat implements DataFormat {
       }
 
       SortedMap<String, Object> newManaged = new TreeMap<>(unmanagedVsUpdate.entriesOnlyOnRight());
-      List<String> parts = new ArrayList<>(5);
+      StringBuilder answer = new StringBuilder();
 
       if (!data.pre.isEmpty()) {
-        parts.add(data.pre + '\n');
+        answer.append(data.pre);
       }
 
       if (!newManaged.isEmpty() || !data.managed.isEmpty()) {
-        parts.add(BEGIN_MONARCH_MANAGED);
+        answer.append(BEGIN_MONARCH_MANAGED).append('\n');
         if (!newManaged.isEmpty()) {
-          parts.add(yaml.dump(newManaged).trim());
+          answer.append(yaml.dump(newManaged).trim());
         }
-        parts.add(END_MONARCH_MANAGED + '\n');
+        answer.append('\n').append(END_MONARCH_MANAGED).append(data.managed.isEmpty() ? "\n" : "");
       }
 
       if (!data.post.isEmpty()) {
-        parts.add(data.post);
+        answer.append(data.post);
       }
 
-      return Joiner.on('\n').join(parts);
+      return answer.toString();
     }
   }
 
@@ -271,7 +267,7 @@ public class YamlDataFormat implements DataFormat {
     public String getUpdate(YamlSourceData data, Map<String, Object> update) {
       return BEGIN_MONARCH_MANAGED + '\n' +
           (update.isEmpty() ? "" : yaml.dump(new TreeMap<>(update)).trim() + '\n') +
-          END_MONARCH_MANAGED;
+          END_MONARCH_MANAGED + '\n';
     }
   }
 }
