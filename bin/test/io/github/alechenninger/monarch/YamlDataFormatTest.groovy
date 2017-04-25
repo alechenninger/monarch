@@ -21,12 +21,14 @@ package io.github.alechenninger.monarch
 import com.google.common.jimfs.Jimfs
 import io.github.alechenninger.monarch.yaml.YamlConfiguration
 import io.github.alechenninger.monarch.yaml.YamlDataFormat
+import org.junit.Assert
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 @RunWith(Enclosed.class)
 class YamlDataFormatTest {
@@ -63,7 +65,7 @@ class YamlDataFormatTest {
 
     @Test
     void shouldSortOutput() {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      def out = new ByteArrayOutputStream();
       parser.newSourceData().writeUpdate([
           'xyz': 1,
           'abc': 2,
@@ -73,12 +75,27 @@ class YamlDataFormatTest {
           'lmnop': 6
       ], out)
 
-      assert new String(out.toByteArray()).contains('''a: 3
+      assert out.toString().contains('''a: 3
 abc: 2
 cde: 5
 fgh: 4
 lmnop: 6
 xyz: 1''')
+    }
+
+    @Test
+    void endsFileWithNewline() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate([
+          'xyz': 1,
+          'abc': 2,
+          'a': 3,
+          'fgh': 4,
+          'cde': 5,
+          'lmnop': 6
+      ], out)
+
+      assert out.toString().endsWith('\n')
     }
   }
 
@@ -98,7 +115,7 @@ xyz: 1''')
 
     @Test
     void shouldSortOutput() {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      def out = new ByteArrayOutputStream()
       parser.newSourceData().writeUpdate([
           'xyz': 1,
           'abc': 2,
@@ -108,12 +125,92 @@ xyz: 1''')
           'lmnop': 6
       ], out)
 
-      assert new String(out.toByteArray()).contains('''a: 3
+      assert out.toString().contains('''a: 3
 abc: 2
 cde: 5
 fgh: 4
 lmnop: 6
 xyz: 1''')
+    }
+
+    @Test
+    void maintainsWhitespaceAroundManagedBlock() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate([
+          'test': 12
+      ], out)
+
+      def source = """
+
+one: 1
+two: 2
+
+${out.toString()}
+three: 3"""
+
+      def update = new ByteArrayOutputStream()
+      parser.parseData(new ByteArrayInputStream(source.bytes))
+          .writeUpdate([
+              'one': 1,
+              'two': 2,
+              'test': 12,
+              'three': 3,
+          ], update)
+
+      Assert.assertEquals(source.toString(), update.toString())
+    }
+
+    @Test
+    void maintainsExistingNewlineAtEndOfFile() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate([
+          'test': 12
+      ], out)
+
+      def source = """
+${out.toString()}
+three: 3
+"""
+
+      def update = new ByteArrayOutputStream()
+      parser.parseData(new ByteArrayInputStream(source.bytes))
+          .writeUpdate([
+          'test': 12,
+          'three': 3,
+      ], update)
+
+      Assert.assertEquals(source.toString(), update.toString())
+    }
+
+    @Test
+    void maintainesExistingLackOfNewlineAtEndOfFile() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate([
+          'test': 12
+      ], out)
+
+      def source = """
+${out.toString()}
+three: 3"""
+
+      def update = new ByteArrayOutputStream()
+      parser.parseData(new ByteArrayInputStream(source.bytes))
+          .writeUpdate([
+          'test': 12,
+          'three': 3,
+      ], update)
+
+      Assert.assertEquals(source.toString(), update.toString())
+    }
+
+    @Test
+    void addingManagedBlockAddsNewlineAtEndOfFile() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate([
+          'test': 12
+      ], out)
+
+      assert out.toString().endsWith('\n')
     }
   }
 }
