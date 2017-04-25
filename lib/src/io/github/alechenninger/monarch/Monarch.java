@@ -55,27 +55,29 @@ public class Monarch {
    */
   public Map<String, Map<String, Object>> generateSources(Source target, Iterable<Change> changes,
       Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    return generateSources(target.descendants(), changes, data, mergeKeys);
+  }
+
+  public Map<String, Map<String, Object>> generateSources(Hierarchy hierarchy,
+      Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    return generateSources(hierarchy.allSources(), changes, data, mergeKeys);
+  }
+
+  private Map<String, Map<String, Object>> generateSources(List<Source> sources,
+      Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
 
     // From top-most to inner-most, generate results, taking into account the results from ancestors
     // as we go along.
     if (log.isDebugEnabled()) {
-      log.debug("Generating sources for descendants: {}", Sources.pathsOf(target.descendants()));
+      log.debug("Generating sources for descendants: {}", Sources.pathsOf(sources));
     }
 
-    for (Source descendant : target.descendants()) {
+    for (Source descendant : sources) {
       result.put(descendant.path(), generateSingleSource(descendant, changes, result, mergeKeys));
     }
 
     return result;
-  }
-
-  private Optional<Change> findChangeForSource(Source source, Iterable<Change> changes) {
-    return StreamSupport.stream(changes.spliterator(), false)
-        .filter(c -> source.isTargetedBy(c.sourceSpec()))
-        .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
-            "Expected at most one change with matching source in list of changes, but got: " +
-                changes)));
   }
 
   /**
@@ -161,6 +163,14 @@ public class Monarch {
     }
 
     return resultSourceData;
+  }
+
+  private Optional<Change> findChangeForSource(Source source, Iterable<Change> changes) {
+    return StreamSupport.stream(changes.spliterator(), false)
+        .filter(c -> source.isTargetedBy(c.sourceSpec()))
+        .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
+            "Expected at most one change with matching source in list of changes, but got: " +
+                changes)));
   }
 
   private static Map<String, Map<String, Object>> copyMapAndValues(

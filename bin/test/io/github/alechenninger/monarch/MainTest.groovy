@@ -466,6 +466,64 @@ inventory:
   }
 
   @Test
+  void applyShouldApplyChangeWithoutTarget() {
+    writeFile('/etc/changes.yaml', '''
+---
+source: global.yaml
+set:
+  foo: baz
+---
+source: teams/myteam.yaml
+set:
+  myapp::version: 2
+  myapp::favorite_website: http://www.redhat.com
+---
+source: teams/myteam/stage.yaml
+set:
+  myapp::favorite_website: http://stage.redhat.com
+''')
+
+    writeDataSources([
+        'global.yaml': 'foo: "bar"',
+        'teams/myteam.yaml': 'bar: "baz"',
+        'teams/myteam/stage.yaml': 'fizz: "buzz"'
+    ])
+
+    writeFile('/etc/hierarchy.yaml', '''
+sources:
+  - global.yaml
+  - teams/%{team}.yaml
+  - teams/%{team}/%{environment}.yaml
+inventory:
+  team:
+    - myteam
+    - otherteam
+  environment:
+    - dev
+    - qa
+    - stage
+    - prod
+''')
+
+    main.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -d $dataDir -o /output/")
+
+    def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
+    def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
+    def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
+
+    assert ['foo': 'baz'] == yaml.load(globalYaml)
+    assert [
+        'fizz': 'buzz',
+        'myapp::favorite_website': 'http://stage.redhat.com',
+    ] == yaml.load(stageYaml)
+    assert [
+        'bar': 'baz',
+        'myapp::version': 2,
+        'myapp::favorite_website': 'http://www.redhat.com'
+    ] == yaml.load(myteamYaml)
+  }
+
+  @Test
   void applyShouldWriteSourceIfAllKeysRemoved() {
     writeDataSource('global.yaml', 'bar: 123')
     writeFile('/etc/changes.yaml', '''

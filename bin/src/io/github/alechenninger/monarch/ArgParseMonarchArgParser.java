@@ -286,7 +286,6 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
 
       subparser.addArgument("--target", "-t", "--source", "-s")
           .dest("target")
-          .required(true)
           .nargs("+")
           .help("A target is the source in the source tree from where you want to change, "
               + "including itself and any sources beneath it in the hierarchy. Redundant keys "
@@ -295,7 +294,10 @@ public class ArgParseMonarchArgParser implements MonarchArgParser {
               "key=value pairs which evaluate to a single source in a dynamic hierarchy. "
               + "For example:\n" +
               "teams/myteam.yaml\n" +
-              "environment=qa team=ops");
+              "environment=qa team=ops\n" +
+              "\n" +
+              "Without a target, the whole hierarchy is up for change, and so all changes are " +
+              "applied to whatever their targets are.");
 
       subparser.addArgument("--configs", "--config")
           .dest("configs")

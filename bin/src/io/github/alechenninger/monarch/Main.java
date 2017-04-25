@@ -142,21 +142,25 @@ public class Main {
             .orElseThrow(missingOptionException("data directory"));
         Hierarchy hierarchy = options.hierarchy()
             .orElseThrow(missingOptionException("hierarchy"));
-        SourceSpec targetSpec = options.target()
-            .orElseThrow(missingOptionException("target"));
+        Optional<SourceSpec> targetSpec = options.target();
 
         Map<String, SourceData> currentData =
             configuredFormats.parseDataSourcesInHierarchy(dataDir, hierarchy);
-        Source target = hierarchy.sourceFor(targetSpec).orElseThrow(
-            () -> new IllegalArgumentException("No source found in hierarchy which satisfies: " +
-                targetSpec));
 
         Iterable<Change> changes = options.changes();
         for (Change change : changes) {
           checkChangeIsApplicable(hierarchy, change);
         }
 
-        applyChanges(outputDir, changes, options.mergeKeys(), currentData, target);
+        if (targetSpec.isPresent()) {
+          Source target = hierarchy.sourceFor(targetSpec.get()).orElseThrow(
+              () -> new IllegalArgumentException("No source found in hierarchy which satisfies: " +
+                  targetSpec));
+          applyChanges(outputDir, changes, options.mergeKeys(), currentData, Targetable.of(target));
+        } else {
+          applyChanges(
+              outputDir, changes, options.mergeKeys(), currentData, Targetable.of(hierarchy));
+        }
       } catch (Exception e) {
         log.error("Error while applying changes.", e);
         return 2;
@@ -167,7 +171,7 @@ public class Main {
   }
 
   private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
-      Map<String, SourceData> currentSources, Source target) throws IOException {
+      Map<String, SourceData> currentSources, Targetable target) throws IOException {
     List<String> affectedSources = target.descendants().stream()
         .map(Source::path)
         .collect(Collectors.toList());
@@ -175,8 +179,8 @@ public class Main {
     Map<String, Map<String, Object>> currentData = currentSources.entrySet().stream()
         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().data()));
 
-    Map<String, Map<String, Object>> result = monarch.generateSources(
-        target, changes, currentData, mergeKeys);
+    Map<String, Map<String, Object>> result =
+        target.generateSources(monarch, changes, currentData, mergeKeys);
 
     for (Map.Entry<String, Map<String, Object>> pathToData : result.entrySet()) {
       String path = pathToData.getKey();
@@ -314,5 +318,41 @@ public class Main {
         .run(args);
 
     System.exit(exitCode);
+  }
+
+  interface Targetable {
+    static Targetable of(Source source) {
+      return new Targetable() {
+        @Override
+        public List<Source> descendants() {
+          return source.descendants();
+        }
+
+        @Override
+        public Map<String, Map<String, Object>> generateSources(Monarch monarch,
+            Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+          return monarch.generateSources(source, changes, data, mergeKeys);
+        }
+      };
+    }
+
+    static Targetable of(Hierarchy hierarchy) {
+      return new Targetable() {
+        @Override
+        public List<Source> descendants() {
+          return hierarchy.allSources();
+        }
+
+        @Override
+        public Map<String, Map<String, Object>> generateSources(Monarch monarch,
+            Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+          return monarch.generateSources(hierarchy, changes, data, mergeKeys);
+        }
+      };
+    }
+
+    List<Source> descendants();
+    Map<String, Map<String, Object>> generateSources(Monarch monarch, Iterable<Change> changes,
+        Map<String, Map<String, Object>> data, Set<String> mergeKeys);
   }
 }

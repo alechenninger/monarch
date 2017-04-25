@@ -227,6 +227,29 @@ class DynamicHierarchy implements Hierarchy {
     }
   }
 
+  private class Root implements Source {
+
+    @Override
+    public String path() {
+      return null;
+    }
+
+    @Override
+    public List<Source> lineage() {
+      return null;
+    }
+
+    @Override
+    public List<Source> descendants() {
+      return null;
+    }
+
+    @Override
+    public boolean isTargetedBy(SourceSpec spec) {
+      return false;
+    }
+  }
+
   private class RenderedSource implements Source {
     private final RenderedNode render;
     private final Assignments assignments;
