@@ -690,7 +690,7 @@ set:
         consoleOut,
         new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
         fs)
-    
+
     writeFile('/.monarch', '''
 hierarchy:
   top.yaml:

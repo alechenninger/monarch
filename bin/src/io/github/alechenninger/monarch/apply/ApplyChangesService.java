@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -83,9 +82,9 @@ public class ApplyChangesService {
             "No source found in hierarchy which satisfies: " + targetSpec))))
         .orElse(Targetable.of(hierarchy));
 
-    List<String> affectedSources = target.descendants().stream()
+    Set<String> affectedSources = target.descendants().stream()
         .map(Source::path)
-        .collect(Collectors.toList());
+        .collect(Collectors.toSet());
     // TODO: Consider currentSources of type Sources or something like that with getter for this
     Map<String, Map<String, Object>> currentData1 = currentData.entrySet().stream()
         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().data()));
@@ -105,7 +104,7 @@ public class ApplyChangesService {
       Map<String, Object> outData = pathToData.getValue();
       SourceData sourceData = currentData.containsKey(path)
           ? currentData.get(path)
-          : this.dataFormats.forPath(outPath).newSourceData();
+          : dataFormats.forPath(outPath).newSourceData();
 
       if (sourceData.isEmpty() && outData.isEmpty()) {
         continue;

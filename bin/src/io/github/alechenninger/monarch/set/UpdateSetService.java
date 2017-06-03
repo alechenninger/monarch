@@ -74,7 +74,7 @@ public class UpdateSetService {
         .findFirst();
 
     Map<String, Object> updatedSet = sourceChange.map(c -> new HashMap<>(c.set()))
-        .orElse(new HashMap<>());
+        .orElseGet(HashMap::new);
     updatedSet.putAll(toPut);
     updatedSet.keySet().removeAll(toRemove);
 
