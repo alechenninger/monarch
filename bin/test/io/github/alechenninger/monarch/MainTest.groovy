@@ -20,6 +20,8 @@ package io.github.alechenninger.monarch
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import io.github.alechenninger.monarch.apply.ApplyChangesService
+import io.github.alechenninger.monarch.set.UpdateSetService
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -42,9 +44,16 @@ class MainTest {
   def yaml = new Yaml(dumperOptions)
   def consoleOut = new ByteArrayOutputStream();
   def dataFormats = new DataFormats.Default()
+  def monarch = new Monarch()
 
-  def main = new Main(new Monarch(), yaml, new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
-      fs, dataFormats, consoleOut, consoleOut)
+  def main = new Main(
+      new ApplyChangesService(dataFormats, monarch),
+      new UpdateSetService(yaml),
+      dataFormats,
+      consoleOut,
+      consoleOut,
+      new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
+      fs)
 
   static def dataDir = '/etc/hierarchy'
   static def hierarchyFile = "/etc/hierarchy.yaml"
@@ -244,7 +253,13 @@ outputDir: /output/
   void shouldOutputErrorsToStderr() {
     def stderr = new ByteArrayOutputStream()
     def main = new Main(
-        new Monarch(), yaml, DefaultConfigPaths.standard(), fs, dataFormats, consoleOut, stderr)
+        new ApplyChangesService(dataFormats, monarch),
+        new UpdateSetService(yaml),
+        dataFormats,
+        consoleOut,
+        stderr,
+        new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
+        fs)
     main.run("set --source global.yaml foo --changes petstore.yaml")
     assert stderr.toString().contains("java.lang.IllegalArgumentException")
     assert !console.contains("java.lang.IllegalArgumentException")
@@ -668,8 +683,14 @@ set:
         .setWorkingDirectory("/working/directory/")
         .build())
     main = new Main(
-        new Monarch(), yaml, DefaultConfigPaths.standard(), fs, dataFormats, consoleOut, consoleOut)
-
+        new ApplyChangesService(dataFormats, monarch),
+        new UpdateSetService(yaml),
+        dataFormats,
+        consoleOut,
+        consoleOut,
+        new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
+        fs)
+    
     writeFile('/.monarch', '''
 hierarchy:
   top.yaml:
@@ -706,7 +727,13 @@ set:
         .setWorkingDirectory("/working/directory/")
         .build())
     main = new Main(
-        new Monarch(), yaml, DefaultConfigPaths.standard(), fs, dataFormats, consoleOut, consoleOut)
+        new ApplyChangesService(dataFormats, monarch),
+        new UpdateSetService(yaml),
+        dataFormats,
+        consoleOut,
+        consoleOut,
+        new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
+        fs)
 
     writeFile('/.monarch', '''
 hierarchy:

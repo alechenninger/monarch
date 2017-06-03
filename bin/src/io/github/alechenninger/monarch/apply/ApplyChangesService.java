@@ -20,8 +20,8 @@ package io.github.alechenninger.monarch.apply;
 
 import io.github.alechenninger.monarch.Change;
 import io.github.alechenninger.monarch.DataFormats;
+import io.github.alechenninger.monarch.DataFormatsConfiguration;
 import io.github.alechenninger.monarch.Hierarchy;
-import io.github.alechenninger.monarch.Main;
 import io.github.alechenninger.monarch.Monarch;
 import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.Source;
@@ -38,13 +38,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ApplyChangesService {
   private final DataFormats dataFormats;
   private final Monarch monarch;
 
-  private static final Logger log = LoggerFactory.getLogger(Main.class);
+  private static final Logger log = LoggerFactory.getLogger(ApplyChangesService.class);
 
   public ApplyChangesService(DataFormats dataFormats, Monarch monarch) {
     this.dataFormats = dataFormats;
@@ -52,22 +53,27 @@ public class ApplyChangesService {
   }
 
   public void applyChanges(ApplyChangesOptions options) throws IOException {
-    DataFormats configuredFormats = options.dataFormatsConfiguration()
-        .map(dataFormats::withConfiguration)
-        .orElse(dataFormats);
-
     Path outputDir = options.outputDir()
         .orElseThrow(() -> MonarchException.missingOption("output directory"));
     Path dataDir = options.dataDir()
         .orElseThrow(() -> MonarchException.missingOption("data directory"));
     Hierarchy hierarchy = options.hierarchy()
         .orElseThrow(() -> MonarchException.missingOption("hierarchy"));
-    Optional<SourceSpec> targetSpec = options.target();
 
+    applyChanges(outputDir, hierarchy, options.target(), options.changes(), options.mergeKeys(),
+        options.dataFormatsConfiguration(), dataDir);
+  }
+
+  private void applyChanges(Path outputDir, Hierarchy hierarchy, Optional<SourceSpec> targetSpec,
+      Iterable<Change> changes, Set<String> mergeKeys,
+      Optional<DataFormatsConfiguration> dataFormatsConfiguration, Path dataDir) {
+
+    DataFormats configuredFormats = dataFormatsConfiguration
+        .map(dataFormats::withConfiguration)
+        .orElse(dataFormats);
     Map<String, SourceData> currentData =
         configuredFormats.parseDataSourcesInHierarchy(dataDir, hierarchy);
 
-    Iterable<Change> changes = options.changes();
     for (Change change : changes) {
       checkChangeIsApplicable(hierarchy, change);
     }
@@ -85,7 +91,7 @@ public class ApplyChangesService {
         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().data()));
 
     Map<String, Map<String, Object>> result =
-        target.generateSources(monarch, changes, currentData1, options.mergeKeys());
+        target.generateSources(monarch, changes, currentData1, mergeKeys);
 
     for (Map.Entry<String, Map<String, Object>> pathToData : result.entrySet()) {
       String path = pathToData.getKey();
@@ -99,7 +105,7 @@ public class ApplyChangesService {
       Map<String, Object> outData = pathToData.getValue();
       SourceData sourceData = currentData.containsKey(path)
           ? currentData.get(path)
-          : dataFormats.forPath(outPath).newSourceData();
+          : this.dataFormats.forPath(outPath).newSourceData();
 
       if (sourceData.isEmpty() && outData.isEmpty()) {
         continue;

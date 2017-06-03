@@ -24,7 +24,7 @@ import io.github.alechenninger.monarch.apply.ApplyChangesService;
 import io.github.alechenninger.monarch.logging.Logging;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
-import io.github.alechenninger.monarch.util.MoreFiles;
+import io.github.alechenninger.monarch.set.UpdateSetService;
 import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import org.slf4j.LoggerFactory;
@@ -35,40 +35,29 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Supplier;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class Main {
   private final DefaultConfigPaths defaultConfigPaths;
   private final FileSystem fileSystem;
   private final DataFormats dataFormats;
-  private final Yaml yaml;
   private final MonarchArgParser parser;
   private final ApplyChangesService applyChangesService;
+  private final UpdateSetService updateSetService;
 
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
 
   // TODO: Don't use yaml directly for update changeset?
-  public Main(Monarch monarch, Yaml yaml, DefaultConfigPaths defaultConfigPaths,
-      FileSystem fileSystem, DataFormats dataFormats, OutputStream stdout, OutputStream stderr) {
-    this.yaml = yaml;
+  public Main(ApplyChangesService applyChangesService, UpdateSetService updateSetService,
+      DataFormats dataFormats, OutputStream stdout, OutputStream stderr,
+      DefaultConfigPaths defaultConfigPaths, FileSystem fileSystem) {
     this.dataFormats = dataFormats;
     this.defaultConfigPaths = defaultConfigPaths;
     this.fileSystem = fileSystem;
     this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo());
-    this.applyChangesService = new ApplyChangesService(dataFormats, monarch);
+    this.applyChangesService = applyChangesService;
+    this.updateSetService = updateSetService;
 
     Logging.outputTo(stdout, stderr);
     Logging.setLevel(Level.INFO);
@@ -110,13 +99,7 @@ public class Main {
         UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
             fileSystem, dataFormats, defaultConfigPaths);
 
-        SourceSpec source = options.source()
-            .orElseThrow(missingOptionException("source"));
-        Path outputPath = options.outputPath()
-            .orElseThrow(missingOptionException("output path"));
-
-        updateSetInChange(source, outputPath, options.changes(), options.putInSet(),
-            options.removeFromSet(), options.hierarchy());
+        updateSetService.updateSetInChange(options);
       } catch (Exception e) {
         log.error("Error while updating 'set' in change.", e);
         return 2;
@@ -143,72 +126,6 @@ public class Main {
     return 0;
   }
 
-  private void updateSetInChange(SourceSpec source, Path outputPath, Iterable<Change> changes,
-      Map<String, Object> toPut, Set<String> toRemove, Optional<Hierarchy> hierarchy)
-      throws IOException {
-    List<Change> outputChanges = StreamSupport.stream(changes.spliterator(), false)
-        // Exclude change we're replacing
-        .filter(c -> !c.sourceSpec().equals(source))
-        .collect(Collectors.toCollection(ArrayList::new));
-
-    // Change we will replace if present
-    Optional<Change> sourceChange = StreamSupport.stream(changes.spliterator(), false)
-        .filter(c -> source.equals(c.sourceSpec()))
-        .findFirst();
-
-    Map<String, Object> updatedSet = sourceChange.map(c -> new HashMap<>(c.set()))
-        .orElse(new HashMap<>());
-    updatedSet.putAll(toPut);
-    updatedSet.keySet().removeAll(toRemove);
-
-    Set<String> remove = sourceChange.map(Change::remove)
-        .orElse(Collections.emptySet());
-
-    // Add replacement change to output if it has any remaining content
-    if (!updatedSet.isEmpty() || !remove.isEmpty()) {
-      Change updatedSourceChange = source.toChange(updatedSet, remove);
-      outputChanges.add(updatedSourceChange);
-    }
-
-    if (hierarchy.map(h -> !h.sourceFor(source).isPresent()).orElse(false)) {
-      log.warn("Source not found in provided hierarchy. source={}", source);
-    }
-
-    // Sort by hierarchy depth if provided, else sort alphabetically
-    Comparator<Change> changeComparator = hierarchy.map(h -> {
-      List<String> descendants = h.allSources().stream()
-          .map(Source::path)
-          .collect(Collectors.toList());
-
-      return (Comparator<Change>) (c1, c2) -> {
-        // TODO make Source Comparable
-        String c1Source = c1.sourceSpec().findSource(h).map(Source::path).orElse("");
-        String c2Source = c2.sourceSpec().findSource(h).map(Source::path).orElse("");
-
-        int c1Index = descendants.indexOf(c1Source);
-        int c2Index = descendants.indexOf(c2Source);
-
-        if (c1Index < 0 || c2Index < 0) {
-          return c1Source.compareTo(c2Source);
-        }
-
-        return c1Index - c2Index;
-      };
-      // TODO maybe make change comparable too?
-    }).orElse(Comparator.comparing(Change::toString));
-
-    List<Map<String, Object>> serializableChanges = outputChanges.stream()
-        .sorted(changeComparator)
-        .map(Change::toMap)
-        .collect(Collectors.toList());
-
-    yaml.dumpAll(serializableChanges.iterator(), MoreFiles.createDirectoriesForWriter(outputPath));
-  }
-
-  private static Supplier<? extends RuntimeException> missingOptionException(String option) {
-    return () -> MonarchException.missingOption(option);
-  }
-
   public static void main(String[] args) throws IOException, ArgumentParserException {
     DumperOptions dumperOptions = new DumperOptions();
     dumperOptions.setPrettyFlow(true);
@@ -216,19 +133,22 @@ public class Main {
     dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 
     Yaml yaml = new Yaml(dumperOptions);
+    DataFormats.Default dataFormats = new DataFormats.Default(new DataFormatsConfiguration() {
+      @Override
+      public Optional<YamlConfiguration> yamlConfiguration() {
+        return Optional.of(YamlConfiguration.DEFAULT);
+      }
+    });
+    Monarch monarch = new Monarch();
 
     int exitCode = new Main(
-        new Monarch(),
-        yaml,
+        new ApplyChangesService(dataFormats, monarch),
+        new UpdateSetService(yaml),
+        dataFormats,
+        System.out, System.err,
         DefaultConfigPaths.standard(),
-        FileSystems.getDefault(),
-        new DataFormats.Default(new DataFormatsConfiguration() {
-          @Override
-          public Optional<YamlConfiguration> yamlConfiguration() {
-            return Optional.of(YamlConfiguration.DEFAULT);
-          }
-        }),
-        System.out, System.err)
+        FileSystems.getDefault()
+    )
         .run(args);
 
     System.exit(exitCode);
