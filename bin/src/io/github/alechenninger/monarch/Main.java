@@ -20,16 +20,17 @@ package io.github.alechenninger.monarch;
 
 import io.github.alechenninger.monarch.apply.ApplyChangesInput;
 import io.github.alechenninger.monarch.apply.ApplyChangesOptions;
+import io.github.alechenninger.monarch.apply.ApplyChangesService;
 import io.github.alechenninger.monarch.logging.Logging;
 import io.github.alechenninger.monarch.set.UpdateSetInput;
 import io.github.alechenninger.monarch.set.UpdateSetOptions;
+import io.github.alechenninger.monarch.util.MoreFiles;
 import io.github.alechenninger.monarch.yaml.YamlConfiguration;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileSystem;
@@ -52,22 +53,22 @@ import java.util.stream.StreamSupport;
 public class Main {
   private final DefaultConfigPaths defaultConfigPaths;
   private final FileSystem fileSystem;
-  private final Monarch monarch;
   private final DataFormats dataFormats;
   private final Yaml yaml;
   private final MonarchArgParser parser;
+  private final ApplyChangesService applyChangesService;
 
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
 
   // TODO: Don't use yaml directly for update changeset?
-  public Main(Monarch monarch, Yaml yaml, DefaultConfigPaths defaultConfigPaths, FileSystem fileSystem,
-      DataFormats dataFormats, OutputStream stdout, OutputStream stderr) {
-    this.monarch = monarch;
+  public Main(Monarch monarch, Yaml yaml, DefaultConfigPaths defaultConfigPaths,
+      FileSystem fileSystem, DataFormats dataFormats, OutputStream stdout, OutputStream stderr) {
     this.yaml = yaml;
     this.dataFormats = dataFormats;
     this.defaultConfigPaths = defaultConfigPaths;
     this.fileSystem = fileSystem;
     this.parser = new ArgParseMonarchArgParser(new DefaultAppInfo());
+    this.applyChangesService = new ApplyChangesService(dataFormats, monarch);
 
     Logging.outputTo(stdout, stderr);
     Logging.setLevel(Level.INFO);
@@ -132,35 +133,7 @@ public class Main {
         ApplyChangesOptions options = ApplyChangesOptions.fromInputAndConfigFiles(
             applyChangesInput, fileSystem, dataFormats, defaultConfigPaths);
 
-        DataFormats configuredFormats = options.dataFormatsConfiguration()
-            .map(dataFormats::withConfiguration)
-            .orElse(dataFormats);
-
-        Path outputDir = options.outputDir()
-            .orElseThrow(missingOptionException("output directory"));
-        Path dataDir = options.dataDir()
-            .orElseThrow(missingOptionException("data directory"));
-        Hierarchy hierarchy = options.hierarchy()
-            .orElseThrow(missingOptionException("hierarchy"));
-        Optional<SourceSpec> targetSpec = options.target();
-
-        Map<String, SourceData> currentData =
-            configuredFormats.parseDataSourcesInHierarchy(dataDir, hierarchy);
-
-        Iterable<Change> changes = options.changes();
-        for (Change change : changes) {
-          checkChangeIsApplicable(hierarchy, change);
-        }
-
-        if (targetSpec.isPresent()) {
-          Source target = hierarchy.sourceFor(targetSpec.get()).orElseThrow(
-              () -> new IllegalArgumentException("No source found in hierarchy which satisfies: " +
-                  targetSpec));
-          applyChanges(outputDir, changes, options.mergeKeys(), currentData, Targetable.of(target));
-        } else {
-          applyChanges(
-              outputDir, changes, options.mergeKeys(), currentData, Targetable.of(hierarchy));
-        }
+        applyChangesService.applyChanges(options);
       } catch (Exception e) {
         log.error("Error while applying changes.", e);
         return 2;
@@ -168,49 +141,6 @@ public class Main {
     }
 
     return 0;
-  }
-
-  private void applyChanges(Path outputDir, Iterable<Change> changes, Set<String> mergeKeys,
-      Map<String, SourceData> currentSources, Targetable target) throws IOException {
-    List<String> affectedSources = target.descendants().stream()
-        .map(Source::path)
-        .collect(Collectors.toList());
-    // TODO: Consider currentSources of type Sources or something like that with getter for this
-    Map<String, Map<String, Object>> currentData = currentSources.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().data()));
-
-    Map<String, Map<String, Object>> result =
-        target.generateSources(monarch, changes, currentData, mergeKeys);
-
-    for (Map.Entry<String, Map<String, Object>> pathToData : result.entrySet()) {
-      String path = pathToData.getKey();
-
-      // We only output a source if it is target or under.
-      if (!affectedSources.contains(path)) {
-        continue;
-      }
-
-      Path outPath = outputDir.resolve(path);
-      Map<String, Object> outData = pathToData.getValue();
-      SourceData sourceData = currentSources.containsKey(path)
-          ? currentSources.get(path)
-          : dataFormats.forPath(outPath).newSourceData();
-
-      if (sourceData.isEmpty() && outData.isEmpty()) {
-        continue;
-      }
-
-      log.debug("Writing result source data for {} to {}", path, outPath);
-
-      try {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        sourceData.writeUpdate(outData, out);
-        ensureParentDirectories(outPath);
-        Files.write(outPath, out.toByteArray());
-      } catch (Exception e) {
-        log.error("Failed to write updated data source for " + path + " to " + outPath, e);
-      }
-    }
   }
 
   private void updateSetInChange(SourceSpec source, Path outputPath, Iterable<Change> changes,
@@ -272,27 +202,11 @@ public class Main {
         .map(Change::toMap)
         .collect(Collectors.toList());
 
-    ensureParentDirectories(outputPath);
-    yaml.dumpAll(serializableChanges.iterator(), Files.newBufferedWriter(outputPath));
-  }
-
-  private static void checkChangeIsApplicable(Hierarchy hierarchy, Change change) {
-    SourceSpec spec = change.sourceSpec();
-    if (!spec.findSource(hierarchy).isPresent()) {
-      log.warn("Source for change not found in hierarchy. You may want to check this " +
-          "change's target for correctness: {}", spec);
-    }
-  }
-
-  private static void ensureParentDirectories(Path path) throws IOException {
-    Path parent = path.getParent();
-    if (parent != null) {
-      Files.createDirectories(parent);
-    }
+    yaml.dumpAll(serializableChanges.iterator(), MoreFiles.createDirectoriesForWriter(outputPath));
   }
 
   private static Supplier<? extends RuntimeException> missingOptionException(String option) {
-    return () -> new MonarchException("Missing required option: " + option);
+    return () -> MonarchException.missingOption(option);
   }
 
   public static void main(String[] args) throws IOException, ArgumentParserException {
@@ -320,39 +234,4 @@ public class Main {
     System.exit(exitCode);
   }
 
-  interface Targetable {
-    static Targetable of(Source source) {
-      return new Targetable() {
-        @Override
-        public List<Source> descendants() {
-          return source.descendants();
-        }
-
-        @Override
-        public Map<String, Map<String, Object>> generateSources(Monarch monarch,
-            Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-          return monarch.generateSources(source, changes, data, mergeKeys);
-        }
-      };
-    }
-
-    static Targetable of(Hierarchy hierarchy) {
-      return new Targetable() {
-        @Override
-        public List<Source> descendants() {
-          return hierarchy.allSources();
-        }
-
-        @Override
-        public Map<String, Map<String, Object>> generateSources(Monarch monarch,
-            Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-          return monarch.generateSources(hierarchy, changes, data, mergeKeys);
-        }
-      };
-    }
-
-    List<Source> descendants();
-    Map<String, Map<String, Object>> generateSources(Monarch monarch, Iterable<Change> changes,
-        Map<String, Map<String, Object>> data, Set<String> mergeKeys);
-  }
 }
