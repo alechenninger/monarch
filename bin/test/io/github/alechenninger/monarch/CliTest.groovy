@@ -34,7 +34,7 @@ import org.yaml.snakeyaml.Yaml
 import java.nio.file.Files
 
 @RunWith(JUnit4.class)
-class MainTest {
+class CliTest {
   def fs = Jimfs.newFileSystem()
   def dumperOptions = new DumperOptions().with {
     defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
@@ -46,7 +46,7 @@ class MainTest {
   def dataFormats = new DataFormats.Default()
   def monarch = new Monarch()
 
-  def main = new Main(
+  def cli = new Cli(
       new ApplyChangesService(dataFormats, monarch),
       new UpdateSetService(yaml),
       dataFormats,
@@ -126,7 +126,7 @@ global.yaml:
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
     ])
 
-    main.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
+    cli.run("-h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
     assert Files.notExists(fs.getPath('/output/teams/myteam.yaml'))
     assert Files.notExists(fs.getPath('/output/teams/myteam/stage.yaml'))
@@ -152,7 +152,7 @@ global.yaml:
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
     ])
 
-    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
+    cli.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
     def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
@@ -192,7 +192,7 @@ dataDir: /etc/hierarchy/
 outputDir: /output/
 ''')
 
-    main.run("apply -h ${hierarchyFile} --target teams/myteam.yaml " +
+    cli.run("apply -h ${hierarchyFile} --target teams/myteam.yaml " +
         "--config /etc/some_other_config.yaml /etc/and_one_more.yaml -c /etc/changes.yaml")
 
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
@@ -205,7 +205,7 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForMonarch() {
-    assert main.run("--help") == 0
+    assert cli.run("--help") == 0
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
     assert console =~ /usage: monarch.*\{apply/
@@ -213,7 +213,7 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForMonarchIfCommandUnrecognized() {
-    assert main.run("foobar") == 2
+    assert cli.run("foobar") == 2
     // Crazy regex is to ensure commands are showing up in syntax like {apply, set}
     // This means that it is not showing the help for a command but for monarch itself.
     assert console =~ /usage: monarch.*\{apply/
@@ -221,38 +221,38 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForApplyCommand() {
-    assert main.run("apply --help") == 0
+    assert cli.run("apply --help") == 0
     assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfBadArgumentProvided() {
-    assert main.run("apply --target foo --changes bar --wat") == 2
+    assert cli.run("apply --target foo --changes bar --wat") == 2
     assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForApplyCommandIfNoArgumentProvided() {
-    assert main.run("apply") == 2
+    assert cli.run("apply") == 2
     assert console.contains("usage: monarch apply")
   }
 
   @Test
   void shouldPrintHelpForSetCommand() {
-    assert main.run("set --help") == 0
+    assert cli.run("set --help") == 0
     assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldNotPrintHelpForSetCommandIfBadArgumentProvided() {
-    main.run("set --source global.yaml foo --changes petstore.yaml")
+    cli.run("set --source global.yaml foo --changes petstore.yaml")
     assert !console.contains("usage: monarch set")
   }
 
   @Test
   void shouldOutputErrorsToStderr() {
     def stderr = new ByteArrayOutputStream()
-    def main = new Main(
+    def main = new Cli(
         new ApplyChangesService(dataFormats, monarch),
         new UpdateSetService(yaml),
         dataFormats,
@@ -267,13 +267,13 @@ outputDir: /output/
 
   @Test
   void shouldPrintHelpForSetCommandIfNoArgumentProvided() {
-    assert main.run("set") == 2
+    assert cli.run("set") == 2
     assert console.contains("usage: monarch set")
   }
 
   @Test
   void shouldShowVersion() {
-    assert main.run("--version") == 0
+    assert cli.run("--version") == 0
     assert console ==~ /[0-9].[0-9].[0-9]\n*/
   }
 
@@ -297,7 +297,7 @@ outputDir: /output/
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
     ])
 
-    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
+    cli.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
     assert console =~ '/etc/changes.yaml'
   }
@@ -324,14 +324,14 @@ set:
         'teams/myteam/stage.yaml': 'fizz: "buzz"'
     ])
 
-    main.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
+    cli.run("apply -h ${hierarchyFile} -c /etc/changes.yaml -t teams/myteam.yaml -d $dataDir -o /output/")
 
     assert console =~ hierarchyFile
   }
 
   @Test
   void setShouldCreateNewChangesetIfNoneExists() {
-    main.run("set", "--changes", "/etc/new.yaml", "--source", "teams/myteam.yaml", "--put", "foo: bar");
+    cli.run("set", "--changes", "/etc/new.yaml", "--source", "teams/myteam.yaml", "--put", "foo: bar");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/new.yaml")))
         .collectMany { Change.fromMap(it as Map<String, Object>) }
@@ -351,7 +351,7 @@ set:
   myapp::version: 2
 ''')
 
-    main.run("set", "--changes", "/etc/changes.yaml", "--source", "teams/myteam.yaml", "--put", "");
+    cli.run("set", "--changes", "/etc/changes.yaml", "--source", "teams/myteam.yaml", "--put", "");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
         .collectMany { Change.fromMap(it as Map<String, Object>) }
@@ -364,7 +364,7 @@ set:
 
   @Test
   void setShouldCreateChangeByVariables() {
-    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops",
+    cli.run("set", "--change", "/etc/changes.yaml", "--source", "environment=qa", "team=ops",
         "--put", "app_version: 2");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
@@ -394,7 +394,7 @@ set:
   app_url: old.stage.app.com
 ''')
 
-    main.run("set", "--change", "/etc/changes.yaml", "--source", "environment=stage", "team=ops",
+    cli.run("set", "--change", "/etc/changes.yaml", "--source", "environment=stage", "team=ops",
         "--put", "app_url: stage.app.com");
 
     def changes = yaml.loadAll(Files.newBufferedReader(fs.getPath("/etc/changes.yaml")))
@@ -420,7 +420,7 @@ remove:
   - key_to_remove
 ''')
 
-    main.run("set", "--change", "/etc/changes.yaml", "--source", "foo/bar.yaml");
+    cli.run("set", "--change", "/etc/changes.yaml", "--source", "foo/bar.yaml");
 
     def changes = new String(Files.readAllBytes(fs.getPath("/etc/changes.yaml")), 'UTF-8')
 
@@ -463,7 +463,7 @@ inventory:
     - prod
 ''')
 
-    main.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -t team=myteam -d $dataDir -o /output/")
+    cli.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -t team=myteam -d $dataDir -o /output/")
 
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
     def stageYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam/stage.yaml')), 'UTF-8')
@@ -520,7 +520,7 @@ inventory:
     - prod
 ''')
 
-    main.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -d $dataDir -o /output/")
+    cli.run("apply -h /etc/hierarchy.yaml -c /etc/changes.yaml -d $dataDir -o /output/")
 
     def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
     def myteamYaml = new String(Files.readAllBytes(fs.getPath('/output/teams/myteam.yaml')), 'UTF-8')
@@ -548,7 +548,7 @@ remove:
   - bar
 ''')
 
-    main.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
+    cli.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
 
     assert Files.exists(fs.getPath('/output/global.yaml'))
 
@@ -566,7 +566,7 @@ set:
   foo: bar
 ''')
 
-    main.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
+    cli.run("apply -h $hierarchyFile -c /etc/changes.yaml -t global.yaml -d $dataDir -o /output/")
 
     assert Files.notExists(fs.getPath('/output/global.yaml'))
   }
@@ -590,7 +590,7 @@ set:
   key: new value
 ''')
 
-    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+    cli.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
         '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'never')
 
     def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
@@ -617,7 +617,7 @@ set:
   key: new value
 ''')
 
-    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+    cli.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
         '-d', dataDir, '-o', '/output/', '--config', '/etc/config.yaml')
 
     def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
@@ -644,7 +644,7 @@ set:
   key: new value
 ''')
 
-    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+    cli.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
         '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'never', '--config', '/etc/config.yaml')
 
     def globalYaml = new String(Files.readAllBytes(fs.getPath('/output/global.yaml')), 'UTF-8')
@@ -671,7 +671,7 @@ set:
   key: new value
 ''')
 
-    main.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
+    cli.run('apply', '-h', hierarchyFile, '-c', '/etc/changes.yaml', '-t', 'global.yaml',
         '-d', dataDir, '-o', '/output/', '--yaml-isolate', 'always', '--config', '/etc/config.yaml')
 
     assert Files.notExists(fs.getPath('/output/global.yaml'))
@@ -682,7 +682,7 @@ set:
     fs = Jimfs.newFileSystem(Configuration.unix().toBuilder()
         .setWorkingDirectory("/working/directory/")
         .build())
-    main = new Main(
+    cli = new Cli(
         new ApplyChangesService(dataFormats, monarch),
         new UpdateSetService(yaml),
         dataFormats,
@@ -712,7 +712,7 @@ set:
   key: new value
 ''')
 
-    main.run('apply', '-c', '/etc/changes.yaml', '-t', 'top.yaml')
+    cli.run('apply', '-c', '/etc/changes.yaml', '-t', 'top.yaml')
 
     def topPath = fs.getPath('/output/top.yaml')
     assert Files.exists(topPath)
@@ -726,7 +726,7 @@ set:
     fs = Jimfs.newFileSystem(Configuration.unix().toBuilder()
         .setWorkingDirectory("/working/directory/")
         .build())
-    main = new Main(
+    cli = new Cli(
         new ApplyChangesService(dataFormats, monarch),
         new UpdateSetService(yaml),
         dataFormats,
@@ -741,8 +741,8 @@ hierarchy:
   - bottom.yaml
 ''')
 
-    main.run('set', '-c', '/etc/changes.yaml', '-s', 'top.yaml', '--put', 'key: new value')
-    main.run('set', '-c', '/etc/changes.yaml', '-s', 'bottom.yaml', '--put', 'bottom_key: new value')
+    cli.run('set', '-c', '/etc/changes.yaml', '-s', 'top.yaml', '--put', 'key: new value')
+    cli.run('set', '-c', '/etc/changes.yaml', '-s', 'bottom.yaml', '--put', 'bottom_key: new value')
 
     // Test sorting which should use hierarchy config in working directory ancestry
     // A bit convoluted admittedly

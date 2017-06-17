@@ -31,6 +31,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Represents both a collection of known {@link DataFormat}s by capability, and a strategy for
@@ -189,18 +191,10 @@ public interface DataFormats {
   }
 
   default Map<String, SourceData> parseDataSourcesInHierarchy(Path dataDir, Hierarchy hierarchy) {
-    Map<String, SourceData> data = new HashMap<>();
-
-    hierarchy.allSources().stream()
+    return hierarchy.allSources().stream()
         // TODO .parallel() but yaml is not threadsafe
         .map(Source::path)
-        .forEach(source -> {
-          Path sourcePath = dataDir.resolve(source);
-          SourceData sourceData = parseData(sourcePath);
-          data.put(source, sourceData);
-        });
-
-    return data;
+        .collect(Collectors.toMap(Function.identity(), p -> parseData(dataDir.resolve(p))));
   }
 
   class Default implements DataFormats {

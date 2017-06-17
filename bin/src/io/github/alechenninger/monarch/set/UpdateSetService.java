@@ -50,16 +50,6 @@ public class UpdateSetService {
     this.yaml = yaml;
   }
 
-  public void updateSetInChange(UpdateSetOptions options) throws IOException {
-    SourceSpec source = options.source()
-        .orElseThrow(() -> MonarchException.missingOption("source"));
-    Path outputPath = options.outputPath()
-        .orElseThrow(() -> MonarchException.missingOption("output path"));
-
-    updateSetInChange(source, outputPath, options.changes(), options.putInSet(),
-        options.removeFromSet(), options.hierarchy());
-  }
-
   public void updateSetInChange(SourceSpec source, Path outputPath, Iterable<Change> changes,
       Map<String, Object> toPut, Set<String> toRemove, Optional<Hierarchy> hierarchy)
       throws IOException {

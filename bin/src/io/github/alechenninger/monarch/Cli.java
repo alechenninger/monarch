@@ -35,10 +35,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.util.Optional;
+import java.nio.file.Path;
 import java.util.logging.Level;
 
-public class Main {
+public class Cli {
   private final DefaultConfigPaths defaultConfigPaths;
   private final FileSystem fileSystem;
   private final DataFormats dataFormats;
@@ -46,10 +46,9 @@ public class Main {
   private final ApplyChangesService applyChangesService;
   private final UpdateSetService updateSetService;
 
-  private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
+  private static final org.slf4j.Logger log = LoggerFactory.getLogger(Cli.class);
 
-  // TODO: Don't use yaml directly for update changeset?
-  public Main(ApplyChangesService applyChangesService, UpdateSetService updateSetService,
+  public Cli(ApplyChangesService applyChangesService, UpdateSetService updateSetService,
       DataFormats dataFormats, OutputStream stdout, OutputStream stderr,
       DefaultConfigPaths defaultConfigPaths, FileSystem fileSystem) {
     this.dataFormats = dataFormats;
@@ -99,7 +98,13 @@ public class Main {
         UpdateSetOptions options = UpdateSetOptions.fromInputAndConfigFiles(updateSetInput,
             fileSystem, dataFormats, defaultConfigPaths);
 
-        updateSetService.updateSetInChange(options);
+        SourceSpec source = options.source()
+            .orElseThrow(() -> MonarchException.missingOption("source"));
+        Path outputPath = options.outputPath()
+            .orElseThrow(() -> MonarchException.missingOption("output path"));
+
+        updateSetService.updateSetInChange(source, outputPath, options.changes(),
+            options.putInSet(), options.removeFromSet(), options.hierarchy());
       } catch (Exception e) {
         log.error("Error while updating 'set' in change.", e);
         return 2;
@@ -116,7 +121,15 @@ public class Main {
         ApplyChangesOptions options = ApplyChangesOptions.fromInputAndConfigFiles(
             applyChangesInput, fileSystem, dataFormats, defaultConfigPaths);
 
-        applyChangesService.applyChanges(options);
+        Path outputDir = options.outputDir()
+            .orElseThrow(() -> MonarchException.missingOption("output directory"));
+        Path dataDir = options.dataDir()
+            .orElseThrow(() -> MonarchException.missingOption("data directory"));
+        Hierarchy hierarchy = options.hierarchy()
+            .orElseThrow(() -> MonarchException.missingOption("hierarchy"));
+
+        applyChangesService.applyChanges(outputDir, hierarchy, options.target(), options.changes(),
+            options.mergeKeys(), options.dataFormatsConfiguration(), dataDir);
       } catch (Exception e) {
         log.error("Error while applying changes.", e);
         return 2;
@@ -133,25 +146,19 @@ public class Main {
     dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 
     Yaml yaml = new Yaml(dumperOptions);
-    DataFormats.Default dataFormats = new DataFormats.Default(new DataFormatsConfiguration() {
-      @Override
-      public Optional<YamlConfiguration> yamlConfiguration() {
-        return Optional.of(YamlConfiguration.DEFAULT);
-      }
-    });
+    DataFormats.Default dataFormats = new DataFormats.Default();
     Monarch monarch = new Monarch();
 
-    int exitCode = new Main(
+    Cli cli = new Cli(
         new ApplyChangesService(dataFormats, monarch),
         new UpdateSetService(yaml),
         dataFormats,
         System.out, System.err,
         DefaultConfigPaths.standard(),
         FileSystems.getDefault()
-    )
-        .run(args);
+    );
 
-    System.exit(exitCode);
+    System.exit(cli.run(args));
   }
 
 }

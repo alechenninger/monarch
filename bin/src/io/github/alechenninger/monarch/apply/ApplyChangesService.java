@@ -23,7 +23,6 @@ import io.github.alechenninger.monarch.DataFormats;
 import io.github.alechenninger.monarch.DataFormatsConfiguration;
 import io.github.alechenninger.monarch.Hierarchy;
 import io.github.alechenninger.monarch.Monarch;
-import io.github.alechenninger.monarch.MonarchException;
 import io.github.alechenninger.monarch.Source;
 import io.github.alechenninger.monarch.SourceData;
 import io.github.alechenninger.monarch.SourceSpec;
@@ -33,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -51,25 +49,13 @@ public class ApplyChangesService {
     this.monarch = monarch;
   }
 
-  public void applyChanges(ApplyChangesOptions options) throws IOException {
-    Path outputDir = options.outputDir()
-        .orElseThrow(() -> MonarchException.missingOption("output directory"));
-    Path dataDir = options.dataDir()
-        .orElseThrow(() -> MonarchException.missingOption("data directory"));
-    Hierarchy hierarchy = options.hierarchy()
-        .orElseThrow(() -> MonarchException.missingOption("hierarchy"));
-
-    applyChanges(outputDir, hierarchy, options.target(), options.changes(), options.mergeKeys(),
-        options.dataFormatsConfiguration(), dataDir);
-  }
-
-  private void applyChanges(Path outputDir, Hierarchy hierarchy, Optional<SourceSpec> targetSpec,
+  public void applyChanges(Path outputDir, Hierarchy hierarchy, Optional<SourceSpec> targetSpec,
       Iterable<Change> changes, Set<String> mergeKeys,
       Optional<DataFormatsConfiguration> dataFormatsConfiguration, Path dataDir) {
-
     DataFormats configuredFormats = dataFormatsConfiguration
         .map(dataFormats::withConfiguration)
         .orElse(dataFormats);
+
     Map<String, SourceData> currentData =
         configuredFormats.parseDataSourcesInHierarchy(dataDir, hierarchy);
 
