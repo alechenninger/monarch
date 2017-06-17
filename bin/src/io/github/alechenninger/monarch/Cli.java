@@ -138,27 +138,4 @@ public class Cli {
 
     return 0;
   }
-
-  public static void main(String[] args) throws IOException, ArgumentParserException {
-    DumperOptions dumperOptions = new DumperOptions();
-    dumperOptions.setPrettyFlow(true);
-    dumperOptions.setIndent(YamlConfiguration.DEFAULT.indent());
-    dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-
-    Yaml yaml = new Yaml(dumperOptions);
-    DataFormats.Default dataFormats = new DataFormats.Default();
-    Monarch monarch = new Monarch();
-
-    Cli cli = new Cli(
-        new ApplyChangesService(dataFormats, monarch),
-        new UpdateSetService(yaml),
-        dataFormats,
-        System.out, System.err,
-        DefaultConfigPaths.standard(),
-        FileSystems.getDefault()
-    );
-
-    System.exit(cli.run(args));
-  }
-
 }

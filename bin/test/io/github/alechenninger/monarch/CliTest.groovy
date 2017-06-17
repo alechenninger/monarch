@@ -252,7 +252,7 @@ outputDir: /output/
   @Test
   void shouldOutputErrorsToStderr() {
     def stderr = new ByteArrayOutputStream()
-    def main = new Cli(
+    def cli = new Cli(
         new ApplyChangesService(dataFormats, monarch),
         new UpdateSetService(yaml),
         dataFormats,
@@ -260,7 +260,7 @@ outputDir: /output/
         stderr,
         new DefaultConfigPaths("/etc/monarch.yaml", ".monarch"),
         fs)
-    main.run("set --source global.yaml foo --changes petstore.yaml")
+    cli.run("set --source global.yaml foo --changes petstore.yaml")
     assert stderr.toString().contains("java.lang.IllegalArgumentException")
     assert !console.contains("java.lang.IllegalArgumentException")
   }
