@@ -30,4 +30,8 @@ public class MonarchException extends RuntimeException {
   public MonarchException(Throwable cause) {
     super(cause);
   }
+
+  public static MonarchException missingOption(String option) {
+    return new MonarchException("Missing required option: " + option);
+  }
 }
