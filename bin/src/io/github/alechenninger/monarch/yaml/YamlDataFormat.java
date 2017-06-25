@@ -265,8 +265,12 @@ public class YamlDataFormat implements DataFormat {
 
     @Override
     public String getUpdate(YamlSourceData data, Map<String, Object> update) {
+      if (update.isEmpty()) {
+        return "";
+      }
+
       return BEGIN_MONARCH_MANAGED + '\n' +
-          (update.isEmpty() ? "" : yaml.dump(new TreeMap<>(update)).trim() + '\n') +
+          yaml.dump(new TreeMap<>(update)).trim() + '\n'+
           END_MONARCH_MANAGED + '\n';
     }
   }

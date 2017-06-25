@@ -28,7 +28,6 @@ import org.junit.runner.RunWith
 import org.yaml.snakeyaml.Yaml
 
 import java.nio.file.Files
-import java.nio.file.Path
 
 @RunWith(Enclosed.class)
 class YamlDataFormatTest {
@@ -51,6 +50,15 @@ class YamlDataFormatTest {
     def parser = new YamlDataFormat(new YamlConfiguration() {
       YamlConfiguration.Isolate updateIsolation() { YamlConfiguration.Isolate.NEVER }
     })
+
+    @Test
+    void removesEmptyFiles() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate(['test': '123'], out)
+      out.reset()
+      parser.parseData(new ByteArrayInputStream(out.toByteArray())).writeUpdate([:], out)
+      assert [] == out.toByteArray().toList()
+    }
 
     @Test
     void shouldAllowUpdatesToUnmanagedKeys() {
@@ -104,6 +112,15 @@ xyz: 1''')
     def parser = new YamlDataFormat(new YamlConfiguration() {
       YamlConfiguration.Isolate updateIsolation() { YamlConfiguration.Isolate.ALWAYS }
     })
+
+    @Test
+    void removesEmptyFiles() {
+      def out = new ByteArrayOutputStream()
+      parser.newSourceData().writeUpdate(['test': '123'], out)
+      out.reset()
+      parser.parseData(new ByteArrayInputStream(out.toByteArray())).writeUpdate([:], out)
+      assert [] == out.toByteArray().toList()
+    }
 
     @Test(expected = MonarchException.class)
     void shouldNotAllowUpdatesToUnmanagedKeys() {
