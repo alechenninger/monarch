@@ -55,8 +55,9 @@ class YamlDataFormatTest {
     void removesEmptyFiles() {
       def out = new ByteArrayOutputStream()
       parser.newSourceData().writeUpdate(['test': '123'], out)
+      def original = out.toByteArray()
       out.reset()
-      parser.parseData(new ByteArrayInputStream(out.toByteArray())).writeUpdate([:], out)
+      parser.parseData(new ByteArrayInputStream(original)).writeUpdate([:], out)
       assert [] == out.toByteArray().toList()
     }
 
@@ -117,8 +118,9 @@ xyz: 1''')
     void removesEmptyFiles() {
       def out = new ByteArrayOutputStream()
       parser.newSourceData().writeUpdate(['test': '123'], out)
+      def original = out.toByteArray()
       out.reset()
-      parser.parseData(new ByteArrayInputStream(out.toByteArray())).writeUpdate([:], out)
+      parser.parseData(new ByteArrayInputStream(original)).writeUpdate([:], out)
       assert [] == out.toByteArray().toList()
     }
 
