@@ -240,19 +240,23 @@ public class YamlDataFormat implements DataFormat {
         answer.append(data.pre);
       }
 
-      if (!newManaged.isEmpty() || !data.managed.isEmpty()) {
+      if (!newManaged.isEmpty()/* || !data.managed.isEmpty()*/) {
         answer.append(BEGIN_MONARCH_MANAGED).append('\n');
         if (!newManaged.isEmpty()) {
-          answer.append(yaml.dump(newManaged).trim());
+          answer.append(yaml.dump(newManaged).trim()).append('\n');
         }
-        answer.append('\n').append(END_MONARCH_MANAGED).append(data.managed.isEmpty() ? "\n" : "");
+        answer.append(END_MONARCH_MANAGED).append(data.managed.isEmpty() ? "\n" : "");
       }
 
       if (!data.post.isEmpty()) {
         answer.append(data.post);
       }
 
-      return answer.toString();
+      return emptyIfBlank(answer.toString());
+    }
+
+    private static String emptyIfBlank(String string) {
+      return string.trim().isEmpty() ? "" : string;
     }
   }
 
@@ -265,8 +269,12 @@ public class YamlDataFormat implements DataFormat {
 
     @Override
     public String getUpdate(YamlSourceData data, Map<String, Object> update) {
+      if (update.isEmpty()) {
+        return "";
+      }
+
       return BEGIN_MONARCH_MANAGED + '\n' +
-          (update.isEmpty() ? "" : yaml.dump(new TreeMap<>(update)).trim() + '\n') +
+          yaml.dump(new TreeMap<>(update)).trim() + '\n'+
           END_MONARCH_MANAGED + '\n';
     }
   }
