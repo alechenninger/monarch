@@ -19,18 +19,19 @@
 package io.github.alechenninger.monarch;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-public abstract class Sources {
-  public static List<String> pathsOf(List<Source> sources) {
-    return sources.stream()
-        .map(Source::path)
-        .collect(Collectors.toList());
+public interface Level {
+  List<Source> sources();
+  // TODO: Do we need this?
+  boolean skippable();
+  boolean isTargetedBy(SourceSpec spec);
+  default boolean isEmpty() {
+    return sources().isEmpty();
   }
-
-  public static List<String> pathsOfLineage(List<Level> lineage) {
-    return pathsOf(lineage.stream()
-        .flatMap(l -> l.sources().stream())
-        .collect(Collectors.toList()));
+  default int size() {
+    return sources().size();
+  }
+  default Source get(int index) {
+    return sources().get(index);
   }
 }

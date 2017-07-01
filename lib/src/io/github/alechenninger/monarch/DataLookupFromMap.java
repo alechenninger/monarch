@@ -131,7 +131,7 @@ public class DataLookupFromMap implements DataLookup {
   }
 
   private List<String> sourceAncestry() {
-    return source.lineage().stream().map(Source::path).collect(Collectors.toList());
+    return source.lineage().stream().flatMap(l -> l.sources().stream()).map(Source::path).collect(Collectors.toList());
   }
 
   private Map<String, Object> getDataBySource(String source) {

@@ -1,6 +1,8 @@
 import io.github.alechenninger.monarch.Assignable
 import io.github.alechenninger.monarch.Hierarchy
 import io.github.alechenninger.monarch.Inventory
+import io.github.alechenninger.monarch.Level
+import io.github.alechenninger.monarch.Source
 import io.github.alechenninger.monarch.SourceSpec
 import org.junit.Test
 import org.yaml.snakeyaml.Yaml
@@ -22,7 +24,17 @@ inventory:
         team: teamA
         environment: prod
         os: rhel
-    - bar.com
+    - bar.com:
+        environment: prod
+        os: rhel
+    - baz.com:
+        team: teamB
+        environment: prod
+        os: macos
+    - qa.baz.com:
+        team: teamB
+        environment: qa
+        os: macos
   team:
   - teamA:
       app: store
@@ -35,13 +47,29 @@ inventory:
   - blog
   os:
   - rhel
+  - macos
 '''))
+
+  // TODO: Support explicitly unassigned variables
+  // TODO: Should bottom of hierarchy be special? We know there's nothing below it.
+  // Perhaps that means that its lineage is more restrictive: we know at that point nothing else
+  // can be assigned, so for example bar.com will never inherit from a team because we know it
+  // doesn't have a team assigned, and there's nothing below it that could.
+  // Another way to think about this is, "what do we know cannot be assigned at or below this point
+  // in the hierarchy?"
+  // Consider not all inventories may be comprehensive. We can check however if we can look at a
+  // directory of sources and see if they are all covered by the inventory. Then we can be smart
+  // about what could be assigned if we wanted to be.
+  // This is assuming that if a variable is defined, then it is complete with respect to its
+  // assignables and their implications.
+  // See comment in DynamicHierarchy#RenderedLevel for algorithm thoughts.
 
   @Test
   void shouldCalculateDescendantsFromPotentialValues() {
     assert hierarchy.allSources()*.path() == [
         "common",
         "rhel",
+        "macos",
         "environment/qa",
         "environment/prod",
         "teams/teamA",
@@ -59,16 +87,20 @@ inventory:
         "teams/teamB/prod/blog",
         "nodes/foo.com",
         "nodes/bar.com",
+        "nodes/baz.com",
+        "nodes/qa.baz.com",
     ]
   }
 
   @Test
   void shouldCalculateAncestorsByExactSource() {
-    assert hierarchy.sourceFor("teams/teamA/qa").get().lineage()*.path() == [
-        "teams/teamA/qa",
-        "teams/teamA",
-        "environment/qa",
-        "common",
+    assert hierarchy.sourceFor("teams/teamA/qa").get()
+        .lineage()*.sources().collect { it*.path() } == [
+        ["teams/teamA/qa"],
+        ["teams/teamA"],
+        ["environment/qa"],
+        ["rhel", "macos"],
+        ["common"],
     ]
   }
 
@@ -81,21 +113,44 @@ inventory:
   @Test
   void shouldCalculateAncestorsByCompleteVariables() {
     assert hierarchy.sourceFor(["team": "teamA", "environment": "qa"]).get()
-        .lineage()*.path() == [
-        "teams/teamA/qa",
-        "teams/teamA",
-        "environment/qa",
-        "common",
+        .lineage()*.sources().collect { it*.path() } == [
+        ["teams/teamA/qa"],
+        ["teams/teamA"],
+        ["environment/qa"],
+        ["rhel", "macos"],
+        ["common"],
     ]
   }
 
   @Test
-  // TODO: Not sure if this should include dynamic source with only one assignable value
-  // Question of: is assignables expected to be comprehensive WRT when a variable may be potentially
-  // absent or not? I'm thinking if it's not absent, then you should supply the variable.
-  void shouldNotIncludeSourcesInAncestryWithAbsentVariables() {
+  void shouldIncludeOnlyWellKnownSourcesInLineageForBottomSource() {
     assert hierarchy.sourceFor(["hostname": "bar.com"]).get()
-        .lineage()*.path() == ["nodes/bar.com", "common"]
+        .lineage()*.sources().collect { it*.path() } == [
+        ["nodes/bar.com"],
+        ["environment/prod"],
+        ["rhel"],
+        ["common"],
+    ]
+  }
+
+  @Test
+  void shouldGetTopMostLevelThatDefinesAllVariablesWithAllPossibleSourcesAtThatLevel() {
+    assert hierarchy.levelFor(["app": "store"]).get().sources()*.path() == [
+        "teams/teamA/qa/store",
+        "teams/teamA/prod/store",
+        "teams/teamB/qa/store",
+        "teams/teamB/prod/store"
+    ]
+    assert hierarchy.levelFor(["app": "store", "team": "teamA"]).get().sources()*.path() == [
+        "teams/teamA/qa/store",
+        "teams/teamA/prod/store",
+    ]
+    assert hierarchy.levelFor(["team": "teamA"]).get().sources()*.path() == ["teams/teamA"]
+  }
+
+  @Test
+  void shouldGetTopMostLevelThatUsesNoVariables() {
+    assert hierarchy.levelFor([:]).get().sources()*.path() == ["common"]
   }
 
   @Test
@@ -105,6 +160,7 @@ inventory:
         "teams/teamB/prod",
         "teams/teamB/prod/store",
         "teams/teamB/prod/blog",
+        "nodes/baz.com",
     ]
   }
 
@@ -153,6 +209,7 @@ inventory:
         "teams/teamA/qa/store",
         "teams/teamB/qa/store",
         "teams/teamB/qa/blog",
+        "nodes/qa.baz.com",
     ]
   }
 
@@ -194,14 +251,15 @@ inventory:
 
   @Test
   void shouldUseImpliedValuesForLineage() {
-    assert hierarchy.sourceFor(['hostname': 'foo.com']).get().lineage()*.path() == [
-        "nodes/foo.com",
-        "teams/teamA/prod/store",
-        "teams/teamA/prod",
-        "teams/teamA",
-        "environment/prod",
-        "rhel",
-        "common",
+    assert hierarchy.sourceFor(['hostname': 'foo.com']).get()
+        .lineage()*.sources().collect { it*.path() } == [
+        ["nodes/foo.com"],
+        ["teams/teamA/prod/store"],
+        ["teams/teamA/prod"],
+        ["teams/teamA"],
+        ["environment/prod"],
+        ["rhel"],
+        ["common"],
     ]
   }
 
@@ -215,6 +273,8 @@ inventory:
         "teams/teamB/prod/store",
         "teams/teamB/prod/blog",
         "nodes/foo.com",
+        "nodes/bar.com",
+        "nodes/baz.com",
     ]
   }
 
@@ -294,9 +354,10 @@ potentials:
 
   @Test
   void shouldTargetAncestorOfSourceWithoutAllAssignmentsOfSource() {
-    assert hierarchy.sourceFor(['hostname': 'foo.com']).get()
-        .lineage().get(2)
-        .isTargetedBy(SourceSpec.byVariables(['team': 'teamA', 'environment': 'prod']))
+    def teamAndEnvironment = hierarchy.sourceFor(['hostname': 'foo.com']).get().lineage().get(2)
+    assert 1 == teamAndEnvironment.size()
+    def teamAProd = teamAndEnvironment.get(0)
+    assert teamAProd.isTargetedBy(SourceSpec.byVariables(['team': 'teamA', 'environment': 'prod']))
   }
 
   /**
@@ -385,7 +446,12 @@ potentials:
 
     def cBar = hierarchy.sourceFor(['c': 'bar']).get()
 
-    assert cBar.lineage()*.path() == ['bar/foo', 'foo', 'middle', 'top']
+    assert cBar.lineage()*.sources().collect { it*.path() } == [
+        ['bar/foo'],
+        ['foo'],
+        ['middle'],
+        ['top']
+    ]
   }
 
   @Test
@@ -415,7 +481,7 @@ potentials:
 
     def bBar = hierarchy.sourceFor(['b': 'bar']).get()
 
-    assert bBar.lineage()*.path() == ['bar', 'middle', 'top']
+    assert bBar.lineage()*.sources().collect { it*.path() } == [['bar'], ['middle'], ['top']]
   }
 
   @Test
@@ -440,18 +506,19 @@ potentials:
 
     def cBar = hierarchy.sourceFor(['c': 'bar']).get()
 
-    assert cBar.lineage().get(2).descendants()*.path() == ['top', 'foo', 'bar/foo']
+    assert cBar.lineage().get(2).sources().get(0).descendants()*.path() == ['top', 'foo', 'bar/foo']
   }
 
   @Test
   void descendantsAncestorsShouldBeRelativeToDescendant() {
     def prod = hierarchy.sourceFor(['environment': 'prod']).get()
     def environmentUnderTeam = prod.descendants()[1]
-    assert environmentUnderTeam.lineage()*.path() == [
-        'teams/teamA/prod',
-        'teams/teamA',
-        'environment/prod',
-        'common'
+    assert environmentUnderTeam.lineage()*.sources().collect { it*.path() } == [
+        ['teams/teamA/prod'],
+        ['teams/teamA'],
+        ['environment/prod'],
+        ['rhel', 'macos'],
+        ['common'],
     ]
   }
 
@@ -552,5 +619,40 @@ inventory:
     )
 
     assert manuallyExpanded == withBraces
+  }
+
+  @Test
+  void levelIsTargetableByPathWithNoVariablesUsed() {
+    assert hierarchy.levelFor("common").get().isTargetedBy(SourceSpec.byPath("common"))
+  }
+
+  @Test
+  void levelIsTargetableByPathWithVariablesUsed() {
+    assert hierarchy.levelFor("teams/teamA/prod").get()
+        .isTargetedBy(SourceSpec.byPath("teams/teamA/prod"))
+  }
+
+  @Test
+  void levelIsTargetableByVariables() {
+    assert hierarchy.levelFor(["app": "store"]).get()
+        .isTargetedBy(SourceSpec.byVariables(["app": "store"]))
+  }
+
+  @Test
+  void levelByPathIsTargetableByVariables() {
+    assert hierarchy.levelFor("teams/teamA/prod").get()
+        .isTargetedBy(SourceSpec.byVariables(["team": "teamA", "environment": "prod"]))
+  }
+
+  @Test
+  void levelByVariablesIsTargetableByPath() {
+    assert hierarchy.levelFor(["team": "teamA", "environment": "prod"]).get()
+        .isTargetedBy(SourceSpec.byPath("teams/teamA/prod"))
+  }
+
+  @Test
+  void specDoesNotTargetLevelWithDifferentAssignmentsAtSameIndex() {
+    assert !hierarchy.levelFor(["team": "teamB", "environment": "prod"]).get()
+        .isTargetedBy(SourceSpec.byVariables(["team": "teamB", "environment": "qa"]))
   }
 }
