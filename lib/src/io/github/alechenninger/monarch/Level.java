@@ -24,6 +24,8 @@ public interface Level {
   List<Source> sources();
   // TODO: Do we need this?
   boolean skippable();
+  List<List<Source>> lineages();
+  List<Source> descendants();
   boolean isTargetedBy(SourceSpec spec);
   default boolean isEmpty() {
     return sources().isEmpty();
@@ -35,3 +37,18 @@ public interface Level {
     return sources().get(index);
   }
 }
+
+/*
+
+a    b     c    d
+|\   |     |    |
+|  \ |     |    |
+e    f     |    g
+ \   | \   |   /
+   \ |   \ | /
+     h     i
+
+
+
+
+ */

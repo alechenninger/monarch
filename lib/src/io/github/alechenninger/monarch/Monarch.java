@@ -63,6 +63,11 @@ public class Monarch {
     return generateSources(hierarchy.allSources(), changes, data, mergeKeys);
   }
 
+  public Map<String, Map<String, Object>> generateSources(Level level,
+      Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    return generateSources(level.descendants(), changes, data, mergeKeys);
+  }
+
   private Map<String, Map<String, Object>> generateSources(List<Source> sources,
       Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
@@ -120,7 +125,7 @@ public class Monarch {
 
       Change change = maybeChange.get();
 
-      log.debug("Applying change for ancestor '{}' (targeted by {}) to '{}'.",
+      log.debug("Applying change for ancestor level '{}' (targeted by {}) to '{}'.",
           ancestors, change.sourceSpec(), target.path());
 
       for (Map.Entry<String, Object> setEntry : change.set().entrySet()) {

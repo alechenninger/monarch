@@ -23,9 +23,9 @@ import java.util.Optional;
 
 public interface DataLookup {
   // TODO: lookup may return multiple values depending on assignments for ancestor
-  Optional<Object> lookup(String key);
-  List<SourceToValue> sourcesOf(String key);
-  List<SourceToValue> sourcesOf(String key, Object value);
+  List<Object> lookup(String key);
+  List<List<SourceToValue>> sourcesOf(String key);
+  List<List<SourceToValue>> sourcesOf(String key, Object value);
   // TODO: multiple values may be inherited for same key depending on other assignments
   boolean isValueInherited(String key, Object value);
 

@@ -5,12 +5,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -280,7 +285,7 @@ class DynamicHierarchy implements Hierarchy {
         try {
           return new RenderedLevel(sourceFor(rendered.get(0), index));
         } catch (UnreachableSourceException e) {
-          throw e; // TODO?
+          throw e;
         }
       } else {
         return new RenderedLevel(Collections.emptyList(), true);
@@ -375,7 +380,7 @@ class DynamicHierarchy implements Hierarchy {
 
         for (int parentLevel = level - 1; parentLevel >= 0; parentLevel--) {
           try {
-            RenderedLevel level = levelFor(assignments, parentLevel, isBottomSource);
+            RenderedLevel level = levelFor(assignments, parentLevel, false);
             if (level.isEmpty()) continue;
             lineage.add(level);
           } catch (UnreachableSourceException ignored) {
@@ -433,6 +438,15 @@ class DynamicHierarchy implements Hierarchy {
       return descendants;
     }
 
+    List<RenderedSource> parents() {
+      List<Level> lineage = lineage();
+      if (lineage.size() == 1) {
+        return Collections.emptyList();
+      }
+      RenderedLevel parentLevel = (RenderedLevel) lineage.get(1);
+      return parentLevel.sources;
+    }
+
     @Override
     public boolean isTargetedBy(SourceSpec spec) {
       return spec.findSource(DynamicHierarchy.this)
@@ -488,11 +502,68 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     @Override
+    public List<List<Source>> lineages() {
+      int lineageCount = nodes.size() - sources.get(0).level + 1;
+
+      List<List<Source>> lineages = new ArrayList<>(sources.stream()
+          .map(s -> startArrayList(lineageCount, (Source) s))
+          .collect(Collectors.toList()));
+
+      List<List<Source>> newLines = new ArrayList<>();
+
+      for (int offset = 0; offset < lineageCount; offset++) {
+        for (List<Source> line : lineages) {
+          if (line.size() <= offset) continue;
+
+          RenderedSource top = (RenderedSource) line.get(offset);
+          List<RenderedSource> parents = top.parents();
+
+          for (int parent = 0; parent < parents.size(); parent++) {
+            if (parent == 0) {
+              line.add(parents.get(parent));
+            } else {
+              List<Source> newLine = new ArrayList<>(lineageCount);
+              newLine.addAll(line);
+              newLine.add(parents.get(parent));
+              newLines.add(newLine);
+            }
+          }
+        }
+
+        lineages.addAll(newLines);
+        newLines.clear();
+      }
+
+      return Collections.unmodifiableList(lineages);
+    }
+
+//    List<List<RenderedSource>> extend(List<RenderedSource> line) {
+//      RenderedSource top = line.get(line.size() - 1);
+//      List<List<RenderedSource>> lines = new ArrayList<>(top.parents().size());
+//      for (RenderedSource parent : top.parents()) {
+//        List<RenderedSource> extended = new ArrayList<>(line.size() + 1);
+//        extended.addAll(line);
+//        extended.add(parent);
+//        if (parent.)
+//        lines.add(extended);
+//      }
+//      return lines;
+//    }
+
+    @Override
+    public List<Source> descendants() {
+      return sources.stream()
+          .flatMap(s -> s.renderedDescendants().stream())
+          .sorted(Comparator.comparingInt(source -> source.level))
+          .collect(Collectors.toList());
+    }
+
+    @Override
     public boolean isTargetedBy(SourceSpec spec) {
       return spec.findLevel(DynamicHierarchy.this)
           .map(Level::sources)
-          .map(s -> sources.stream().map(Source::path).collect(Collectors.toSet())
-              .equals(s.stream().map(Source::path).collect(Collectors.toSet())))
+          .map(s -> s.stream().map(Source::path).collect(Collectors.toSet())
+              .containsAll(sources.stream().map(Source::path).collect(Collectors.toSet())))
           .orElse(false);
     }
 
@@ -538,5 +609,11 @@ class DynamicHierarchy implements Hierarchy {
     public RenderedSource conflict() {
       return conflict;
     }
+  }
+
+  private static <T> List<T> startArrayList(int capacity, T first) {
+    List<T> list = new ArrayList<>(capacity);
+    list.add(first);
+    return list;
   }
 }

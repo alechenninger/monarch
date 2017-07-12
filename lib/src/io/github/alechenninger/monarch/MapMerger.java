@@ -35,6 +35,7 @@ public class MapMerger implements Merger {
       throw new IllegalArgumentException("Can only merge a map with other maps!");
     }
 
+    // TODO: Shouldn't this not override existing overlapping keys?
     merged.putAll((Map) toMerge);
   }
 

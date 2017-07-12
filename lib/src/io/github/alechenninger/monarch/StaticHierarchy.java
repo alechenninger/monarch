@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -225,6 +224,18 @@ class StaticHierarchy implements Hierarchy {
     }
 
     @Override
+    public List<List<Source>> lineages() {
+      return Collections.singletonList(source.lineage().stream()
+          .flatMap(l -> l.sources().stream()) // we know l.sources() is size 1
+          .collect(Collectors.toList()));
+    }
+
+    @Override
+    public List<Source> descendants() {
+      return source.descendants();
+    }
+
+    @Override
     public boolean isTargetedBy(SourceSpec spec) {
       return source.isTargetedBy(spec);
     }
@@ -232,36 +243,6 @@ class StaticHierarchy implements Hierarchy {
     @Override
     public String toString() {
       return source.toString();
-    }
-  }
-
-  private static class DescendantsIterator implements Iterator<Node> {
-    private Queue<Node> currentLevel = new LinkedList<>();
-
-    DescendantsIterator(Collection<Node> nodes) {
-      currentLevel.addAll(nodes);
-    }
-
-    static Stream<Node> asStream(Collection<Node> nodes) {
-      Iterable<Node> descendantsIterable = () -> new DescendantsIterator(nodes);
-      return StreamSupport.stream(descendantsIterable.spliterator(), false);
-    }
-
-    @Override
-    public boolean hasNext() {
-      return !currentLevel.isEmpty();
-    }
-
-    @Override
-    public Node next() {
-      Node next = currentLevel.remove();
-
-      Collection<Node> nextChildren = next.children();
-      if (!nextChildren.isEmpty()) {
-        currentLevel.addAll(nextChildren);
-      }
-
-      return next;
     }
   }
 
@@ -291,7 +272,7 @@ class StaticHierarchy implements Hierarchy {
     }
   }
 
-  static class Node {
+  static class Node implements HasDescendants<Node> {
     private final String name;
     private final Collection<Node> children = new LinkedList<>();
 
@@ -356,7 +337,7 @@ class StaticHierarchy implements Hierarchy {
       return this;
     }
 
-    Collection<Node> children() {
+    public Collection<Node> children() {
       return Collections.unmodifiableCollection(children);
     }
 
