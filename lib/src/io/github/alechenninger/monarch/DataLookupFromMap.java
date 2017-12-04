@@ -43,84 +43,114 @@ public class DataLookupFromMap implements DataLookup {
   }
 
   @Override
-  public Optional<Object> lookup(String key) {
+  public List<Object> lookup(String key) {
+    List<Object> values = new ArrayList<>();
+
     if (mergeKeys.contains(key)) {
-      Merger merger = null;
+      for (List<Source> line : sourceAncestries()) {
+        Merger mergerForLine = null;
 
-      for (String ancestor : sourceAncestry()) {
+        for (Source ancestor : line) {
+          Map<String, Object> ancestorData = getDataBySource(ancestor);
+
+          if (ancestorData.containsKey(key)) {
+            if (mergerForLine == null) {
+              mergerForLine = Merger.startingWith(ancestorData.get(key));
+            } else {
+              mergerForLine.merge(ancestorData.get(key));
+            }
+          }
+        }
+
+        if (mergerForLine != null) {
+          values.add(mergerForLine.getMerged());
+        }
+      }
+
+      return values;
+    }
+
+    for (List<Source> lines : sourceAncestries()) {
+      for (Source ancestor : lines) {
         Map<String, Object> ancestorData = getDataBySource(ancestor);
-
         if (ancestorData.containsKey(key)) {
-          if (merger == null) {
-            merger = Merger.startingWith(ancestorData.get(key));
+          values.add(ancestorData.get(key));
+          break; // next line...
+        }
+      }
+    }
+
+    return values;
+  }
+
+  @Override
+  public List<List<SourceToValue>> sourcesOf(String key) {
+    List<List<SourceToValue>> byLineage = new ArrayList<>();
+
+    for (List<Source> lineage : sourceAncestries()) {
+      List<SourceToValue> sources = new ArrayList<>();
+
+      for (Source ancestor : lineage) {
+        Map<String, Object> ancestorData = getDataBySource(ancestor);
+        if (ancestorData.containsKey(key)) {
+          sources.add(new SourceToValue(ancestor.path(), ancestorData.get(key)));
+        }
+      }
+
+      byLineage.add(sources);
+    }
+
+    return byLineage;
+  }
+
+  @Override
+  public List<List<SourceToValue>> sourcesOf(String key, Object value) {
+    List<List<SourceToValue>> byLineage = new ArrayList<>();
+
+    for (List<Source> lineage : sourceAncestries()) {
+      List<SourceToValue> sources = new ArrayList<>();
+
+      for (Source ancestor : lineage) {
+        Map<String, Object> ancestorData = getDataBySource(ancestor);
+        if (ancestorData.containsKey(key)) {
+          Object ancestorValue = ancestorData.get(key);
+
+          if (mergeKeys.contains(key)) {
+            Merger merger = Merger.startingWith(ancestorValue);
+            if (merger.contains(value)) {
+              sources.add(new SourceToValue(ancestor.path(), ancestorValue));
+            }
           } else {
-            merger.merge(ancestorData.get(key));
+            if (Objects.equals(ancestorValue, value)) {
+              sources.add(new SourceToValue(ancestor.path(), ancestorValue));
+            }
           }
         }
       }
 
-      return Optional.ofNullable(merger).map(Merger::getMerged);
+      byLineage.add(sources);
     }
 
-    for (String ancestor : sourceAncestry()) {
-      Map<String, Object> ancestorData = getDataBySource(ancestor);
-      if (ancestorData.containsKey(key)) {
-        return Optional.of(ancestorData.get(key));
-      }
-    }
-
-    return Optional.empty();
-  }
-
-  @Override
-  public List<SourceToValue> sourcesOf(String key) {
-    List<SourceToValue> sources = new ArrayList<>();
-
-    for (String ancestor : sourceAncestry()) {
-      Map<String, Object> ancestorData = getDataBySource(ancestor);
-      if (ancestorData.containsKey(key)) {
-        sources.add(new SourceToValue(ancestor, ancestorData.get(key)));
-      }
-    }
-
-    return sources;
-  }
-
-  @Override
-  public List<SourceToValue> sourcesOf(String key, Object value) {
-    List<SourceToValue> sources = new ArrayList<>();
-
-    for (String ancestor : sourceAncestry()) {
-      Map<String, Object> ancestorData = getDataBySource(ancestor);
-      if (ancestorData.containsKey(key)) {
-        Object ancestorValue = ancestorData.get(key);
-
-        if (mergeKeys.contains(key)) {
-          Merger merger = Merger.startingWith(ancestorValue);
-          if (merger.contains(value)) {
-            sources.add(new SourceToValue(ancestor, ancestorValue));
-          }
-        } else {
-          if (Objects.equals(ancestorValue, value)) {
-            sources.add(new SourceToValue(ancestor, ancestorValue));
-          }
-        }
-      }
-    }
-
-    return sources;
+    return byLineage;
   }
 
   @Override
   public boolean isValueInherited(String key, Object value) {
-    List<SourceToValue> sources = sourcesOf(key, value);
-    int sourcesCount = sources.size();
+    List<List<SourceToValue>> lines = sourcesOf(key, value);
 
-    if (sourcesCount == 1 && sources.get(0).source().equals(path)) {
-      return false;
+    for (List<SourceToValue> sources : lines) {
+      int sourcesCount = sources.size();
+
+      if (sourcesCount == 1 && sources.get(0).source().equals(path)) {
+        return false;
+      }
+
+      if (sourcesCount == 0) {
+        return false;
+      }
     }
 
-    return sourcesCount > 0;
+    return true;
   }
 
   @Override
@@ -130,11 +160,15 @@ public class DataLookupFromMap implements DataLookup {
         '}';
   }
 
-  private List<String> sourceAncestry() {
-    return source.lineage().stream().map(Source::path).collect(Collectors.toList());
+  private List<Level> sourceAncestry() {
+    return source.lineage();
   }
 
-  private Map<String, Object> getDataBySource(String source) {
-    return Optional.ofNullable(data.get(source)).orElse(Collections.emptyMap());
+  private List<List<Source>> sourceAncestries() {
+    return source.lineage().get(0).lineages();
+  }
+
+  private Map<String, Object> getDataBySource(Source source) {
+    return Optional.ofNullable(data.get(source.path())).orElse(Collections.emptyMap());
   }
 }

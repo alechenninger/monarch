@@ -5,12 +5,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -45,27 +51,7 @@ class DynamicHierarchy implements Hierarchy {
 
   @Override
   public Optional<Source> sourceFor(String source) {
-    if (!cachedPaths.containsKey(source)) {
-
-      List<Assignments> satisfyingVars = nodes.stream()
-          .flatMap(node -> node.assignmentsFor(source, inventory, Assignments.none(inventory))
-              .map(Stream::of).orElse(Stream.empty()))
-          .collect(Collectors.toList());
-
-      if (satisfyingVars.isEmpty()) {
-        cachedPaths.put(source, null);
-      }
-
-      Assignments allVariables = new Assignments(inventory);
-      // TODO: Instead, we can do this in loop over nodes
-      for (Assignments assignments : satisfyingVars) {
-        allVariables = allVariables.with(assignments);
-      }
-
-      cachedPaths.put(source, allVariables);
-    }
-
-    return Optional.ofNullable(cachedPaths.get(source)).flatMap(this::sourceFor);
+    return assignmentsFor(source).flatMap(this::sourceFor);
   }
 
   @Override
@@ -123,6 +109,59 @@ class DynamicHierarchy implements Hierarchy {
 
     cachedSources.put(assignments, target);
     return Optional.of(target);
+  }
+
+  @Override
+  public Optional<Level> levelFor(String source) {
+    return ListReversed.stream(nodes)
+        .flatMap(node -> node
+            .assignmentsFor(source, Assignments.none(inventory))
+            .map(Stream::of).orElse(Stream.empty()))
+        .findFirst()
+        .flatMap(used -> levelFor(used.stream()
+            .collect(Collectors.toMap(a -> a.variable().name(), Assignment::value))
+        ));
+  }
+
+  @Override
+  public Optional<Level> levelFor(Map<String, String> variables) {
+    RenderedLevel target = null;
+
+    // First find target, if any.
+    for (int i = 0; i < nodes.size(); i++) {
+      DynamicNode node = nodes.get(i);
+      if (node.variables().containsAll(variables.keySet())) {
+        try {
+          target = levelFor(inventory.assignAll(variables), i, false);
+          break;
+        } catch (UnreachableSourceException ignored) {
+          // Get next best level...
+        }
+      }
+    }
+
+    return Optional.ofNullable(target);
+  }
+
+  public Optional<Level> levelFor(Assignments assignments) {
+    RenderedLevel target = null;
+
+    // First find target, if any.
+    for (int i = 0; i < nodes.size(); i++) {
+      DynamicNode node = nodes.get(i);
+      List<String> variables = node.variables();
+
+      if (variables.containsAll(assignments.toMap().keySet())) {
+        try {
+          target = levelFor(assignments, i, false);
+          break;
+        } catch (UnreachableSourceException ignored) {
+          // Get next best level...
+        }
+      }
+    }
+
+    return Optional.ofNullable(target);
   }
 
   @Override
@@ -227,12 +266,61 @@ class DynamicHierarchy implements Hierarchy {
     }
   }
 
+  private RenderedLevel levelFor(Assignments assignments, int index, boolean renderOne) {
+    DynamicNode node = nodes.get(index);
+    List<RenderedNode> rendered = node.render(assignments);
+    if (!renderOne) {
+      List<RenderedSource> sources = new ArrayList<>(rendered.size());
+      for (RenderedNode render : rendered) {
+        try {
+          sources.add(sourceFor(render, index));
+        } catch (UnreachableSourceException ignored) {
+          // Continue...
+        }
+      }
+      boolean skippable = sources.isEmpty();
+      return new RenderedLevel(sources, skippable);
+    } else {
+      if (rendered.size() == 1) {
+        try {
+          return new RenderedLevel(sourceFor(rendered.get(0), index));
+        } catch (UnreachableSourceException e) {
+          throw e;
+        }
+      } else {
+        return new RenderedLevel(Collections.emptyList(), true);
+      }
+    }
+  }
+
+  private Optional<Assignments> assignmentsFor(String source) {
+    if (!cachedPaths.containsKey(source)) {
+      List<Set<Assignment>> satisfyingVars = nodes.stream()
+          .flatMap(node -> node.assignmentsFor(source, Assignments.none(inventory))
+              .map(Stream::of).orElse(Stream.empty()))
+          .collect(Collectors.toList());
+
+      if (satisfyingVars.isEmpty()) {
+        cachedPaths.put(source, null);
+      } else {
+        Assignments allVariables = new Assignments(inventory);
+        // TODO: Instead, we can do this in loop over nodes
+        for (Set<Assignment> assignments : satisfyingVars) {
+          allVariables = allVariables.with(assignments);
+        }
+        cachedPaths.put(source, allVariables);
+      }
+    }
+
+    return Optional.ofNullable(cachedPaths.get(source));
+  }
+
   private class RenderedSource implements Source {
     private final RenderedNode render;
     private final Assignments assignments;
     private final int level;
 
-    private List<RenderedSource> lineage;
+    private List<RenderedLevel> lineage;
     private List<RenderedSource> descendants;
 
     private RenderedSource(RenderedNode render, int level) {
@@ -264,24 +352,52 @@ class DynamicHierarchy implements Hierarchy {
     }
 
     @Override
-    public List<Source> lineage() {
+    public List<Level> lineage() {
       if (lineage == null) {
         lineage = new ArrayList<>(level + 1 /* == how many in lineage + me */);
-        lineage.add(this);
+        lineage.add(new RenderedLevel(this));
+
+        /*
+        Each source above this could be figured out from what values are possible considering:
+        1. Current assignments for this source
+        2. Possible assignments for all nodes below this source
+
+        #2 Could be figured out from:
+        - Consider the variables used but unassigned below this source
+        - Limit possible values for lineage to all of possible values in descendants
+        - Unused variable == no possible values, however an unused variable can still be
+          implied.
+
+        This is where it gets tricky because we have to assume that all possible values are
+        comprehensive. In other words, it requires the inventory has absolutely everything it in,
+        otherwise we could deduce something that really isn't true, it's just the user assumed they
+        didn't have to tell us about every little thing.
+
+        For now, we only treat the bottom source as special. We really know that nothing can be
+        below that, so no reason to consider possibilities other than what is defined.
+        */
+        boolean isBottomSource = level == nodes.size() - 1;
 
         for (int parentLevel = level - 1; parentLevel >= 0; parentLevel--) {
-          DynamicNode node = nodes.get(parentLevel);
-          if (assignments.assignsSupersetOf(node.variables())) {
-            RenderedNode parentRender = node.renderOne(assignments);
-            if (lineage == null) {
-              lineage = new ArrayList<>();
-            }
-            try {
-              lineage.add(sourceFor(parentRender, parentLevel));
-            } catch (UnreachableSourceException ignored) {
-              // Fall through
-            }
+          try {
+            RenderedLevel level = levelFor(assignments, parentLevel, false);
+            if (level.isEmpty()) continue;
+            lineage.add(level);
+          } catch (UnreachableSourceException ignored) {
+            // Fall through
           }
+
+//          if (assignments.assignsSupersetOf(node.variables())) {
+//            RenderedNode parentRender = node.renderOne(assignments);
+//            if (lineage == null) {
+//              lineage = new ArrayList<>();
+//            }
+//            try {
+//              lineage.add(sourceFor(parentRender, parentLevel));
+//            } catch (UnreachableSourceException ignored) {
+//              // Fall through
+//            }
+//          }
         }
       }
 
@@ -302,8 +418,9 @@ class DynamicHierarchy implements Hierarchy {
           List<RenderedNode> childRenders = nodes.get(childLevel).render(assignments);
 
           for (RenderedNode childRender : childRenders) {
-            Assignments childAssigns = inventory.assignAll(childRender.usedAssignments());
-            if (assignments.isEmpty() || childAssigns.containsAll(assignments)) {
+            Assignments usedByChild = inventory.assignAll(childRender.usedAssignments());
+            // TODO: isEmpty is redundant I think; any collection contains the empty collection
+            if (assignments.isEmpty() || usedByChild.containsAll(assignments)) {
               if (descendants == null ) {
                 descendants = new ArrayList<>(childRenders.size());
               }
@@ -319,6 +436,15 @@ class DynamicHierarchy implements Hierarchy {
       }
 
       return descendants;
+    }
+
+    List<RenderedSource> parents() {
+      List<Level> lineage = lineage();
+      if (lineage.size() == 1) {
+        return Collections.emptyList();
+      }
+      RenderedLevel parentLevel = (RenderedLevel) lineage.get(1);
+      return parentLevel.sources;
     }
 
     @Override
@@ -351,6 +477,116 @@ class DynamicHierarchy implements Hierarchy {
     }
   }
 
+  private class RenderedLevel implements Level {
+    private final List<RenderedSource> sources;
+    private final boolean skippable;
+
+    public RenderedLevel(RenderedSource source) {
+      this.skippable = false;
+      this.sources = Collections.singletonList(source);
+    }
+
+    public RenderedLevel(List<RenderedSource> sources, boolean skippable) {
+      this.sources = sources;
+      this.skippable = skippable;
+    }
+
+    @Override
+    public List<Source> sources() {
+      return Collections.unmodifiableList(sources);
+    }
+
+    @Override
+    public boolean skippable() {
+      return skippable;
+    }
+
+    @Override
+    public List<List<Source>> lineages() {
+      int lineageCount = nodes.size() - sources.get(0).level + 1;
+
+      List<List<Source>> lineages = new ArrayList<>(sources.stream()
+          .map(s -> startArrayList(lineageCount, (Source) s))
+          .collect(Collectors.toList()));
+
+      List<List<Source>> newLines = new ArrayList<>();
+
+      for (int offset = 0; offset < lineageCount; offset++) {
+        for (List<Source> line : lineages) {
+          if (line.size() <= offset) continue;
+
+          RenderedSource top = (RenderedSource) line.get(offset);
+          List<RenderedSource> parents = top.parents();
+
+          for (int parent = 0; parent < parents.size(); parent++) {
+            if (parent == 0) {
+              line.add(parents.get(parent));
+            } else {
+              List<Source> newLine = new ArrayList<>(lineageCount);
+              newLine.addAll(line);
+              newLine.add(parents.get(parent));
+              newLines.add(newLine);
+            }
+          }
+        }
+
+        lineages.addAll(newLines);
+        newLines.clear();
+      }
+
+      return Collections.unmodifiableList(lineages);
+    }
+
+//    List<List<RenderedSource>> extend(List<RenderedSource> line) {
+//      RenderedSource top = line.get(line.size() - 1);
+//      List<List<RenderedSource>> lines = new ArrayList<>(top.parents().size());
+//      for (RenderedSource parent : top.parents()) {
+//        List<RenderedSource> extended = new ArrayList<>(line.size() + 1);
+//        extended.addAll(line);
+//        extended.add(parent);
+//        if (parent.)
+//        lines.add(extended);
+//      }
+//      return lines;
+//    }
+
+    @Override
+    public List<Source> descendants() {
+      return sources.stream()
+          .flatMap(s -> s.renderedDescendants().stream())
+          .sorted(Comparator.comparingInt(source -> source.level))
+          .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean isTargetedBy(SourceSpec spec) {
+      return spec.findLevel(DynamicHierarchy.this)
+          .map(Level::sources)
+          .map(s -> s.stream().map(Source::path).collect(Collectors.toSet())
+              .containsAll(sources.stream().map(Source::path).collect(Collectors.toSet())))
+          .orElse(false);
+    }
+
+    @Override
+    public String toString() {
+      return "{" + sources + ", skippable=" + skippable +  '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      RenderedLevel that = (RenderedLevel) o;
+      return skippable == that.skippable &&
+          Objects.equals(sources, that.sources);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(sources, skippable);
+    }
+  }
+
   private static class UnreachableSourceException extends RuntimeException {
     private final RenderedNode render;
     private final int level;
@@ -373,5 +609,11 @@ class DynamicHierarchy implements Hierarchy {
     public RenderedSource conflict() {
       return conflict;
     }
+  }
+
+  private static <T> List<T> startArrayList(int capacity, T first) {
+    List<T> list = new ArrayList<>(capacity);
+    list.add(first);
+    return list;
   }
 }

@@ -63,6 +63,11 @@ public class Monarch {
     return generateSources(hierarchy.allSources(), changes, data, mergeKeys);
   }
 
+  public Map<String, Map<String, Object>> generateSources(Level level,
+      Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
+    return generateSources(level.descendants(), changes, data, mergeKeys);
+  }
+
   private Map<String, Map<String, Object>> generateSources(List<Source> sources,
       Iterable<Change> changes, Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
     Map<String, Map<String, Object>> result = copyMapAndValues(data);
@@ -86,7 +91,7 @@ public class Monarch {
    */
   private Map<String, Object> generateSingleSource(Source target, Iterable<Change> changes,
       Map<String, Map<String, Object>> data, Set<String> mergeKeys) {
-    List<Source> lineage = target.lineage();
+    List<Level> lineage = target.lineage();
 
     DataLookup targetLookup = new DataLookupFromMap(data, target, mergeKeys);
 
@@ -96,11 +101,23 @@ public class Monarch {
         : new HashMap<>(sourceData);
 
     if (log.isDebugEnabled()) {
-      log.debug("Looking for changes applicable to lineage: {}", Sources.pathsOf(lineage));
+      log.debug("Looking for changes applicable to lineage: {}", Sources.pathsOfLineage(lineage));
     }
 
-    for (Source ancestor : new ListReversed<>(lineage)) {
-      Optional<Change> maybeChange = findChangeForSource(ancestor, changes);
+    // TODO: lineage would be Level of various Sources?
+    // TODO: Or we would have multiple lineages for each permutation
+    for (Level ancestors : new ListReversed<>(lineage)) {
+      /*
+      find change for level?
+      what if multiple changes?
+      what if change only patches part of level? is it applicable to this descendant?
+      i dont think so
+      we would want to warn if those values weren't inherited? or perhaps more accurately that there
+      is no way within the targeted variables to apply the change without conflicting with the
+      changes
+      it could do it by going lower, to individual nodes in our hierarchy's case.
+       */
+      Optional<Change> maybeChange = findChangeForLevel(ancestors, changes);
 
       if (!maybeChange.isPresent()) {
         continue;
@@ -108,14 +125,17 @@ public class Monarch {
 
       Change change = maybeChange.get();
 
-      log.debug("Applying change for ancestor '{}' (targeted by {}) to '{}'.",
-          ancestor.path(), change.sourceSpec(), target.path());
+      log.debug("Applying change for ancestor level '{}' (targeted by {}) to '{}'.",
+          ancestors, change.sourceSpec(), target.path());
 
       for (Map.Entry<String, Object> setEntry : change.set().entrySet()) {
         String setKey = setEntry.getKey();
         Object setValue = setEntry.getValue();
 
         if (target.isNotTargetedBy(change.sourceSpec())) {
+          /*
+          if multiple different values inherited, then its not inherited
+           */
           if (targetLookup.isValueInherited(setKey, setValue)) {
             log.debug("Desired key:value is inherited above '{}': <{}: {}>",
                 target.path(), setKey, setValue);
@@ -165,12 +185,12 @@ public class Monarch {
     return resultSourceData;
   }
 
-  private Optional<Change> findChangeForSource(Source source, Iterable<Change> changes) {
+  private Optional<Change> findChangeForLevel(Level level, Iterable<Change> changes) {
     return StreamSupport.stream(changes.spliterator(), false)
-        .filter(c -> source.isTargetedBy(c.sourceSpec()))
-        .collect(Collect.maxOneResultOrThrow(() -> new IllegalArgumentException(
-            "Expected at most one change with matching source in list of changes, but got: " +
-                changes)));
+        .filter(c -> level.isTargetedBy(c.sourceSpec()))
+        .collect(Collect.maxOneResultOrThrowResult(c -> new IllegalArgumentException(
+            "Expected at most one change for level " + level + " in list of changes, but got: " +
+                c)));
   }
 
   private static Map<String, Map<String, Object>> copyMapAndValues(

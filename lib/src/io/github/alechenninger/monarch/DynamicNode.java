@@ -18,6 +18,7 @@
 
 package io.github.alechenninger.monarch;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -43,14 +44,12 @@ public interface DynamicNode {
 
   List<RenderedNode> render(Assignments assignments);
 
-  default Optional<Assignments> assignmentsFor(String source,
-      Inventory potentials, Assignments variables) {
-    return render(variables).stream()
+  default Optional<Set<Assignment>> assignmentsFor(String source, Assignments variables) {
+    Optional<RenderedNode> node = render(variables).stream()
         .filter(s -> s.path().equals(source))
-        .map(RenderedNode::usedAssignments)
-        // TODO validate only one found?
-        .findFirst()
-        .map(potentials::assignAll);
+        .collect(Collect.maxOneResultOrThrowResult(r -> new IllegalArgumentException(
+            "Expected at most one render that matched source but got: " + r)));
+    return node.map(RenderedNode::usedAssignments);
   }
 
   final class RenderedNode {

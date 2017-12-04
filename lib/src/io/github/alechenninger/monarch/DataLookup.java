@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DataLookup {
-  Optional<Object> lookup(String key);
-  List<SourceToValue> sourcesOf(String key);
-  List<SourceToValue> sourcesOf(String key, Object value);
+  // TODO: lookup may return multiple values depending on assignments for ancestor
+  List<Object> lookup(String key);
+  List<List<SourceToValue>> sourcesOf(String key);
+  List<List<SourceToValue>> sourcesOf(String key, Object value);
+  // TODO: multiple values may be inherited for same key depending on other assignments
   boolean isValueInherited(String key, Object value);
 
   final class SourceToValue {

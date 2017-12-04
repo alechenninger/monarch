@@ -220,27 +220,26 @@ public class Assignments implements Iterable<Assignment> {
    * Returns true if at least the provided variables are all assigned.
    */
   public boolean assignsSupersetOf(List<String> variables) {
-    Assignments assignments = new Assignments(inventory);
     for (String variable : variables) {
       if (!isAssigned(variable)) {
         return false;
       }
-      assignments.add(forVariable(variable));
     }
-    return containsAll(assignments);
+
+    return true;
   }
 
   /**
-   * Returns true if variables contains a superset of all of the assigned variables.
-   * @param variables
-   * @return
+   *
    */
   public boolean assignsSubsetOf(List<String> variables) {
-    Assignments assignments = new Assignments(inventory);
     for (String variable : variables) {
-      assignments.add(forVariable(variable));
+      if (isAssigned(variable)) {
+        return true;
+      }
     }
-    return assignments.containsAll(this);
+
+    return false;
   }
 
   public boolean isEmpty() {

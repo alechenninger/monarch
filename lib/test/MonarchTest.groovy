@@ -43,6 +43,18 @@ global.yaml:
         }, new HashSet<>())
   }
 
+  Map generateFromYaml(String hierarchy, String changes, Map<String, String> sourceToChange,
+                       Map data) {
+    return m.generateSources(
+        Hierarchy.fromStringListOrMap(yaml.load(hierarchy)).levelFor(sourceToChange).get(),
+        yaml.loadAll(changes).collectMany { Change.fromMap(it as Map) },
+        data.with {
+          it.each { entry ->
+            entry.setValue(this.yaml.load(entry.getValue()))
+          }
+        }, new HashSet<>())
+  }
+
   @Test
   void shouldSetValuesFromClosestAncestorIfNotAlreadyInherited() {
     def changes = '''
@@ -259,5 +271,47 @@ otherapp::version: 5
         'myteam/stage.yaml': yaml.load('myapp::version: 2')]
 
     assert result == expected
+  }
+
+  @Test
+  void appliesChangesWithoutConflicting() {
+    def changes = '''
+source:
+  team: A
+set:
+  foo: bar
+---
+source:
+  team: A
+  os: rhel
+set:
+  foo: baz
+'''
+
+    def hierarchy = '''
+sources:
+  - '%{environment}'
+  - '%{team}'
+  - '%{team}/%{environment}/%{os}'
+  - '%{team}/%{environment}'
+inventory:
+  team: 
+  - A
+  environment:
+  - prod
+  - dev
+  os:
+  - rhel
+  - fedora
+'''
+
+    def result = generateFromYaml(hierarchy, changes, ["environment": "prod"], [:])
+
+    assert [
+        "A/prod/rhel": ["foo": "baz"],
+        "A/prod/fedora": ["foo": "bar"],
+        "prod": [:],
+        "A/prod": [:],
+    ] == result
   }
 }

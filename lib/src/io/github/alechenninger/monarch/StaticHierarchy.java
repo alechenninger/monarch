@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -64,6 +63,23 @@ class StaticHierarchy implements Hierarchy {
   public Optional<Source> sourceFor(Assignments assignments) {
     throw new UnsupportedOperationException("Statically defined hierarchies do not support " +
         "identifying a source via variables.");
+  }
+
+  @Override
+  public Optional<Level> levelFor(String source) {
+    return sourceFor(source).map(StaticLevel::new);
+  }
+
+  @Override
+  public Optional<Level> levelFor(Map<String, String> variables) {
+    throw new UnsupportedOperationException("Statically defined hierarchies do not support " +
+        "identifying a level via variables.");
+  }
+
+  @Override
+  public Optional<Level> levelFor(Assignments assignments) {
+    throw new UnsupportedOperationException("Statically defined hierarchies do not support " +
+        "identifying a level via variables.");
   }
 
   public List<Source> allSources() {
@@ -148,9 +164,10 @@ class StaticHierarchy implements Hierarchy {
     }
 
     @Override
-    public List<Source> lineage() {
+    public List<Level> lineage() {
       return AncestorsIterator.asStream(source)
           .map(StaticSource::new)
+          .map(StaticLevel::new)
           .collect(Collectors.toList());
     }
 
@@ -189,33 +206,43 @@ class StaticHierarchy implements Hierarchy {
     }
   }
 
-  private static class DescendantsIterator implements Iterator<Node> {
-    private Queue<Node> currentLevel = new LinkedList<>();
+  private static class StaticLevel implements Level {
+    private final Source source;
 
-    DescendantsIterator(Collection<Node> nodes) {
-      currentLevel.addAll(nodes);
-    }
-
-    static Stream<Node> asStream(Collection<Node> nodes) {
-      Iterable<Node> descendantsIterable = () -> new DescendantsIterator(nodes);
-      return StreamSupport.stream(descendantsIterable.spliterator(), false);
+    private StaticLevel(Source source) {
+      this.source = source;
     }
 
     @Override
-    public boolean hasNext() {
-      return !currentLevel.isEmpty();
+    public List<Source> sources() {
+      return Collections.singletonList(source);
     }
 
     @Override
-    public Node next() {
-      Node next = currentLevel.remove();
+    public boolean skippable() {
+      return false;
+    }
 
-      Collection<Node> nextChildren = next.children();
-      if (!nextChildren.isEmpty()) {
-        currentLevel.addAll(nextChildren);
-      }
+    @Override
+    public List<List<Source>> lineages() {
+      return Collections.singletonList(source.lineage().stream()
+          .flatMap(l -> l.sources().stream()) // we know l.sources() is size 1
+          .collect(Collectors.toList()));
+    }
 
-      return next;
+    @Override
+    public List<Source> descendants() {
+      return source.descendants();
+    }
+
+    @Override
+    public boolean isTargetedBy(SourceSpec spec) {
+      return source.isTargetedBy(spec);
+    }
+
+    @Override
+    public String toString() {
+      return source.toString();
     }
   }
 
@@ -245,7 +272,7 @@ class StaticHierarchy implements Hierarchy {
     }
   }
 
-  static class Node {
+  static class Node implements HasDescendants<Node> {
     private final String name;
     private final Collection<Node> children = new LinkedList<>();
 
@@ -310,7 +337,7 @@ class StaticHierarchy implements Hierarchy {
       return this;
     }
 
-    Collection<Node> children() {
+    public Collection<Node> children() {
       return Collections.unmodifiableCollection(children);
     }
 

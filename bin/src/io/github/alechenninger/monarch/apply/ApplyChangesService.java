@@ -63,6 +63,7 @@ public class ApplyChangesService {
       checkChangeIsApplicable(hierarchy, change);
     }
 
+    // TODO: levelFor?
     Targetable target = targetSpec.map(spec -> Targetable.of(
         hierarchy.sourceFor(spec).orElseThrow(() -> new IllegalArgumentException(
             "No source found in hierarchy which satisfies: " + targetSpec))))

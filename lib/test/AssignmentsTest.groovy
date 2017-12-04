@@ -24,6 +24,40 @@ import org.junit.runner.RunWith
 
 @RunWith(Enclosed.class)
 class AssignmentsTest {
+  static class AssignsSubset {
+    def inventory = Inventory.from([
+        'dessert': [Assignable.of('cookie', ['drink': 'milk']), Assignable.of('ice cream')],
+        'drink'  : [Assignable.of('milk', ['garnish': 'straw']), Assignable.of('soda')],
+        'garnish': [Assignable.of('straw'), Assignable.of('cherry')],
+    ])
+
+    @Test
+    void whenAssignsAllVariables() {
+      assert inventory.assignAll(['dessert': 'ice cream', 'drink': 'soda', 'garnish': 'straw'])
+          .assignsSubsetOf(['dessert', 'drink', 'garnish'])
+    }
+
+    @Test
+    void notWhenVariablesAreEmpty() {
+      assert !inventory.assignAll(['dessert': 'cookie']).assignsSubsetOf([])
+    }
+
+    @Test
+    void notWhenAllVariablesAreUnassigned() {
+      assert !inventory.assignAll(['garnish': 'straw']).assignsSubsetOf(['drink'])
+    }
+
+    @Test
+    void whenAssignsSomeVariablesButNotOthers() {
+      assert inventory.assignAll(['garnish': 'straw']).assignsSubsetOf(['garnish', 'drink'])
+    }
+
+    @Test
+    void whenAssignSomeVariablesImplicitly() {
+      assert inventory.assignAll(['drink': 'milk']).assignsSubsetOf(['garnish', 'dessert'])
+    }
+  }
+
   static class ShouldConflictWhenAssignment {
     @Test(expected = IllegalArgumentException.class)
     void impliesTransitivelyAConflictWithItsImplication() {

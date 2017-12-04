@@ -58,5 +58,12 @@ public interface Hierarchy {
 
   Optional<Source> sourceFor(Assignments assignments);
 
+  Optional<Level> levelFor(String source);
+
+  Optional<Level> levelFor(Map<String, String> variables);
+
+  Optional<Level> levelFor(Assignments assignments);
+
   List<Source> allSources();
+
 }

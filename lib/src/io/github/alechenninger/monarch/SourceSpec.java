@@ -15,6 +15,8 @@ public interface SourceSpec {
 
   Optional<Source> findSource(Hierarchy hierarchy);
 
+  Optional<Level> findLevel(Hierarchy hierarchy);
+
   Object toStringOrMap();
 
   @SuppressWarnings("unchecked")
@@ -97,6 +99,11 @@ public interface SourceSpec {
     }
 
     @Override
+    public Optional<Level> findLevel(Hierarchy hierarchy) {
+      return hierarchy.levelFor(variables);
+    }
+
+    @Override
     public Object toStringOrMap() {
       return variables;
     }
@@ -137,6 +144,12 @@ public interface SourceSpec {
     @Override
     public Optional<Source> findSource(Hierarchy hierarchy) {
       return hierarchy.sourceFor(path);
+    }
+
+    @Override
+    public Optional<Level> findLevel(Hierarchy hierarchy) {
+//      throw new UnsupportedOperationException("TODO");
+      return hierarchy.levelFor(path);
     }
 
     @Override

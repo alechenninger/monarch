@@ -8,7 +8,7 @@ public interface Source {
   /**
    * Returns this source and its ancestors in a single line up to a furthest root.
    */
-  List<Source> lineage();
+  List<Level> lineage();
 
   /**
    * Returns all of the node names in order of <em>nearest to furthest</em>, including the root
